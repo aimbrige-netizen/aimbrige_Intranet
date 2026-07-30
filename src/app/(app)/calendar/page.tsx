@@ -5,7 +5,11 @@ import {
   type CalendarScope,
   type CalendarView,
 } from "@/features/calendar/CalendarBoard";
-import { getActiveResources, getCalendarItems } from "@/features/calendar/data";
+import {
+  getActiveResources,
+  getCalendarItems,
+  getHolidayMap,
+} from "@/features/calendar/data";
 import {
   addDaysYmd,
   monthGrid,
@@ -63,7 +67,7 @@ export default async function CalendarPage({
 
   const { from, to } = rangeOf(days);
 
-  const [items, resources] = await Promise.all([
+  const [items, resources, holidays] = await Promise.all([
     getCalendarItems({
       scope,
       from,
@@ -72,6 +76,7 @@ export default async function CalendarPage({
       teamId: me.team_id,
     }),
     getActiveResources(),
+    getHolidayMap(days[0], days[days.length - 1]),
   ]);
 
   return (
@@ -84,6 +89,7 @@ export default async function CalendarPage({
       <CalendarBoard
         items={items}
         resources={resources}
+        holidays={holidays}
         scope={scope}
         view={view}
         cursor={cursor}

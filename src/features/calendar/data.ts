@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import type {
   CalendarEventWithOwner,
   CalendarItem,
+  Holiday,
   Resource,
   ResourceBookingWithRelations,
 } from "@/types/db";
@@ -113,6 +114,34 @@ export async function getCalendarItems({
   return [...eventItems, ...bookingItems].sort((a, b) =>
     a.startAt.localeCompare(b.startAt),
   );
+}
+
+/**
+ * 표시 구간의 공휴일. 키는 'yyyy-MM-dd'.
+ * 캘린더 표시와 스펙 03의 근무일 산정이 같은 소스를 쓰도록 여기서만 조회한다.
+ */
+export async function getHolidayMap(
+  fromYmd: string,
+  toYmd: string,
+): Promise<Record<string, Holiday>> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("holidays")
+    .select("*")
+    .gte("date", fromYmd)
+    .lte("date", toYmd);
+
+  if (error) {
+    // 공휴일 테이블이 아직 없거나 조회 실패해도 캘린더 자체는 떠야 한다
+    console.error("[calendar] 공휴일 조회 실패:", error.message);
+    return {};
+  }
+
+  const map: Record<string, Holiday> = {};
+  (data ?? []).forEach((row) => {
+    map[(row as Holiday).date] = row as Holiday;
+  });
+  return map;
 }
 
 /** 예약 가능한 활성 리소스 (스펙 3.6) */

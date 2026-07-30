@@ -202,6 +202,21 @@ export interface ResourceBookingWithRelations extends ResourceBooking {
   booker: Pick<Employee, "id" | "name"> | null;
 }
 
+export type HolidayKind =
+  | "public"
+  | "substitute"
+  | "temporary"
+  | "statutory_leave";
+
+export interface Holiday {
+  date: string;
+  name: string;
+  kind: HolidayKind;
+  is_non_working: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 /** 캘린더 화면에서 종류가 다른 항목을 한 배열로 다루기 위한 표현 */
 export type CalendarItemKind =
   | "personal"

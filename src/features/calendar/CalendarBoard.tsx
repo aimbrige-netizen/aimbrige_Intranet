@@ -19,11 +19,31 @@ import {
   toSeoulTime,
   toSeoulYmd,
   weekGrid,
+  weekdayOf,
 } from "@/features/calendar/date";
 import { EventModal } from "@/features/calendar/EventModal";
 import { BookingModal } from "@/features/calendar/BookingModal";
 import { EventDetail } from "@/features/calendar/EventDetail";
-import type { CalendarItem, Resource } from "@/types/db";
+import type { CalendarItem, Holiday, Resource } from "@/types/db";
+
+/**
+ * 날짜 숫자 색상 — 일요일·공휴일은 빨강, 토요일은 파랑.
+ * 국내 캘린더의 기본 관습이라 별도 옵션 없이 항상 적용한다.
+ */
+function dayToneClass(
+  weekday: number,
+  isHoliday: boolean,
+  inRange: boolean,
+): string {
+  const tone =
+    isHoliday || weekday === 0
+      ? "text-danger"
+      : weekday === 6
+        ? "text-primary"
+        : "text-ink";
+  // 이번 달이 아닌 날은 같은 색조를 유지하면서 흐리게
+  return inRange ? tone : `${tone} opacity-40`;
+}
 
 export type CalendarView = "month" | "week" | "list";
 export type CalendarScope = "personal" | "team" | "company";
@@ -48,6 +68,7 @@ const VIEW_LABELS: Record<CalendarView, string> = {
 export function CalendarBoard({
   items,
   resources,
+  holidays,
   scope,
   view,
   cursor,
@@ -55,6 +76,8 @@ export function CalendarBoard({
 }: {
   items: CalendarItem[];
   resources: Resource[];
+  /** 'yyyy-MM-dd' → 공휴일 */
+  holidays: Record<string, Holiday>;
   scope: CalendarScope;
   view: CalendarView;
   /** 월간은 'yyyy-MM', 주간·리스트는 'yyyy-MM-dd' 기준 */
@@ -233,6 +256,7 @@ export function CalendarBoard({
               days={days}
               cursor={cursor}
               items={items}
+              holidays={holidays}
               today={today}
               onPick={setSelected}
               onAdd={openCreate}
@@ -241,12 +265,13 @@ export function CalendarBoard({
             <WeekGrid
               days={days}
               items={items}
+              holidays={holidays}
               today={today}
               onPick={setSelected}
               onAdd={openCreate}
             />
           ) : (
-            <ListView items={items} onPick={setSelected} />
+            <ListView items={items} holidays={holidays} onPick={setSelected} />
           )}
         </CardBody>
       </Card>
@@ -308,6 +333,7 @@ function MonthGrid({
   days,
   cursor,
   items,
+  holidays,
   today,
   onPick,
   onAdd,
@@ -315,6 +341,7 @@ function MonthGrid({
   days: string[];
   cursor: string;
   items: CalendarItem[];
+  holidays: Record<string, Holiday>;
   today: string;
   onPick: (item: CalendarItem) => void;
   onAdd: (date: string) => void;
@@ -327,7 +354,11 @@ function MonthGrid({
             key={label}
             className={cn(
               "px-2 py-2 text-center text-label font-medium",
-              index === 0 ? "text-danger" : index === 6 ? "text-primary" : "text-muted",
+              index === 0
+                ? "text-danger"
+                : index === 6
+                  ? "text-primary"
+                  : "text-muted",
             )}
           >
             {label}
@@ -336,11 +367,13 @@ function MonthGrid({
       </div>
 
       <div className="grid grid-cols-7">
-        {days.map((day) => {
+        {days.map((day, index) => {
           const dayItems = items.filter((item) => occursOn(item, day));
           const inMonth = day.startsWith(cursor);
           const isToday = day === today;
           const dayNumber = Number(day.slice(8, 10));
+          const holiday = holidays[day];
+          const weekday = index % 7;
 
           return (
             <div
@@ -350,21 +383,32 @@ function MonthGrid({
                 !inMonth && "bg-canvas/60",
               )}
             >
-              <button
-                type="button"
-                onClick={() => onAdd(day)}
-                title={`${day} 일정 추가`}
-                className={cn(
-                  "mb-1 grid size-6 place-items-center rounded-full text-label transition-colors hover:bg-primary-light",
-                  isToday
-                    ? "bg-primary font-semibold text-white hover:bg-primary"
-                    : inMonth
-                      ? "text-ink"
-                      : "text-muted/60",
-                )}
-              >
-                {dayNumber}
-              </button>
+              <div className="mb-1 flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => onAdd(day)}
+                  title={`${day} 일정 추가`}
+                  className={cn(
+                    "grid size-6 place-items-center rounded-full text-label transition-colors hover:bg-primary-light",
+                    isToday
+                      ? "bg-primary font-semibold text-white hover:bg-primary"
+                      : dayToneClass(weekday, !!holiday, inMonth),
+                  )}
+                >
+                  {dayNumber}
+                </button>
+                {holiday ? (
+                  <span
+                    className={cn(
+                      "truncate text-[10px] text-danger",
+                      !inMonth && "opacity-40",
+                    )}
+                    title={holiday.name}
+                  >
+                    {holiday.name}
+                  </span>
+                ) : null}
+              </div>
 
               <div className="space-y-0.5">
                 {dayItems.slice(0, 3).map((item) => (
@@ -387,12 +431,14 @@ function MonthGrid({
 function WeekGrid({
   days,
   items,
+  holidays,
   today,
   onPick,
   onAdd,
 }: {
   days: string[];
   items: CalendarItem[];
+  holidays: Record<string, Holiday>;
   today: string;
   onPick: (item: CalendarItem) => void;
   onAdd: (date: string) => void;
@@ -402,6 +448,7 @@ function WeekGrid({
       {days.map((day, index) => {
         const dayItems = items.filter((item) => occursOn(item, day));
         const isToday = day === today;
+        const holiday = holidays[day];
 
         return (
           <div
@@ -414,29 +461,38 @@ function WeekGrid({
             <button
               type="button"
               onClick={() => onAdd(day)}
-              className="mb-2 flex w-full items-baseline gap-1.5 text-left"
+              className="mb-2 w-full text-left"
               title={`${day} 일정 추가`}
             >
-              <span
-                className={cn(
-                  "text-label font-medium",
-                  index === 0
-                    ? "text-danger"
-                    : index === 6
-                      ? "text-primary"
-                      : "text-muted",
-                )}
-              >
-                {WEEKDAY_LABELS[index]}
+              <span className="flex items-baseline gap-1.5">
+                <span
+                  className={cn(
+                    "text-label font-medium",
+                    index === 0
+                      ? "text-danger"
+                      : index === 6
+                        ? "text-primary"
+                        : "text-muted",
+                  )}
+                >
+                  {WEEKDAY_LABELS[index]}
+                </span>
+                <span
+                  className={cn(
+                    "text-body",
+                    isToday
+                      ? "font-semibold text-primary"
+                      : dayToneClass(index, !!holiday, true),
+                  )}
+                >
+                  {Number(day.slice(8, 10))}
+                </span>
               </span>
-              <span
-                className={cn(
-                  "text-body",
-                  isToday ? "font-semibold text-primary" : "text-ink",
-                )}
-              >
-                {Number(day.slice(8, 10))}
-              </span>
+              {holiday ? (
+                <span className="mt-0.5 block truncate text-[10px] text-danger">
+                  {holiday.name}
+                </span>
+              ) : null}
             </button>
 
             <div className="space-y-1">
@@ -457,9 +513,11 @@ function WeekGrid({
 
 function ListView({
   items,
+  holidays,
   onPick,
 }: {
   items: CalendarItem[];
+  holidays: Record<string, Holiday>;
   onPick: (item: CalendarItem) => void;
 }) {
   if (items.length === 0) {
@@ -483,7 +541,24 @@ function ListView({
     <ul className="divide-y divide-line">
       {Array.from(groups.entries()).map(([date, group]: [string, CalendarItem[]]) => (
         <li key={date} className="px-4 py-3">
-          <p className="mb-2 text-label font-semibold text-muted">{date}</p>
+          <p className="mb-2 flex items-center gap-2 text-label font-semibold text-muted">
+            <span
+              className={cn(
+                weekdayOf(date) === 0
+                  ? "text-danger"
+                  : weekdayOf(date) === 6
+                    ? "text-primary"
+                    : undefined,
+              )}
+            >
+              {date} ({WEEKDAY_LABELS[weekdayOf(date)]})
+            </span>
+            {holidays[date] ? (
+              <span className="font-normal text-danger">
+                {holidays[date].name}
+              </span>
+            ) : null}
+          </p>
           <ul className="space-y-1.5">
             {group.map((item) => {
               const color = EVENT_COLORS[item.kind];
