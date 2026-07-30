@@ -338,7 +338,8 @@ export type CalendarItemKind =
   | "team"
   | "company"
   | "resource_booking"
-  | "leave";
+  | "leave"
+  | "approval";
 
 export interface CalendarItem {
   id: string;

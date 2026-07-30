@@ -4,7 +4,16 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApprovalList } from "@/features/attendance/ApprovalList";
-import { getApprovalQueue } from "@/features/attendance/data";
+import {
+  getApprovalQueue,
+  getTeamWeeklyHours,
+} from "@/features/attendance/data";
+import {
+  WEEKLY_LIMIT_HOURS,
+  WEEKLY_WARN_HOURS,
+} from "@/features/attendance/constants";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { cn } from "@/lib/utils";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import {
   LEAVE_CATEGORY_LABELS,
@@ -19,7 +28,10 @@ export default async function ApprovalsPage() {
   // 팀장·매니저·관리자만 (스펙 2장 접근 권한)
   if (!me.isManager) redirect("/attendance");
 
-  const { leaves, overtimes, corrections } = await getApprovalQueue();
+  const [{ leaves, overtimes, corrections }, teamHours] = await Promise.all([
+    getApprovalQueue(),
+    getTeamWeeklyHours(),
+  ]);
 
   // 세 종류의 신청을 한 목록으로 합쳐 대기중이 위로 오게 정렬한다
   const items: ApprovalItem[] = [
@@ -98,6 +110,55 @@ export default async function ApprovalsPage() {
       />
 
       <ApprovalList items={items} />
+
+      {/* 팀원 주 52시간 현황 (스펙 3.2 — "본인과 팀장 모두에게 노출") */}
+      {teamHours.length > 0 ? (
+        <Card className="mt-5">
+          <CardHeader
+            title="팀원 이번 주 근무시간"
+            description={`정규 근무 + 승인된 초과근무 합산. ${WEEKLY_WARN_HOURS}시간 이상이면 경고, ${WEEKLY_LIMIT_HOURS}시간 초과면 위반입니다.`}
+          />
+          <CardBody className="p-0">
+            <div className="overflow-x-auto">
+              <table className="ab-table min-w-[420px]">
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th className="w-32">이번 주</th>
+                    <th className="w-24">상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {teamHours.map((row) => {
+                    const over = row.hours > WEEKLY_LIMIT_HOURS;
+                    const warn = !over && row.hours >= WEEKLY_WARN_HOURS;
+                    return (
+                      <tr key={row.employeeId}>
+                        <td>{row.name}</td>
+                        <td
+                          className={cn(
+                            "tabular-nums",
+                            over
+                              ? "font-semibold text-danger"
+                              : warn
+                                ? "font-semibold text-warn"
+                                : undefined,
+                          )}
+                        >
+                          {row.hours}시간
+                        </td>
+                        <td className="text-caption">
+                          {over ? "초과" : warn ? "근접" : "정상"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardBody>
+        </Card>
+      ) : null}
     </>
   );
 }

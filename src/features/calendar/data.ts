@@ -121,38 +121,27 @@ export async function getCalendarItems({
     onlyMine: scope === "personal",
   });
 
-  return [...eventItems, ...bookingItems, ...leaveItems].sort((a, b) =>
-    a.startAt.localeCompare(b.startAt),
-  );
+  // 승인된 출장·재택근무 (스펙 04 · 7장 연동)
+  const approvalItems = await getApprovalItems({
+    fromYmd: toSeoulYmdLocal(from),
+    toYmd: toSeoulYmdLocal(to),
+    employeeId,
+    onlyMine: scope === "personal",
+  });
+
+  return [
+    ...eventItems,
+    ...bookingItems,
+    ...leaveItems,
+    ...approvalItems,
+  ].sort((a, b) => a.startAt.localeCompare(b.startAt));
 }
 
-function toSeoulYmdLocal(date: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Seoul",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(date);
-}
-
-const LEAVE_TYPE_SHORT: Record<string, string> = {
-  full_day: "연차",
-  half_day_am: "오전반차",
-  half_day_pm: "오후반차",
-  hourly: "시간연차",
-};
-
-const LEAVE_CATEGORY_SHORT: Record<string, string> = {
-  annual: "연차",
-  industrial_accident: "공상",
-  family_care: "가족돌봄",
-  maternity: "출산",
-  menstrual: "생리",
-  congratulation_condolence: "경조",
-};
-
-/** 승인된 휴가를 캘린더 항목으로 변환 */
-async function getLeaveItems({
+/**
+ * 승인된 출장·재택근무를 캘린더 항목으로 변환 (스펙 04 · 7장)
+ * 별도 테이블에 복제하지 않고 조회 시 병합한다(연차와 같은 패턴).
+ */
+async function getApprovalItems({
   fromYmd,
   toYmd,
   employeeId,
@@ -166,56 +155,130 @@ async function getLeaveItems({
   const supabase = createServerSupabase();
 
   let query = supabase
-    .from("leave_requests")
+    .from("approval_documents")
     .select(
-      `id, employee_id, leave_type, leave_category, start_date, end_date,
-       employee:employees!employee_id(id, name)`,
+      `id, document_type, title, form_data, requester_id, status,
+       requester:employees!requester_id(id, name)`,
     )
-    .eq("status", "approved")
-    .lte("start_date", toYmd)
-    .gte("end_date", fromYmd);
+    .in("status", ["approved", "completed"])
+    .in("document_type", ["business_trip", "remote_work"]);
 
-  if (onlyMine) query = query.eq("employee_id", employeeId);
+  if (onlyMine) query = query.eq("requester_id", employeeId);
 
   const { data, error } = await query;
   if (error) {
-    // 스펙 03 마이그레이션 전이면 테이블이 없다 — 캘린더는 계속 떠야 한다
+    // 스펙 04 마이그레이션 전이면 테이블이 없다 — 캘린더는 계속 떠야 한다
+    console.error("[calendar] 결재 문서 조회 실패:", error.message);
+    return [];
+  }
+
+  const items: CalendarItem[] = [];
+  for (const row of data ?? []) {
+    const r = row as unknown as {
+      id: string;
+      document_type: string;
+      form_data: Record<string, unknown>;
+      requester_id: string;
+      requester: { name: string } | null;
+    };
+    const start = String(r.form_data?.startDate ?? "");
+    const end = String(r.form_data?.endDate ?? start);
+    // 날짜는 form_data(JSON) 안에 있어 SQL 범위 필터가 어렵다. 여기서 걸러낸다.
+    if (!start || start > toYmd || end < fromYmd) continue;
+
+    const label = r.document_type === "business_trip" ? "출장" : "재택";
+    const name = r.requester?.name ?? "";
+
+    items.push({
+      id: `approval-${r.id}`,
+      kind: "approval",
+      title: `${name} ${label}`.trim(),
+      description: null,
+      startAt: new Date(`${start}T00:00:00+09:00`).toISOString(),
+      endAt: new Date(`${addDaysYmd(end, 1)}T00:00:00+09:00`).toISOString(),
+      allDay: true,
+      ownerId: r.requester_id,
+      ownerName: name,
+      editable: false,
+    });
+  }
+  return items;
+}
+
+function toSeoulYmdLocal(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+// 휴가 표시 라벨은 list_calendar_leaves() RPC가 만들어 준다.
+// (타인의 휴가 종류를 숨겨야 해서 DB 쪽에서 라벨을 결정한다)
+
+/**
+ * 승인된 휴가를 캘린더 항목으로 변환.
+ *
+ * leave_requests를 직접 읽지 않고 list_calendar_leaves() RPC를 쓴다. 이유:
+ *  - RLS는 "본인 + 팀장 + 관리자"라, 일반 직원이 팀·전사 캘린더를 봐도 동료 연차가
+ *    하나도 안 보였다. 스펙 02 3.4는 "같은 팀에서 동시에 휴가인 날 시각화"를 요구한다.
+ *  - 그렇다고 RLS를 넓히면 leave_category가 함께 노출되는데, 생리휴가·공상휴가는
+ *    민감정보다. RPC가 타인의 휴가 종류를 '휴가'로 뭉개서 돌려준다.
+ */
+async function getLeaveItems({
+  fromYmd,
+  toYmd,
+  employeeId,
+  onlyMine,
+}: {
+  fromYmd: string;
+  toYmd: string;
+  employeeId: string;
+  onlyMine: boolean;
+}): Promise<CalendarItem[]> {
+  const supabase = createServerSupabase();
+
+  const { data, error } = await supabase.rpc("list_calendar_leaves", {
+    p_from: fromYmd,
+    p_to: toYmd,
+  });
+
+  if (error) {
+    // 스펙 03 마이그레이션 전이면 함수가 없다 — 캘린더는 계속 떠야 한다
     console.error("[calendar] 휴가 조회 실패:", error.message);
     return [];
   }
 
-  return (data ?? []).map((row) => {
-    const r = row as unknown as {
-      id: string;
-      employee_id: string;
-      leave_type: string;
-      leave_category: string;
-      start_date: string;
-      end_date: string;
-      employee: { name: string } | null;
-    };
-    const name = r.employee?.name ?? "";
-    const kindLabel =
-      r.leave_category === "annual"
-        ? LEAVE_TYPE_SHORT[r.leave_type]
-        : LEAVE_CATEGORY_SHORT[r.leave_category];
+  const rows = (data ?? []) as {
+    id: string;
+    employee_id: string;
+    employee_name: string;
+    start_date: string;
+    end_date: string;
+    label: string;
+    is_mine: boolean;
+  }[];
 
-    return {
+  return rows
+    .filter((r) => (onlyMine ? r.employee_id === employeeId : true))
+    .map((r) => ({
       id: `leave-${r.id}`,
       kind: "leave" as const,
-      title: `${name} ${kindLabel}`.trim(),
+      title: `${r.employee_name} ${r.label}`.trim(),
       description: null,
       // 종일 항목으로 취급. occursOn이 종료 경계를 배타적으로 보므로
       // 종료일 당일까지 표시되도록 다음 날 자정을 끝으로 둔다.
       startAt: new Date(`${r.start_date}T00:00:00+09:00`).toISOString(),
-      endAt: new Date(`${addDaysYmd(r.end_date, 1)}T00:00:00+09:00`).toISOString(),
+      endAt: new Date(
+        `${addDaysYmd(r.end_date, 1)}T00:00:00+09:00`,
+      ).toISOString(),
       allDay: true,
       ownerId: r.employee_id,
-      ownerName: name,
+      ownerName: r.employee_name,
       // 휴가는 캘린더에서 직접 수정하지 않는다(근태 화면에서 취소)
       editable: false,
-    };
-  });
+    }));
 }
 
 /**

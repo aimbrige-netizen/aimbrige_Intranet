@@ -41,7 +41,7 @@ export default async function DashboardPage({
 
   const [approval, attendance, notices, calendar, favorites, settings] =
     await Promise.all([
-      getApprovalPending(),
+      getApprovalPending(me.id),
       getAttendanceToday(me.id, me.hire_date),
       getNotices(),
       getCalendarUpcoming(),
@@ -51,9 +51,7 @@ export default async function DashboardPage({
 
   const nodes: Record<WidgetKey, React.ReactNode> = {
     approval_pending: (
-      <ApprovalPendingWidget
-        pendingSpec={approval.connected ? "" : approval.pendingSpec}
-      />
+      <ApprovalPendingWidget documents={approval.connected ? approval.data : []} />
     ),
     attendance_today: (
       <AttendanceTodayWidget

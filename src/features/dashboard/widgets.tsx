@@ -26,10 +26,18 @@ function NotConnected({ pendingSpec }: { pendingSpec: string }) {
   );
 }
 
+export interface PendingApproval {
+  id: string;
+  title: string;
+  requester: string;
+  requestedAt: string;
+}
+
+/** 결재 대기 — 스펙 04에서 실제 연동됨 */
 export function ApprovalPendingWidget({
-  pendingSpec,
+  documents,
 }: {
-  pendingSpec: string;
+  documents: PendingApproval[];
 }) {
   return (
     <Card>
@@ -40,10 +48,48 @@ export function ApprovalPendingWidget({
             결재 대기
           </span>
         }
-        action={<Badge tone="neutral">0</Badge>}
+        action={
+          <span className="flex items-center gap-2">
+            <Badge tone={documents.length > 0 ? "danger" : "neutral"}>
+              {documents.length}
+            </Badge>
+            <Link
+              href="/approvals?tab=inbox"
+              className="text-label text-primary hover:underline"
+            >
+              전체보기
+            </Link>
+          </span>
+        }
       />
       <CardBody>
-        <NotConnected pendingSpec={pendingSpec} />
+        {documents.length === 0 ? (
+          <EmptyState
+            icon={FileCheck}
+            title="승인할 문서가 없습니다"
+            description="본인 차례인 결재 문서가 생기면 여기에 표시됩니다."
+            compact
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {documents.map((doc) => (
+              <li key={doc.id}>
+                <Link
+                  href={`/approvals/${doc.id}`}
+                  className="flex items-center gap-3 rounded px-1 py-2.5 transition-colors hover:bg-canvas"
+                >
+                  <span className="w-16 shrink-0 text-label text-muted">
+                    {doc.requester}
+                  </span>
+                  <span className="truncate text-body text-ink">{doc.title}</span>
+                  <span className="ml-auto shrink-0 text-caption">
+                    {toSeoulYmd(doc.requestedAt).slice(5)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardBody>
     </Card>
   );

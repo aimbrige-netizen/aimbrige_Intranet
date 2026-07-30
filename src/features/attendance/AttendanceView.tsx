@@ -20,6 +20,7 @@ import {
 import { cancelLeaveRequest } from "@/server/actions/attendance";
 import { toSeoulTime, WEEKDAY_LABELS, weekdayOf } from "@/features/calendar/date";
 import { cn } from "@/lib/utils";
+import { isAbsentDay, type AbsentDay } from "./data-client";
 import type {
   AttendanceRecord,
   CorrectionRequest,
@@ -28,7 +29,7 @@ import type {
 } from "@/types/db";
 
 interface Props {
-  records: AttendanceRecord[];
+  records: (AttendanceRecord | AbsentDay)[];
   leaves: LeaveRequest[];
   overtimes: OvertimeRequest[];
   corrections: CorrectionRequest[];
@@ -63,7 +64,20 @@ export function AttendanceView({
       "상태",
       "위치경고",
     ];
-    const rows = records.map((r) => {
+    const rows = records.map((row) => {
+      if (isAbsentDay(row)) {
+        return [
+          row.work_date,
+          WEEKDAY_LABELS[weekdayOf(row.work_date)],
+          "",
+          "",
+          "",
+          "",
+          ATTENDANCE_STATUS_LABELS.absent,
+          "",
+        ];
+      }
+      const r = row;
       const hours =
         r.check_in_at && r.check_out_at
           ? (
@@ -171,7 +185,40 @@ export function AttendanceView({
                     </tr>
                   </thead>
                   <tbody>
-                    {records.map((r) => {
+                    {records.map((row) => {
+                      // 근무일인데 기록이 없는 날은 결근으로 표시 (data.ts에서 계산)
+                      if (isAbsentDay(row)) {
+                        const wd = weekdayOf(row.work_date);
+                        return (
+                          <tr key={`absent-${row.work_date}`}>
+                            <td className="whitespace-nowrap tabular-nums">
+                              <span
+                                className={cn(
+                                  wd === 0
+                                    ? "text-danger"
+                                    : wd === 6
+                                      ? "text-primary"
+                                      : undefined,
+                                )}
+                              >
+                                {row.work_date} ({WEEKDAY_LABELS[wd]})
+                              </span>
+                            </td>
+                            <td className="text-muted">-</td>
+                            <td className="text-muted">-</td>
+                            <td className="text-muted">-</td>
+                            <td className="text-muted">-</td>
+                            <td>
+                              <Badge tone="danger">
+                                {ATTENDANCE_STATUS_LABELS.absent}
+                              </Badge>
+                            </td>
+                            <td className="text-caption">기록 없음</td>
+                          </tr>
+                        );
+                      }
+
+                      const r = row;
                       const weekday = weekdayOf(r.work_date);
                       const hours =
                         r.check_in_at && r.check_out_at

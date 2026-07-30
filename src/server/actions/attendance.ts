@@ -482,10 +482,16 @@ const RPC_BY_KIND = {
   correction: "approve_correction_request",
 } as const;
 
-const TABLE_BY_KIND = {
-  leave: "leave_requests",
-  overtime: "overtime_requests",
-  correction: "attendance_correction_requests",
+/**
+ * 반려도 RPC로만 처리한다.
+ * 예전에는 테이블 UPDATE 정책으로 반려했는데, 그 정책이 열려 있으면
+ * 같은 경로로 status='approved'도 직접 쓸 수 있어 잔여 차감을 건너뛸 수 있었다.
+ * (마이그레이션 08 참고 — UPDATE 정책은 제거됨)
+ */
+const REJECT_RPC_BY_KIND = {
+  leave: "reject_leave_request",
+  overtime: "reject_overtime_request",
+  correction: "reject_correction_request",
 } as const;
 
 export async function approveRequest(
@@ -508,35 +514,23 @@ export async function approveRequest(
 }
 
 export async function rejectRequest(
-  kind: keyof typeof TABLE_BY_KIND,
+  kind: keyof typeof REJECT_RPC_BY_KIND,
   requestId: string,
   rejectionReason: string,
 ): Promise<AttendanceActionResult> {
-  const me = await requireSessionEmployee();
+  await requireSessionEmployee();
   const reason = rejectionReason.trim();
   if (!reason) {
     return { ok: false, fieldErrors: { rejectionReason: "반려 사유는 필수입니다." } };
   }
 
   const supabase = createServerSupabase();
-  const patch: Record<string, unknown> = {
-    status: "rejected",
-    approver_id: me.id,
-    rejection_reason: reason,
-  };
-  if (kind === "correction") patch.processed_at = new Date().toISOString();
-  else patch.approved_at = null;
-
-  const { error, count } = await supabase
-    .from(TABLE_BY_KIND[kind])
-    .update(patch, { count: "exact" })
-    .eq("id", requestId)
-    .eq("status", "pending");
+  const { error } = await supabase.rpc(REJECT_RPC_BY_KIND[kind], {
+    request_id: requestId,
+    p_reason: reason,
+  });
 
   if (error) return { ok: false, message: error.message };
-  if (count === 0) {
-    return { ok: false, message: "이미 처리되었거나 권한이 없습니다." };
-  }
 
   revalidatePath("/attendance");
   revalidatePath("/attendance/approvals");
@@ -634,20 +628,20 @@ export async function adjustAttendanceRecord(
     .eq("work_date", v.workDate)
     .maybeSingle<{ check_in_at: string | null; check_out_at: string | null }>();
 
-  const { error } = await admin.from("attendance_records").upsert(
-    {
-      employee_id: v.employeeId,
-      work_date: v.workDate,
-      check_in_at: v.checkInTime
-        ? seoulToDate(v.workDate, v.checkInTime).toISOString()
-        : null,
-      check_out_at: v.checkOutTime
-        ? seoulToDate(v.workDate, v.checkOutTime).toISOString()
-        : null,
-      manual_adjustment_reason: v.reason,
-    },
-    { onConflict: "employee_id,work_date" },
-  );
+  // 상태(정상/지각/조퇴)까지 재계산되도록 DB 함수로 처리한다.
+  // 직접 upsert하면 시각만 바뀌고 status가 옛 값으로 남는다.
+  const supabase = createServerSupabase();
+  const { error } = await supabase.rpc("admin_set_attendance", {
+    p_employee_id: v.employeeId,
+    p_work_date: v.workDate,
+    p_check_in: v.checkInTime
+      ? seoulToDate(v.workDate, v.checkInTime).toISOString()
+      : null,
+    p_check_out: v.checkOutTime
+      ? seoulToDate(v.workDate, v.checkOutTime).toISOString()
+      : null,
+    p_reason: v.reason,
+  });
 
   if (error) return { ok: false, message: error.message };
 

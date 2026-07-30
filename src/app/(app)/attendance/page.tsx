@@ -6,7 +6,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { CheckInOut } from "@/features/attendance/CheckInOut";
 import { AttendanceView } from "@/features/attendance/AttendanceView";
 import {
-  getAttendanceRange,
+  getAttendanceWithAbsences,
   getLeaveSummary,
   getMyCorrectionRequests,
   getMyLeaveAdjustments,
@@ -19,6 +19,7 @@ import {
   WEEKLY_LIMIT_HOURS,
   WEEKLY_WARN_HOURS,
 } from "@/features/attendance/constants";
+import { isAbsentDay } from "@/features/attendance/data-client";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { monthLabel, todayYmd } from "@/features/calendar/date";
 import { formatDate } from "@/lib/utils";
@@ -44,7 +45,7 @@ export default async function AttendancePage() {
   ] = await Promise.all([
     getTodayAttendance(me.id),
     getLeaveSummary(me.id, me.hire_date),
-    getAttendanceRange(me.id, monthStart, today),
+    getAttendanceWithAbsences(me.id, monthStart, today),
     getMyLeaveRequests(me.id),
     getMyOvertimeRequests(me.id),
     getMyCorrectionRequests(me.id),
@@ -52,11 +53,13 @@ export default async function AttendancePage() {
     getMyLeaveAdjustments(me.id),
   ]);
 
-  const monthlyHours = records.reduce((sum, r) => {
-    if (!r.check_in_at || !r.check_out_at) return sum;
+  const monthlyHours = records.reduce((sum, row) => {
+    if (isAbsentDay(row)) return sum;
+    if (!row.check_in_at || !row.check_out_at) return sum;
     return (
       sum +
-      (new Date(r.check_out_at).getTime() - new Date(r.check_in_at).getTime()) /
+      (new Date(row.check_out_at).getTime() -
+        new Date(row.check_in_at).getTime()) /
         3_600_000
     );
   }, 0);

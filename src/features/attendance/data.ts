@@ -4,6 +4,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createAdminSupabase } from "@/lib/supabase/admin";
 import { addDaysYmd, todayYmd, weekdayOf } from "@/features/calendar/date";
 import { computeAccruedDays, nextAccrual } from "./leave-accrual";
+import type { AbsentDay, AttendanceRow } from "./data-client";
 import { DAILY_WORK_HOURS, WEEKLY_LIMIT_HOURS, WEEKLY_WARN_HOURS } from "./constants";
 import type {
   AttendanceRecord,
@@ -172,6 +173,100 @@ export function diffTimeHours(start: string, end: string): number {
   const [sh, sm] = start.split(":").map(Number);
   const [eh, em] = end.split(":").map(Number);
   return (eh * 60 + em - (sh * 60 + sm)) / 60;
+}
+
+/**
+ * 근무일 중 기록이 없는 날을 결근으로 채운다.
+ *
+ * attendance_records에는 '출근한 날'만 행이 생기므로, 결근은 행의 부재로 나타난다.
+ * status='absent'를 쓰는 코드 경로가 없어 화면에서 결근이 아예 안 보이던 문제를
+ * 조회 시점 계산으로 해결한다(cron 없이 정확).
+ * 주말·공휴일과 승인된 휴가일은 결근이 아니다.
+ */
+export async function getAttendanceWithAbsences(
+  employeeId: string,
+  fromYmd: string,
+  toYmd: string,
+): Promise<AttendanceRow[]> {
+  const supabase = createServerSupabase();
+  const today = todayYmd();
+  // 오늘은 아직 퇴근 전일 수 있어 결근 판정에서 제외한다
+  const lastJudgedDay = toYmd < today ? toYmd : addDaysYmd(today, -1);
+
+  const [records, { data: holidays }, { data: leaves }] = await Promise.all([
+    getAttendanceRange(employeeId, fromYmd, toYmd),
+    supabase
+      .from("holidays")
+      .select("date")
+      .eq("is_non_working", true)
+      .gte("date", fromYmd)
+      .lte("date", toYmd),
+    supabase
+      .from("leave_requests")
+      .select("start_date, end_date")
+      .eq("employee_id", employeeId)
+      .eq("status", "approved")
+      .lte("start_date", toYmd)
+      .gte("end_date", fromYmd),
+  ]);
+
+  const recorded = new Set(records.map((r) => r.work_date));
+  const nonWorking = new Set((holidays ?? []).map((h) => h.date as string));
+
+  const onLeave = new Set<string>();
+  (leaves ?? []).forEach((l) => {
+    let cursor = l.start_date as string;
+    for (let guard = 0; guard < 400 && cursor <= (l.end_date as string); guard += 1) {
+      onLeave.add(cursor);
+      cursor = addDaysYmd(cursor, 1);
+    }
+  });
+
+  const absences: AbsentDay[] = [];
+  let cursor = fromYmd;
+  for (let guard = 0; guard < 400 && cursor <= lastJudgedDay; guard += 1) {
+    const weekday = weekdayOf(cursor);
+    const isWeekend = weekday === 0 || weekday === 6;
+    if (
+      !isWeekend &&
+      !nonWorking.has(cursor) &&
+      !recorded.has(cursor) &&
+      !onLeave.has(cursor)
+    ) {
+      absences.push({ absent: true, work_date: cursor });
+    }
+    cursor = addDaysYmd(cursor, 1);
+  }
+
+  return [...records, ...absences].sort((a, b) =>
+    b.work_date.localeCompare(a.work_date),
+  );
+}
+
+/** 팀원 주간 근무시간 (스펙 3.2 — 팀장에게도 52시간 경고 노출) */
+export async function getTeamWeeklyHours(): Promise<
+  { employeeId: string; name: string; hours: number }[]
+> {
+  const supabase = createServerSupabase();
+  const today = todayYmd();
+  const weekStart = addDaysYmd(today, -weekdayOf(today));
+
+  const { data, error } = await supabase.rpc("team_weekly_hours", {
+    p_week_start: weekStart,
+  });
+
+  if (error) {
+    console.error("[attendance] 팀 주간 근무시간 조회 실패:", error.message);
+    return [];
+  }
+
+  return ((data ?? []) as { employee_id: string; employee_name: string; hours: number }[]).map(
+    (row) => ({
+      employeeId: row.employee_id,
+      name: row.employee_name,
+      hours: Number(row.hours),
+    }),
+  );
 }
 
 /** 본인 휴가 신청 이력 */

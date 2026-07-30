@@ -5,6 +5,7 @@ import {
   getLeaveSummary,
   getTodayAttendance,
 } from "@/features/attendance/data";
+import { getMyPendingApprovals } from "@/features/approvals/data";
 import type {
   AttendanceRecord,
   Favorite,
@@ -26,11 +27,25 @@ export type WidgetData<T> =
   | { connected: false; pendingSpec: string }
   | { connected: true; data: T };
 
-/** 결재 대기 → 스펙 04 전자결재 */
-export async function getApprovalPending(): Promise<
-  WidgetData<{ id: string; title: string; requester: string; requestedAt: string }[]>
+/**
+ * 결재 대기 — 스펙 04에서 실제 연동 완료 (스펙 04 · 7장)
+ * 본인이 현재 단계 담당자인 문서만.
+ */
+export async function getApprovalPending(employeeId: string): Promise<
+  WidgetData<
+    { id: string; title: string; requester: string; requestedAt: string }[]
+  >
 > {
-  return { connected: false, pendingSpec: "스펙 04 전자결재" };
+  const rows = await getMyPendingApprovals(employeeId);
+  return {
+    connected: true,
+    data: rows.slice(0, 5).map((row) => ({
+      id: row.document.id,
+      title: row.document.title,
+      requester: row.document.requester?.name ?? "-",
+      requestedAt: row.document.created_at,
+    })),
+  };
 }
 
 /**
