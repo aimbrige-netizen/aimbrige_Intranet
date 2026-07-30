@@ -1,0 +1,121 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * 에임브릿지 인트라넷 전역 스타일
+ * 디자인 근거: aimbridge_intranet_design_system.md v1.0
+ * - 사이드바만 다크, 메인 콘텐츠는 라이트
+ * - 다크모드는 지원하지 않는다(그룹웨어 톤 통일 목적)
+ */
+
+:root {
+  --color-primary: #1d4e8f;
+  --color-primary-light: #eaf1fb;
+  --color-sidebar: #1a1d24;
+  --color-sidebar-text: #c7cbd4;
+  --color-ink: #1f2430;
+  --color-canvas: #f7f8fa;
+  --color-line: #e2e5ea;
+  --color-success: #2fa36b;
+  --color-warn: #e0a72e;
+  --color-danger: #db4c4c;
+  --color-muted: #6b7280;
+
+  --layout-topbar: 60px;
+  --layout-rail: 72px;
+  --layout-rail-open: 240px;
+
+  color-scheme: light;
+}
+
+@layer base {
+  html {
+    /* 본문 기본 14px (디자인시스템 타이포 스케일) */
+    font-size: 14px;
+  }
+
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1 {
+    @apply text-h1;
+  }
+
+  h2 {
+    @apply text-h2;
+  }
+
+  /* 폼 요소가 브라우저 기본 폰트로 떨어지지 않게 */
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  /* 포커스 링은 Primary 톤으로 통일 */
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+}
+
+@layer components {
+  /* 카드: radius 8px + 옅은 그림자, 장식보다 여백으로 구분 */
+  .ab-card {
+    @apply rounded-card border border-line bg-surface shadow-card;
+  }
+
+  /* 선택형 카드(옵션 뱃지): 다크 배경 + 흰 텍스트 + radius 12px */
+  .ab-pick-card {
+    @apply rounded-pick bg-sidebar text-white transition-colors hover:bg-sidebar-hover;
+  }
+
+  /* 라벨-옆-인풋 밀도 높은 표 형태 폼 (결재·신청서류용) */
+  .ab-form-grid {
+    @apply grid grid-cols-1 overflow-hidden rounded-card border border-line bg-surface md:grid-cols-[160px_1fr];
+  }
+
+  .ab-form-label {
+    @apply flex items-center border-line bg-[#F2F4F7] px-4 py-3 text-label font-medium text-ink md:border-b md:border-r;
+  }
+
+  .ab-form-field {
+    @apply border-b border-line px-4 py-3;
+  }
+
+  /* 테이블: zebra 없이 hover 시에만 행 강조, 헤더는 Border 색 배경 */
+  .ab-table {
+    @apply w-full border-collapse text-body;
+  }
+
+  .ab-table thead th {
+    @apply whitespace-nowrap border-b border-line bg-line/60 px-4 py-3 text-left text-label font-semibold text-ink;
+  }
+
+  .ab-table tbody td {
+    @apply border-b border-line px-4 py-3 align-middle;
+  }
+
+  .ab-table tbody tr {
+    @apply transition-colors hover:bg-primary-light/60;
+  }
+}
+
+@layer utilities {
+  /* 캡션·라벨 텍스트 */
+  .text-caption {
+    @apply text-label text-muted;
+  }
+
+  /* 스크롤바를 사이드바 톤에 맞춤 */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+}
