@@ -19,17 +19,21 @@ const config: Config = {
           hover: "#17406F",
           light: "#EAF1FB",
         },
+        // 사이드바는 라이트(화이트) — 메인 콘텐츠와 톤을 통일하고 경계선으로만 구분한다
         sidebar: {
-          DEFAULT: "#1A1D24",
-          hover: "#242832",
-          text: "#C7CBD4",
-          active: "#FFFFFF",
+          DEFAULT: "#FFFFFF",
+          hover: "#F3F6FB",
+          text: "#5B6270",
+          active: "#1D4E8F",
         },
+        // 선택형 카드(연차 유형 등)처럼 의도적으로 대비를 주는 다크 블록 전용
+        pick: "#1A1D24",
         ink: "#1F2430",
         muted: "#6B7280",
         surface: "#FFFFFF",
-        canvas: "#F7F8FA",
-        line: "#E2E5EA",
+        canvas: "#F5F7FA",
+        line: "#E7EAF0",
+        "line-strong": "#DDE1E8",
         success: "#2FA36B",
         warn: "#E0A72E",
         danger: "#DB4C4C",
@@ -50,17 +54,18 @@ const config: Config = {
         label: ["12px", { lineHeight: "1.5", fontWeight: "400" }],
       },
       borderRadius: {
-        card: "8px",
+        card: "12px",
         pick: "12px",
       },
       boxShadow: {
-        card: "0 1px 3px rgba(0,0,0,0.06)",
-        pop: "0 4px 16px rgba(0,0,0,0.10)",
+        // 테두리로 가두기보다 옅은 그림자로 띄운다
+        card: "0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05)",
+        pop: "0 8px 24px rgba(16,24,40,0.12)",
       },
       spacing: {
         topbar: "60px",
-        rail: "72px",
-        railopen: "240px",
+        rail: "76px",
+        drawer: "248px",
       },
       screens: {
         // 디자인시스템: 모바일 브레이크포인트 768px

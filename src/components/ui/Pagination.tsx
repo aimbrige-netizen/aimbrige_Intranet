@@ -38,10 +38,10 @@ export function Pagination({
 
   const linkClass = (disabled: boolean) =>
     cn(
-      "inline-flex h-8 items-center gap-1 rounded-md border border-line px-2.5 text-label transition-colors",
+      "inline-flex h-8 items-center gap-1 rounded-lg border border-line-strong px-2.5 text-label transition-colors",
       disabled
         ? "pointer-events-none text-muted opacity-50"
-        : "text-ink hover:bg-primary-light",
+        : "text-ink hover:bg-canvas",
     );
 
   return (

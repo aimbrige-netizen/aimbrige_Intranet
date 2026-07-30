@@ -4,27 +4,27 @@
 
 /*
  * 에임브릿지 인트라넷 전역 스타일
- * 디자인 근거: aimbridge_intranet_design_system.md v1.0
- * - 사이드바만 다크, 메인 콘텐츠는 라이트
+ * 디자인 근거: aimbridge_intranet_design_system.md v1.1
+ * - 전체 라이트 톤. 사이드바도 화이트로 두고 경계선·활성색으로만 구분한다
+ * - 면을 나눌 때 테두리보다 여백과 옅은 그림자를 우선한다
  * - 다크모드는 지원하지 않는다(그룹웨어 톤 통일 목적)
  */
 
 :root {
   --color-primary: #1d4e8f;
   --color-primary-light: #eaf1fb;
-  --color-sidebar: #1a1d24;
-  --color-sidebar-text: #c7cbd4;
+  --color-sidebar-text: #5b6270;
   --color-ink: #1f2430;
-  --color-canvas: #f7f8fa;
-  --color-line: #e2e5ea;
+  --color-canvas: #f5f7fa;
+  --color-line: #e7eaf0;
   --color-success: #2fa36b;
   --color-warn: #e0a72e;
   --color-danger: #db4c4c;
   --color-muted: #6b7280;
 
   --layout-topbar: 60px;
-  --layout-rail: 72px;
-  --layout-rail-open: 240px;
+  --layout-rail: 76px;
+  --layout-drawer: 248px;
 
   color-scheme: light;
 }
@@ -67,14 +67,14 @@
 }
 
 @layer components {
-  /* 카드: radius 8px + 옅은 그림자, 장식보다 여백으로 구분 */
+  /* 카드: radius 12px + 옅은 그림자, 장식보다 여백으로 구분 */
   .ab-card {
     @apply rounded-card border border-line bg-surface shadow-card;
   }
 
   /* 선택형 카드(옵션 뱃지): 다크 배경 + 흰 텍스트 + radius 12px */
   .ab-pick-card {
-    @apply rounded-pick bg-sidebar text-white transition-colors hover:bg-sidebar-hover;
+    @apply rounded-pick bg-pick text-white transition-colors hover:bg-[#242832];
   }
 
   /* 라벨-옆-인풋 밀도 높은 표 형태 폼 (결재·신청서류용) */
@@ -83,28 +83,32 @@
   }
 
   .ab-form-label {
-    @apply flex items-center border-line bg-[#F2F4F7] px-4 py-3 text-label font-medium text-ink md:border-b md:border-r;
+    @apply flex items-center border-line bg-canvas px-4 py-3 text-label font-medium text-ink md:border-b md:border-r;
   }
 
   .ab-form-field {
     @apply border-b border-line px-4 py-3;
   }
 
-  /* 테이블: zebra 없이 hover 시에만 행 강조, 헤더는 Border 색 배경 */
+  /* 테이블: zebra 없이 hover 시에만 행 강조 */
   .ab-table {
     @apply w-full border-collapse text-body;
   }
 
   .ab-table thead th {
-    @apply whitespace-nowrap border-b border-line bg-line/60 px-4 py-3 text-left text-label font-semibold text-ink;
+    @apply whitespace-nowrap border-b border-line bg-canvas px-4 py-3 text-left text-label font-semibold text-muted;
   }
 
   .ab-table tbody td {
     @apply border-b border-line px-4 py-3 align-middle;
   }
 
+  .ab-table tbody tr:last-child td {
+    @apply border-b-0;
+  }
+
   .ab-table tbody tr {
-    @apply transition-colors hover:bg-primary-light/60;
+    @apply transition-colors hover:bg-canvas;
   }
 }
 
@@ -117,5 +121,18 @@
   /* 스크롤바를 사이드바 톤에 맞춤 */
   .scrollbar-thin {
     scrollbar-width: thin;
+  }
+
+  /*
+   * 76px 레일은 스크롤바가 차지하는 폭(약 15px)만으로도 아이콘이 눌려 보인다.
+   * 스크롤 자체는 살리고 막대만 숨긴다.
+   */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
   }
 }

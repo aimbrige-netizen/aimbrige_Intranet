@@ -16,6 +16,8 @@ import type { RoleName } from "@/types/db";
 export interface NavItem {
   key: string;
   label: string;
+  /** 76px 레일에 들어갈 짧은 라벨. 없으면 label을 그대로 쓴다 */
+  short?: string;
   href: string;
   icon: LucideIcon;
   /** false면 '준비중' 처리 — 해당 모듈 스펙 작업 때 true로 바꾼다 */
@@ -65,6 +67,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         key: "approval",
         label: "전자결재",
+        short: "결재",
         href: "/approval",
         icon: FileCheck,
         ready: false,
@@ -96,6 +99,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         key: "admin-employees",
         label: "임직원 관리",
+        short: "임직원",
         href: "/admin/employees",
         icon: Building2,
         ready: true,
@@ -104,6 +108,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         key: "admin-roles",
         label: "권한관리",
+        short: "권한",
         href: "/admin/roles",
         icon: Shield,
         ready: true,
@@ -112,6 +117,7 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         key: "admin-audit",
         label: "감사 로그",
+        short: "감사로그",
         href: "/admin/audit-logs",
         icon: ScrollText,
         ready: true,

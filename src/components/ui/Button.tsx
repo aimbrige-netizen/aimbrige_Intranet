@@ -11,16 +11,16 @@ type Size = "sm" | "md";
 
 const VARIANTS: Record<Variant, string> = {
   primary:
-    "bg-primary text-white hover:bg-primary-hover disabled:bg-primary/40",
+    "bg-primary text-white hover:bg-primary-hover disabled:bg-primary/35",
   secondary:
-    "border border-line bg-surface text-ink hover:bg-primary-light disabled:text-muted",
+    "border border-line-strong bg-surface text-ink hover:bg-canvas disabled:border-line disabled:text-muted",
   ghost: "text-primary hover:bg-primary-light disabled:text-muted",
-  danger: "bg-danger text-white hover:bg-[#C33F3F] disabled:bg-danger/40",
+  danger: "bg-danger text-white hover:bg-[#C33F3F] disabled:bg-danger/35",
 };
 
 const SIZES: Record<Size, string> = {
-  sm: "h-8 px-3 text-label",
-  md: "h-9 px-4 text-body",
+  sm: "h-8 gap-1 px-3 text-label",
+  md: "h-9 gap-1.5 px-4 text-body",
 };
 
 export interface ButtonProps
@@ -35,7 +35,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       type={type ?? "button"}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-md font-medium transition-colors",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-lg font-medium transition-colors",
         "disabled:cursor-not-allowed",
         VARIANTS[variant],
         SIZES[size],

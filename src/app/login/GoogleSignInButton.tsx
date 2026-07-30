@@ -42,7 +42,7 @@ export function GoogleSignInButton({ next }: { next?: string }) {
         type="button"
         onClick={signIn}
         disabled={loading}
-        className="flex h-11 w-full items-center justify-center gap-2.5 rounded-md border border-line bg-surface text-body font-medium text-ink transition-colors hover:bg-primary-light disabled:opacity-60"
+        className="flex h-11 w-full items-center justify-center gap-2.5 rounded-lg border border-line-strong bg-surface text-body font-medium text-ink transition-colors hover:bg-canvas disabled:opacity-60"
       >
         <GoogleMark />
         {loading ? "이동 중…" : "Google 계정으로 로그인"}

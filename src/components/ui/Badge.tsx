@@ -4,7 +4,7 @@ import type { EmploymentStatus, RoleName } from "@/types/db";
 type Tone = "neutral" | "primary" | "success" | "warn" | "danger";
 
 const TONES: Record<Tone, string> = {
-  neutral: "bg-line/70 text-ink",
+  neutral: "bg-line-strong/70 text-muted",
   primary: "bg-primary-light text-primary",
   success: "bg-success/12 text-success",
   warn: "bg-warn/15 text-[#8A6316]",

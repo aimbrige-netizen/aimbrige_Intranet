@@ -3,7 +3,7 @@ import { CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const CONTROL_BASE =
-  "w-full rounded-md border border-line bg-surface px-3 py-2 text-body text-ink placeholder:text-muted " +
+  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-body text-ink placeholder:text-muted " +
   "transition-colors focus:border-primary disabled:bg-canvas disabled:text-muted";
 
 export const Input = forwardRef<

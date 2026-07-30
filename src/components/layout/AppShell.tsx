@@ -33,7 +33,7 @@ export function AppShell({
 
       <div className="md:pl-rail">
         <Topbar user={user} onMenuClick={() => setMobileOpen(true)} />
-        <main className="mx-auto w-full max-w-[1440px] px-4 py-6 md:px-6 md:py-8">
+        <main className="mx-auto w-full max-w-[1440px] px-4 py-5 md:px-6 md:py-7">
           {children}
         </main>
       </div>

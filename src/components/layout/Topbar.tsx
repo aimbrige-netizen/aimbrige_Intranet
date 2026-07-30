@@ -67,16 +67,16 @@ export function Topbar({
       </Link>
 
       {/* 통합검색 — placeholder만, 실제 검색은 후순위 */}
-      <div className="relative ml-auto hidden w-full max-w-sm md:ml-0 md:block">
+      <div className="relative ml-auto hidden w-full max-w-md md:ml-0 md:block">
         <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
+          className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted"
           aria-hidden
         />
         <input
           type="search"
           disabled
           placeholder="통합검색 (준비중)"
-          className="h-9 w-full rounded-md border border-line bg-canvas pl-9 pr-3 text-body placeholder:text-muted disabled:cursor-not-allowed"
+          className="h-9 w-full rounded-full border border-line bg-canvas pl-10 pr-4 text-body placeholder:text-muted disabled:cursor-not-allowed"
         />
       </div>
 
@@ -99,7 +99,7 @@ export function Topbar({
           <button
             type="button"
             onClick={() => setMenuOpen((open) => !open)}
-            className="flex items-center gap-2 rounded-md p-1 transition-colors hover:bg-canvas"
+            className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2 transition-colors hover:bg-canvas"
             aria-expanded={menuOpen}
             aria-haspopup="menu"
           >
@@ -124,7 +124,7 @@ export function Topbar({
           {menuOpen ? (
             <div
               role="menu"
-              className="absolute right-0 top-[calc(100%+6px)] w-56 overflow-hidden rounded-md border border-line bg-surface shadow-pop"
+              className="absolute right-0 top-[calc(100%+6px)] w-56 overflow-hidden rounded-card border border-line bg-surface shadow-pop"
             >
               <div className="border-b border-line px-4 py-3">
                 <p className="truncate text-body font-medium text-ink">
@@ -135,7 +135,7 @@ export function Topbar({
               <Link
                 href="/profile"
                 onClick={() => setMenuOpen(false)}
-                className="flex items-center gap-2 px-4 py-2.5 text-body text-ink transition-colors hover:bg-primary-light"
+                className="flex items-center gap-2 px-4 py-2.5 text-body text-ink transition-colors hover:bg-canvas"
                 role="menuitem"
               >
                 <CircleUser className="size-4 text-muted" />내 프로필

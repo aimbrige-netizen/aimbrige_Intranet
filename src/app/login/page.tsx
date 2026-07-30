@@ -20,7 +20,7 @@ export default function LoginPage({
     <div className="grid min-h-dvh place-items-center bg-canvas px-4 py-10">
       <div className="w-full max-w-[400px]">
         <div className="mb-8 text-center">
-          <span className="mx-auto mb-4 grid size-12 place-items-center rounded-pick bg-sidebar text-body font-bold text-white">
+          <span className="mx-auto mb-4 grid size-12 place-items-center rounded-pick bg-primary text-body font-bold text-white">
             AB
           </span>
           <h1 className="text-h1 text-ink">에임브릿지 인트라넷</h1>
