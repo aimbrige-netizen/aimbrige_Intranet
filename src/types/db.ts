@@ -202,6 +202,121 @@ export interface ResourceBookingWithRelations extends ResourceBooking {
   booker: Pick<Employee, "id" | "name"> | null;
 }
 
+// =====================================================================
+// 스펙 03 — 출퇴근관리 (연차·반차)
+// =====================================================================
+
+export type WorkStatus = "normal_office" | "field_work" | "remote" | "training";
+export type AttendanceStatus = "normal" | "late" | "early_leave" | "absent";
+
+export interface AttendanceRecord {
+  id: string;
+  employee_id: string;
+  work_date: string;
+  check_in_at: string | null;
+  check_out_at: string | null;
+  check_in_ip: string | null;
+  check_in_location: string | null;
+  location_warning: string | null;
+  work_status: WorkStatus;
+  status: AttendanceStatus;
+  manual_adjustment_reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LeaveType = "full_day" | "half_day_am" | "half_day_pm" | "hourly";
+export type LeaveCategory =
+  | "annual"
+  | "industrial_accident"
+  | "family_care"
+  | "maternity"
+  | "menstrual"
+  | "congratulation_condolence";
+export type RequestStatus = "pending" | "approved" | "rejected" | "cancelled";
+
+export interface LeaveRequest {
+  id: string;
+  employee_id: string;
+  leave_type: LeaveType;
+  leave_category: LeaveCategory;
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  hours: number | null;
+  days: number;
+  reason: string | null;
+  status: RequestStatus;
+  approver_id: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export interface OvertimeRequest {
+  id: string;
+  employee_id: string;
+  work_date: string;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  compensate_as_leave: boolean;
+  status: Exclude<RequestStatus, "cancelled">;
+  approver_id: string | null;
+  approved_at: string | null;
+  rejection_reason: string | null;
+  created_at: string;
+}
+
+export interface CorrectionRequest {
+  id: string;
+  employee_id: string;
+  target_date: string;
+  requested_check_in: string | null;
+  requested_check_out: string | null;
+  reason: string;
+  status: Exclude<RequestStatus, "cancelled">;
+  approver_id: string | null;
+  rejection_reason: string | null;
+  processed_at: string | null;
+  created_at: string;
+}
+
+export interface LeaveBalance {
+  employee_id: string;
+  accrued_days: number;
+  used_days: number;
+  adjustment_days: number;
+  updated_at: string;
+}
+
+export interface LeaveAdjustment {
+  id: string;
+  employee_id: string;
+  days: number;
+  reason: string;
+  adjusted_by: string | null;
+  created_at: string;
+}
+
+/** 승인함에서 종류가 다른 신청을 한 목록으로 다루기 위한 표현 */
+export type ApprovalKind = "leave" | "overtime" | "correction";
+
+export interface ApprovalItem {
+  id: string;
+  kind: ApprovalKind;
+  employeeId: string;
+  employeeName: string;
+  /** 화면에 보여줄 유형 라벨 */
+  typeLabel: string;
+  dateLabel: string;
+  detailLabel: string;
+  reason: string | null;
+  status: RequestStatus;
+  createdAt: string;
+  rejectionReason: string | null;
+}
+
 export type HolidayKind =
   | "public"
   | "substitute"
@@ -222,7 +337,8 @@ export type CalendarItemKind =
   | "personal"
   | "team"
   | "company"
-  | "resource_booking";
+  | "resource_booking"
+  | "leave";
 
 export interface CalendarItem {
   id: string;

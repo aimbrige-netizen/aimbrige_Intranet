@@ -32,14 +32,21 @@ export const EVENT_COLORS: Record<
     chip: "bg-event-resource/10 text-event-resource-ink",
     dot: "bg-event-resource",
   },
+  // 스펙 03 연동 — 승인된 연차·휴가
+  leave: {
+    label: "연차·휴가",
+    hex: "#2FA36B",
+    chip: "bg-success/10 text-success",
+    dot: "bg-success",
+  },
 };
 
 /**
  * 아직 연동되지 않은 항목들 — 자리만 확보하고 회색으로 표시한다.
  * 각 모듈 스펙 작업 때 실제 데이터로 채운다.
+ * (연차·반차는 스펙 03에서 연동 완료되어 목록에서 제거됨)
  */
 export const PENDING_SOURCES = [
-  { label: "연차·반차", spec: "스펙 03 출퇴근관리" },
   { label: "결재 마감일", spec: "스펙 04 전자결재" },
   { label: "프로젝트 마일스톤", spec: "스펙 10 프로젝트 관리" },
 ];

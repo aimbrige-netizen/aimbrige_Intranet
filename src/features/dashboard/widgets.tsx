@@ -9,10 +9,10 @@ import {
 } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
-import type { Favorite } from "@/types/db";
+import { CheckInOut } from "@/features/attendance/CheckInOut";
+import type { AttendanceRecord, Favorite } from "@/types/db";
 
 /** 아직 연동되지 않은 위젯의 공통 빈 상태 */
 function NotConnected({ pendingSpec }: { pendingSpec: string }) {
@@ -49,10 +49,13 @@ export function ApprovalPendingWidget({
   );
 }
 
+/** 오늘의 근태 — 스펙 03에서 실제 연동됨 */
 export function AttendanceTodayWidget({
-  pendingSpec,
+  record,
+  remainingLeave,
 }: {
-  pendingSpec: string;
+  record: AttendanceRecord | null;
+  remainingLeave: number;
 }) {
   return (
     <Card>
@@ -63,39 +66,23 @@ export function AttendanceTodayWidget({
             오늘의 근태
           </span>
         }
-      />
-      <CardBody className="space-y-4">
-        <div className="grid grid-cols-3 divide-x divide-line rounded-card bg-canvas py-3 text-center">
-          {[
-            { label: "출근", value: "--:--" },
-            { label: "퇴근", value: "--:--" },
-            { label: "잔여 연차", value: "-" },
-          ].map((item) => (
-            <div key={item.label}>
-              <p className="text-caption">{item.label}</p>
-              <p className="mt-0.5 text-body font-semibold text-ink">
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* 출근/퇴근 버튼은 이번 모듈에서 비활성 (스펙 3.2 위젯 표) */}
-        <div className="flex gap-2">
-          <Button disabled className="flex-1" title="출퇴근관리 모듈에서 활성화됩니다">
-            출근하기
-          </Button>
-          <Button
-            variant="secondary"
-            disabled
-            className="flex-1"
-            title="출퇴근관리 모듈에서 활성화됩니다"
+        action={
+          <Link
+            href="/attendance"
+            className="text-label text-primary hover:underline"
           >
-            퇴근하기
-          </Button>
+            전체보기
+          </Link>
+        }
+      />
+      <CardBody className="space-y-3">
+        <div className="flex items-center justify-between rounded-card bg-primary-light px-4 py-2.5">
+          <span className="text-body text-ink">잔여 연차</span>
+          <span className="text-h2 tabular-nums text-primary">
+            {remainingLeave}일
+          </span>
         </div>
-
-        <NotConnected pendingSpec={pendingSpec} />
+        <CheckInOut record={record} compact />
       </CardBody>
     </Card>
   );

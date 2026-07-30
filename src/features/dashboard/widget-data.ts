@@ -1,7 +1,16 @@
 import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
-import type { Favorite, RoleName, WidgetKey } from "@/types/db";
+import {
+  getLeaveSummary,
+  getTodayAttendance,
+} from "@/features/attendance/data";
+import type {
+  AttendanceRecord,
+  Favorite,
+  RoleName,
+  WidgetKey,
+} from "@/types/db";
 
 /**
  * ⚑ 위젯 데이터 fetch 레이어 (스펙 01 · 3.2)
@@ -24,16 +33,28 @@ export async function getApprovalPending(): Promise<
   return { connected: false, pendingSpec: "스펙 04 전자결재" };
 }
 
-/** 오늘의 근태 → 스펙 03 출퇴근관리 */
-export async function getAttendanceToday(): Promise<
-  WidgetData<{
-    checkedInAt: string | null;
-    checkedOutAt: string | null;
-    workStatus: string | null;
-    leaveRemaining: number | null;
-  }>
+/**
+ * 오늘의 근태 — 스펙 03에서 실제 연동 완료
+ * 출퇴근 기록과 잔여 연차를 함께 돌려준다.
+ */
+export async function getAttendanceToday(
+  employeeId: string,
+  hireDate: string | null,
+): Promise<
+  WidgetData<{ record: AttendanceRecord | null; remainingLeave: number }>
 > {
-  return { connected: false, pendingSpec: "스펙 03 출퇴근관리" };
+  const [record, summary] = await Promise.all([
+    getTodayAttendance(employeeId),
+    getLeaveSummary(employeeId, hireDate),
+  ]);
+
+  return {
+    connected: true,
+    data: {
+      record,
+      remainingLeave: Math.round(summary.remaining * 100) / 100,
+    },
+  };
 }
 
 /** 미열람 공지 → 스펙 05 게시판&공지사항 */

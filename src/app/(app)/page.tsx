@@ -42,7 +42,7 @@ export default async function DashboardPage({
   const [approval, attendance, notices, calendar, favorites, settings] =
     await Promise.all([
       getApprovalPending(),
-      getAttendanceToday(),
+      getAttendanceToday(me.id, me.hire_date),
       getNotices(),
       getCalendarUpcoming(),
       getFavorites(me.id),
@@ -57,7 +57,8 @@ export default async function DashboardPage({
     ),
     attendance_today: (
       <AttendanceTodayWidget
-        pendingSpec={attendance.connected ? "" : attendance.pendingSpec}
+        record={attendance.connected ? attendance.data.record : null}
+        remainingLeave={attendance.connected ? attendance.data.remainingLeave : 0}
       />
     ),
     notices: (
