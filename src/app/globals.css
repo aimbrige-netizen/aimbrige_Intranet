@@ -30,11 +30,11 @@
 }
 
 @layer base {
-  html {
-    /* 본문 기본 14px (디자인시스템 타이포 스케일) */
-    font-size: 14px;
-  }
-
+  /*
+   * html의 font-size는 건드리지 않는다(브라우저 기본 16px 유지).
+   * 여기를 14px로 낮추면 Tailwind의 rem 기반 간격·크기 유틸리티가 전부 87.5%로
+   * 축소돼 여백이 설계와 달라진다. 본문 14px은 body에서 지정한다.
+   */
   body {
     @apply bg-canvas text-ink antialiased;
     font-size: 14px;
