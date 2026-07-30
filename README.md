@@ -21,7 +21,7 @@
 | 스펙 | 모듈 | 상태 |
 |---|---|---|
 | 01 | 계정/인증 & 홈대시보드 | ✅ 구현 |
-| 02 | 조직도·디렉토리 & 캘린더 | ⬜ |
+| 02 | 조직도·디렉토리 & 캘린더 | ✅ 구현 |
 | 03 | 출퇴근관리 | ⬜ |
 | 04 | 전자결재 | ⬜ |
 | 05 | 게시판 & 공지사항 | ⬜ |
@@ -41,10 +41,12 @@
 
 ### 2. 스키마 적용
 
-Supabase 대시보드 → **SQL Editor** → **New query** 에 아래 두 파일을 **순서대로** 붙여넣고 각각 Run.
+Supabase 대시보드 → **SQL Editor** → **New query** 에서, 아래 파일들을 **파일 내용 전체를 복사해** 순서대로 붙여넣고 각각 Run 합니다. (파일 경로를 붙여넣는 게 아닙니다)
 
 1. `supabase/migrations/20260730000001_init_auth_dashboard.sql` — 테이블·RLS·역할 3종
 2. `supabase/migrations/20260730000002_avatar_storage.sql` — 프로필 사진 버킷
+3. `supabase/migrations/20260730000003_org_calendar.sql` — 조직도·캘린더·리소스
+4. `supabase/migrations/20260730000004_fix_definer_guards.sql` — SECURITY DEFINER 권한 검사 수정
 
 > Supabase CLI를 쓰면 `supabase link --project-ref <ref>` 후 `supabase db push` 로도 됩니다.
 
@@ -64,8 +66,15 @@ Supabase 대시보드 → **SQL Editor** → **New query** 에 아래 두 파일
      ```
      (`<프로젝트ref>`는 Supabase 프로젝트 URL의 서브도메인)
 4. 발급된 **클라이언트 ID / 클라이언트 보안 비밀** 복사
-5. 스코프는 지금은 기본 로그인(email·profile)만으로 충분하지만, 인덱스 문서 권장대로 처음부터
-   Calendar / Drive / Gmail readonly 스코프를 함께 등록해두면 스펙 02·06·11에서 재작업이 없습니다.
+5. **스코프 등록** — 새 UI에서는 좌측 **데이터 액세스** 메뉴입니다(예전 "OAuth 동의 화면 → 범위").
+   **범위 추가 또는 삭제** → 필요한 스코프 체크 → 업데이트 → 저장
+   - 스펙 02 캘린더 동기화: `https://www.googleapis.com/auth/calendar.events`
+   - 스펙 06 Drive / 스펙 11 Gmail 은 해당 모듈 작업 때 추가
+
+   > 스코프를 등록한 뒤 `.env.local`의 `NEXT_PUBLIC_GOOGLE_EXTRA_SCOPES`에 넣어야
+   > 로그인 요청에 실제로 포함됩니다. **콘솔에 등록하기 전에 env를 채우면 동의 화면에서
+   > 막혀 로그인이 실패**하므로 반드시 콘솔 → env 순서로 진행하세요.
+   > 이미 로그인한 사용자는 로그아웃 후 다시 로그인해야 새 스코프가 토큰에 반영됩니다.
 
 **Supabase 대시보드** → **Authentication → Sign In / Providers → Google**
 
