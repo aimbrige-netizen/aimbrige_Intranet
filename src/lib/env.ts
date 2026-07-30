@@ -39,19 +39,24 @@ export const serverEnv = {
 };
 
 /**
- * 로그인 허용 도메인. 기본값 sding.kr (기획서 3.1)
- * 여러 도메인을 허용해야 하면 콤마로 구분한다.
+ * 로그인 허용 도메인. 콤마로 구분해 여러 도메인을 허용할 수 있다.
+ * (예: 회사 워크스페이스 도메인 준비 전까지 개인 gmail.com도 임시 허용)
  */
 export const allowedEmailDomains: string[] = (
-  process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS ?? "sding.kr"
+  process.env.NEXT_PUBLIC_ALLOWED_EMAIL_DOMAINS ?? ""
 )
   .split(",")
   .map((d) => d.trim().toLowerCase())
   .filter(Boolean);
 
-/** Google OAuth 계정 선택창을 특정 워크스페이스로 제한할 때 쓰는 hd 파라미터 */
-export const googleHostedDomain =
-  process.env.NEXT_PUBLIC_GOOGLE_HOSTED_DOMAIN ?? allowedEmailDomains[0];
+/**
+ * Google OAuth 계정 선택창을 특정 워크스페이스로 제한할 때 쓰는 hd 파라미터.
+ * 허용 도메인이 여러 개(예: gmail.com + 회사 도메인 임시 병행)이면 hd 하나로
+ * 표현할 수 없으므로 명시적으로 설정했을 때만 사용하고, 그 외엔 선택창을
+ * 제한하지 않는다 — 실제 접근 통제는 서버의 isAllowedEmail 검증이 담당한다.
+ */
+export const googleHostedDomain: string | null =
+  process.env.NEXT_PUBLIC_GOOGLE_HOSTED_DOMAIN?.trim() || null;
 
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;

@@ -22,8 +22,9 @@ export function GoogleSignInButton({ next }: { next?: string }) {
       options: {
         redirectTo: callback.toString(),
         queryParams: {
-          // Google 단에서 회사 워크스페이스 계정만 노출
-          hd: googleHostedDomain,
+          // hd를 설정한 경우에만 Google 계정 선택창을 해당 워크스페이스로 제한.
+          // (허용 도메인이 여러 개일 땐 hd 하나로 표현할 수 없어 생략 — 서버 검증이 실제 통제선)
+          ...(googleHostedDomain ? { hd: googleHostedDomain } : {}),
           prompt: "select_account",
         },
       },
