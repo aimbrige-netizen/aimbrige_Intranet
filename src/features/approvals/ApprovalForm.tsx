@@ -54,6 +54,25 @@ export function ApprovalForm({
     [items],
   );
 
+  /**
+   * 경비 항목 오류를 하나의 문구로 모은다.
+   * 서버는 items.1.amount 처럼 인덱스가 붙은 키로 오류를 주는데, 특정 인덱스만
+   * 확인하면 두 번째 이후 항목의 오류가 화면에 전혀 안 나타난다(제출이 조용히 실패).
+   */
+  const itemsError = useMemo(() => {
+    const direct = errors.items;
+    if (direct) return direct;
+
+    const perItem = Object.entries(errors)
+      .filter(([key]) => key.startsWith("items."))
+      .map(([key, message]) => {
+        const index = Number(key.split(".")[1]);
+        return Number.isFinite(index) ? `${index + 1}번 항목: ${message}` : message;
+      });
+
+    return perItem.length > 0 ? perItem.join(" / ") : undefined;
+  }, [errors]);
+
   const buildPayload = (): Record<string, unknown> => {
     switch (documentType) {
       case "special_request":
@@ -213,7 +232,9 @@ export function ApprovalForm({
                 <FormRow
                   label="청구 항목"
                   required
-                  error={errors.items ?? errors["items.0.name"] ?? errors["items.0.amount"]}
+                  // 항목별 오류 키는 items.1.amount 처럼 인덱스가 붙는다.
+                  // 0번만 보면 두 번째 이후 항목 오류가 화면에 안 나와서 전부 모은다.
+                  error={itemsError}
                 >
                   <div className="space-y-2">
                     {items.map((item, index) => (

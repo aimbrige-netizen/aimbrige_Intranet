@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Paperclip } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import { AttachmentPanel } from "@/features/approvals/AttachmentPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -57,6 +58,7 @@ export default async function ApprovalDetailPage({
     currentStep.status === "pending";
 
   const canComplete = doc.status === "approved" && me.isSystemAdmin;
+  const canAttach = doc.requester_id === me.id && doc.status === "pending";
 
   const formEntries = Object.entries(doc.form_data ?? {}).filter(
     ([key]) => key !== "items",
@@ -149,28 +151,17 @@ export default async function ApprovalDetailPage({
             </CardBody>
           </Card>
 
-          {doc.attachments.length > 0 ? (
+          {/* 첨부는 기안자 본인이 진행중 문서에만 추가할 수 있다 (스펙 3.3) */}
+          {doc.attachments.length > 0 || canAttach ? (
             <Card>
               <CardHeader title={`첨부파일 ${doc.attachments.length}건`} />
               <CardBody>
-                <ul className="divide-y divide-line">
-                  {doc.attachments.map((file) => (
-                    <li
-                      key={file.id}
-                      className="flex items-center gap-2 py-2.5 text-body"
-                    >
-                      <Paperclip className="size-4 shrink-0 text-muted" aria-hidden />
-                      <span className="truncate text-ink">
-                        {file.file_name ?? file.file_url}
-                      </span>
-                      {file.file_size ? (
-                        <span className="ml-auto shrink-0 text-caption">
-                          {Math.round(file.file_size / 1024)}KB
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
+                <AttachmentPanel
+                  documentId={doc.id}
+                  authUserId={me.auth_user_id}
+                  attachments={doc.attachments}
+                  canUpload={canAttach}
+                />
               </CardBody>
             </Card>
           ) : null}

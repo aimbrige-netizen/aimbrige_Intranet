@@ -215,43 +215,8 @@ export async function getLinePreview(
   };
 }
 
-/** 승인된 출장·재택근무를 캘린더에 표시 (스펙 7장) */
-export async function getApprovedDateDocuments(
-  fromYmd: string,
-  toYmd: string,
-): Promise<
-  {
-    id: string;
-    document_type: DocumentType;
-    title: string;
-    form_data: Record<string, unknown>;
-    requester: Pick<Employee, "id" | "name"> | null;
-  }[]
-> {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase
-    .from("approval_documents")
-    .select(
-      `id, document_type, title, form_data,
-       requester:employees!requester_id(id, name)`,
-    )
-    .in("status", ["approved", "completed"])
-    .in("document_type", ["business_trip", "remote_work"]);
-
-  if (error) {
-    console.error("[approvals] 캘린더용 문서 조회 실패:", error.message);
-    return [];
-  }
-
-  // 날짜는 form_data 안에 있어 SQL로 범위 필터가 어렵다.
-  // 문서 수가 많지 않아 애플리케이션에서 걸러낸다.
-  return ((data ?? []) as never[]).filter((row) => {
-    const form = (row as { form_data: Record<string, unknown> }).form_data;
-    const start = String(form?.startDate ?? "");
-    const end = String(form?.endDate ?? start);
-    if (!start) return false;
-    return start <= toYmd && end >= fromYmd;
-  });
-}
+// 캘린더 표시용 출장·재택 조회는 src/features/calendar/data.ts의
+// getApprovalItems()가 list_calendar_approvals() RPC로 처리한다.
+// (문서 RLS로는 동료 문서가 안 보여서 definer 함수를 거쳐야 한다)
 
 export type { ApprovalStep };

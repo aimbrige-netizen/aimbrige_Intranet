@@ -139,7 +139,11 @@ export async function getCalendarItems({
 
 /**
  * 승인된 출장·재택근무를 캘린더 항목으로 변환 (스펙 04 · 7장)
- * 별도 테이블에 복제하지 않고 조회 시 병합한다(연차와 같은 패턴).
+ *
+ * approval_documents를 직접 읽지 않고 list_calendar_approvals() RPC를 쓴다.
+ * 문서 RLS는 "기안자 + 담당 결재자 + 관리자"라, 동료의 출장이 팀·전사
+ * 캘린더에 하나도 안 나왔다. RPC가 표시에 필요한 최소 정보만(이름·기간·유형)
+ * 돌려준다 — 사유·예상경비는 노출하지 않는다. 휴가와 같은 패턴.
  */
 async function getApprovalItems({
   fromYmd,
@@ -154,55 +158,45 @@ async function getApprovalItems({
 }): Promise<CalendarItem[]> {
   const supabase = createServerSupabase();
 
-  let query = supabase
-    .from("approval_documents")
-    .select(
-      `id, document_type, title, form_data, requester_id, status,
-       requester:employees!requester_id(id, name)`,
-    )
-    .in("status", ["approved", "completed"])
-    .in("document_type", ["business_trip", "remote_work"]);
+  const { data, error } = await supabase.rpc("list_calendar_approvals", {
+    p_from: fromYmd,
+    p_to: toYmd,
+  });
 
-  if (onlyMine) query = query.eq("requester_id", employeeId);
-
-  const { data, error } = await query;
   if (error) {
-    // 스펙 04 마이그레이션 전이면 테이블이 없다 — 캘린더는 계속 떠야 한다
+    // 스펙 04 마이그레이션 전이면 함수가 없다 — 캘린더는 계속 떠야 한다
     console.error("[calendar] 결재 문서 조회 실패:", error.message);
     return [];
   }
 
-  const items: CalendarItem[] = [];
-  for (const row of data ?? []) {
-    const r = row as unknown as {
-      id: string;
-      document_type: string;
-      form_data: Record<string, unknown>;
-      requester_id: string;
-      requester: { name: string } | null;
-    };
-    const start = String(r.form_data?.startDate ?? "");
-    const end = String(r.form_data?.endDate ?? start);
-    // 날짜는 form_data(JSON) 안에 있어 SQL 범위 필터가 어렵다. 여기서 걸러낸다.
-    if (!start || start > toYmd || end < fromYmd) continue;
+  const rows = (data ?? []) as {
+    id: string;
+    requester_id: string;
+    requester_name: string;
+    document_type: string;
+    start_date: string;
+    end_date: string;
+  }[];
 
-    const label = r.document_type === "business_trip" ? "출장" : "재택";
-    const name = r.requester?.name ?? "";
-
-    items.push({
-      id: `approval-${r.id}`,
-      kind: "approval",
-      title: `${name} ${label}`.trim(),
-      description: null,
-      startAt: new Date(`${start}T00:00:00+09:00`).toISOString(),
-      endAt: new Date(`${addDaysYmd(end, 1)}T00:00:00+09:00`).toISOString(),
-      allDay: true,
-      ownerId: r.requester_id,
-      ownerName: name,
-      editable: false,
+  return rows
+    .filter((r) => (onlyMine ? r.requester_id === employeeId : true))
+    .map((r) => {
+      const label = r.document_type === "business_trip" ? "출장" : "재택";
+      return {
+        id: `approval-${r.id}`,
+        kind: "approval" as const,
+        title: `${r.requester_name} ${label}`.trim(),
+        description: null,
+        startAt: new Date(`${r.start_date}T00:00:00+09:00`).toISOString(),
+        endAt: new Date(
+          `${addDaysYmd(r.end_date, 1)}T00:00:00+09:00`,
+        ).toISOString(),
+        allDay: true,
+        ownerId: r.requester_id,
+        ownerName: r.requester_name,
+        editable: false,
+      };
     });
-  }
-  return items;
 }
 
 function toSeoulYmdLocal(date: Date): string {

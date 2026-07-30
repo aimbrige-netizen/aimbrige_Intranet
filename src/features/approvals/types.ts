@@ -76,6 +76,8 @@ export interface ExpenseItem {
 
 /** 유형별 form_data 구조 */
 export interface SpecialRequestData {
+  /** 특별처리신청서만 사용자가 제목을 직접 입력한다(자동생성 대상 아님) */
+  title: string;
   content: string;
 }
 export interface BusinessTripData {

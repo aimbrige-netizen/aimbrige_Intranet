@@ -37,15 +37,24 @@ export default async function ApprovalsPage({
   searchParams: { tab?: string; status?: string };
 }) {
   const me = await requireSessionEmployee();
-  const tab = searchParams.tab === "inbox" && me.isManager ? "inbox" : "mine";
   const status = STATUS_FILTERS.some((f) => f.value === searchParams.status)
     ? (searchParams.status ?? "")
     : "";
 
-  const [myDocs, pending] = await Promise.all([
-    tab === "mine" ? getMyDocuments(me.id, status || undefined) : Promise.resolve([]),
-    getMyPendingApprovals(me.id),
-  ]);
+  const pending = await getMyPendingApprovals(me.id);
+
+  /**
+   * 승인 탭 노출 기준.
+   * 스펙 3.1은 "팀장/매니저·시스템 관리자만"이라고 했지만, 최종 승인자는 관리자가
+   * 임직원 중 누구든 지정할 수 있다(역할과 무관). 역할로만 가리면 일반직원으로
+   * 지정된 최종 승인자가 자기 결재 목록을 아예 못 보게 된다.
+   * → 역할이 팀장 이상이거나, 실제로 처리할 문서가 있으면 탭을 보여준다.
+   */
+  const canSeeInbox = me.isManager || pending.length > 0;
+  const tab = searchParams.tab === "inbox" && canSeeInbox ? "inbox" : "mine";
+
+  const myDocs =
+    tab === "mine" ? await getMyDocuments(me.id, status || undefined) : [];
 
   const linkFor = (params: Record<string, string>) => {
     const search = new URLSearchParams(params);
@@ -80,8 +89,8 @@ export default async function ApprovalsPage({
           >
             내가 올린 문서
           </Link>
-          {/* 승인 탭은 팀장·관리자에게만 (스펙 3.1) */}
-          {me.isManager ? (
+          {/* 승인 탭 — 팀장 이상이거나 실제 담당 문서가 있는 경우 */}
+          {canSeeInbox ? (
             <Link
               href={linkFor({ tab: "inbox" })}
               className={cn(
