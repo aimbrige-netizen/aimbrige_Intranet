@@ -17,20 +17,20 @@ export const EVENT_COLORS: Record<
   team: {
     label: "팀 일정",
     hex: "#2FA36B",
-    chip: "bg-success/12 text-success",
+    chip: "bg-success/10 text-success",
     dot: "bg-success",
   },
   company: {
     label: "전사 일정",
     hex: "#7C5CBF",
-    chip: "bg-[#7C5CBF]/12 text-[#5F44A0]",
-    dot: "bg-[#7C5CBF]",
+    chip: "bg-event-company/10 text-event-company-ink",
+    dot: "bg-event-company",
   },
   resource_booking: {
     label: "리소스 예약",
     hex: "#D97C3C",
-    chip: "bg-[#D97C3C]/12 text-[#B25F26]",
-    dot: "bg-[#D97C3C]",
+    chip: "bg-event-resource/10 text-event-resource-ink",
+    dot: "bg-event-resource",
   },
 };
 

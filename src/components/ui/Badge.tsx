@@ -6,9 +6,9 @@ type Tone = "neutral" | "primary" | "success" | "warn" | "danger";
 const TONES: Record<Tone, string> = {
   neutral: "bg-line-strong/70 text-muted",
   primary: "bg-primary-light text-primary",
-  success: "bg-success/12 text-success",
+  success: "bg-success/10 text-success",
   warn: "bg-warn/15 text-[#8A6316]",
-  danger: "bg-danger/12 text-danger",
+  danger: "bg-danger/10 text-danger",
 };
 
 export function Badge({

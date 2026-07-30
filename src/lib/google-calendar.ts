@@ -27,11 +27,29 @@ export interface GoogleSyncInput {
   allDay: boolean;
 }
 
-/** 세션에 남아 있는 Google access token (없으면 null) */
+/**
+ * 세션에 남아 있는 Google access token (없으면 null)
+ *
+ * provider_token은 OAuth 콜백 직후 세션에 담기고, 액세스 토큰이 갱신되면(약 1시간)
+ * 사라진다. 즉 오래 로그인해 둔 사용자는 이 값이 없어 동기화가 조용히 건너뛰어진다.
+ * 왜 안 됐는지 추적할 수 있게 사유를 로그로 남긴다.
+ */
 async function getProviderToken(): Promise<string | null> {
   const supabase = createServerSupabase();
   const { data } = await supabase.auth.getSession();
-  return data.session?.provider_token ?? null;
+
+  if (!data.session) {
+    console.warn("[google-calendar] 세션이 없어 동기화를 건너뜁니다.");
+    return null;
+  }
+  if (!data.session.provider_token) {
+    console.warn(
+      "[google-calendar] provider_token이 없어 동기화를 건너뜁니다. " +
+        "캘린더 스코프를 켠 뒤 다시 로그인했는지, 로그인 후 1시간이 지나지 않았는지 확인하세요.",
+    );
+    return null;
+  }
+  return data.session.provider_token;
 }
 
 function toGoogleTime(iso: string, allDay: boolean) {

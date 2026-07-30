@@ -146,7 +146,7 @@ export function Topbar({
                 disabled={signingOut}
                 className={cn(
                   "flex w-full items-center gap-2 border-t border-line px-4 py-2.5 text-left text-body transition-colors",
-                  "text-danger hover:bg-danger/8 disabled:opacity-50",
+                  "text-danger hover:bg-danger/10 disabled:opacity-50",
                 )}
                 role="menuitem"
               >

@@ -54,7 +54,7 @@ export function FavoriteList({
             type="button"
             onClick={() => remove(favorite.id)}
             disabled={pending}
-            className="shrink-0 rounded p-1.5 text-muted transition-colors hover:bg-danger/8 hover:text-danger disabled:opacity-50"
+            className="shrink-0 rounded p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
             aria-label={`${favorite.label} 즐겨찾기 삭제`}
           >
             <Trash2 className="size-4" />

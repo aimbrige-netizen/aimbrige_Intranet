@@ -6,11 +6,13 @@ import type { Config } from "tailwindcss";
  * 색상값을 바꿀 때는 이 파일과 globals.css의 CSS 변수를 함께 수정한다.
  */
 const config: Config = {
-  content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
-  ],
+  /*
+   * src 전체를 스캔한다.
+   * create-next-app 기본값은 app/components/pages 세 폴더만 훑기 때문에
+   * src/features 같은 폴더를 추가하면 그 안의 클래스가 CSS로 생성되지 않는다.
+   * (실제로 캘린더의 grid-cols-7이 누락돼 월간 격자가 1열로 무너졌다)
+   */
+  content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
@@ -37,6 +39,18 @@ const config: Config = {
         success: "#2FA36B",
         warn: "#E0A72E",
         danger: "#DB4C4C",
+        /*
+         * 캘린더 이벤트 색상 (스펙 02 · 3.4)
+         * 개인=primary, 팀=success는 기존 토큰을 재사용하고 전사·리소스만 신규.
+         * hex를 클래스에 직접 쓰지 않고 토큰으로 두는 이유: `bg-[#7C5CBF]/12` 처럼
+         * 임의 hex에 투명도 수식자를 붙이면 Tailwind가 클래스를 생성하지 못한다.
+         */
+        event: {
+          company: "#7C5CBF",
+          "company-ink": "#5F44A0",
+          resource: "#D97C3C",
+          "resource-ink": "#B25F26",
+        },
       },
       fontFamily: {
         sans: [
