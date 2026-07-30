@@ -22,11 +22,13 @@
 |---|---|---|
 | 01 | 계정/인증 & 홈대시보드 | ✅ 구현 |
 | 02 | 조직도·디렉토리 & 캘린더 | ✅ 구현 |
-| 03 | 출퇴근관리 | ⬜ |
-| 04 | 전자결재 | ⬜ |
-| 05 | 게시판 & 공지사항 | ⬜ |
-| 06 | 개인 파일함 | ⬜ |
+| 03 | 출퇴근관리 (연차·반차) | ✅ 구현 |
+| 04 | 전자결재 | ✅ 구현 |
+| 05 | 게시판 & 공지사항 | ✅ 구현 |
+| 06 | 개인 파일함 (Drive) | ✅ 구현 |
 | 07~18 | Phase 2·3 | ⬜ |
+
+**MVP 전체 완료.** 홈 대시보드 위젯 5종(결재대기·근태·공지·일정·즐겨찾기)이 모두 실제 데이터에 연결됐습니다.
 
 ## 최초 세팅 (순서대로)
 
@@ -43,10 +45,22 @@
 
 Supabase 대시보드 → **SQL Editor** → **New query** 에서, 아래 파일들을 **파일 내용 전체를 복사해** 순서대로 붙여넣고 각각 Run 합니다. (파일 경로를 붙여넣는 게 아닙니다)
 
-1. `supabase/migrations/20260730000001_init_auth_dashboard.sql` — 테이블·RLS·역할 3종
-2. `supabase/migrations/20260730000002_avatar_storage.sql` — 프로필 사진 버킷
-3. `supabase/migrations/20260730000003_org_calendar.sql` — 조직도·캘린더·리소스
-4. `supabase/migrations/20260730000004_fix_definer_guards.sql` — SECURITY DEFINER 권한 검사 수정
+| # | 파일 | 내용 |
+|---|---|---|
+| 01 | `20260730000001_init_auth_dashboard.sql` | 테이블·RLS·역할 3종 |
+| 02 | `20260730000002_avatar_storage.sql` | 프로필 사진 버킷 |
+| 03 | `20260730000003_org_calendar.sql` | 조직도·캘린더·리소스 |
+| 04 | `20260730000004_fix_definer_guards.sql` | SECURITY DEFINER 권한 검사 수정 |
+| 05 | `20260730000005_holidays.sql` | 공휴일 + 2026년 21일 시딩 |
+| 06 | `20260730000006_attendance_leave.sql` | 출퇴근·연차·초과근무 |
+| 07 | `20260730000007_approvals.sql` | 전자결재 + 첨부 버킷 |
+| 08 | `20260730000008_attendance_hardening.sql` | 근태 보안 보강 |
+| 09 | `20260730000009_boards.sql` | 게시판 + 게시판 2개 시딩 |
+| 10 | `20260730000010_drive_files.sql` | Drive 매핑 테이블 |
+| 11 | `20260730000011_approvals_hardening.sql` | 결재 보안 보강 |
+
+> 08·11은 각각 06·07의 보안 결함을 고치는 마이그레이션입니다. **반드시 번호 순서대로**
+> 실행하세요. 새로 세팅하는 환경에서는 01~11을 순서대로 한 번씩 실행하면 됩니다.
 
 > Supabase CLI를 쓰면 `supabase link --project-ref <ref>` 후 `supabase db push` 로도 됩니다.
 
