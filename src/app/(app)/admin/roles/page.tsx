@@ -43,8 +43,8 @@ export default async function RolesPage() {
       .select(
         `id, name, email, position, employment_status, profile_image_url,
          role:roles(id, name, label),
-         department:departments(id, name),
-         team:teams(id, name)`,
+         department:departments!department_id(id, name),
+         team:teams!team_id(id, name)`,
       )
       .order("name"),
   ]);

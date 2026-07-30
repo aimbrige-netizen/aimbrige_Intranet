@@ -3,13 +3,16 @@ import { redirect } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase/server";
 import type { EmployeeWithRelations, SessionEmployee } from "@/types/db";
 
+// departments!department_id / teams!team_id: employees<->departments,teams 사이에
+// FK가 두 방향(소속 department_id/team_id, 그리고 부서·팀의 manager_id)으로 있어서
+// 힌트 없이 embed하면 PostgREST가 "more than one relationship" 에러를 낸다.
 const EMPLOYEE_SELECT = `
   id, auth_user_id, email, name, department_id, team_id, position, role_id,
   employment_status, hire_date, phone, emergency_contact, profile_image_url,
   created_at, updated_at,
   role:roles(id, name, label),
-  department:departments(id, name),
-  team:teams(id, name)
+  department:departments!department_id(id, name),
+  team:teams!team_id(id, name)
 ` as const;
 
 /**
@@ -25,11 +28,15 @@ export const getSessionEmployee = cache(
     } = await supabase.auth.getUser();
     if (!user) return null;
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("employees")
       .select(EMPLOYEE_SELECT)
       .eq("auth_user_id", user.id)
       .maybeSingle<EmployeeWithRelations>();
+
+    if (error) {
+      console.error("[session] employees 조회 실패:", error.message);
+    }
 
     if (!data || data.employment_status !== "active") return null;
 

@@ -39,8 +39,8 @@ export default async function EmployeeDetailPage({
        employment_status, hire_date, phone, emergency_contact, profile_image_url,
        created_at, updated_at,
        role:roles(id, name, label),
-       department:departments(id, name),
-       team:teams(id, name)`,
+       department:departments!department_id(id, name),
+       team:teams!team_id(id, name)`,
     )
     .eq("id", params.id)
     .maybeSingle<EmployeeWithRelations>();

@@ -47,8 +47,8 @@ export default async function EmployeesPage({
     .select(
       `id, name, email, position, hire_date, employment_status, profile_image_url,
        role:roles(id, name, label),
-       department:departments(id, name),
-       team:teams(id, name)`,
+       department:departments!department_id(id, name),
+       team:teams!team_id(id, name)`,
       { count: "exact" },
     )
     .order("name", { ascending: true })
