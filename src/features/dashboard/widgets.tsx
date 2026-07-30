@@ -11,6 +11,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
 import type { Favorite } from "@/types/db";
 
 /** 아직 연동되지 않은 위젯의 공통 빈 상태 */
@@ -118,10 +119,18 @@ export function NoticesWidget({ pendingSpec }: { pendingSpec: string }) {
   );
 }
 
+export interface UpcomingEvent {
+  id: string;
+  title: string;
+  startsAt: string;
+  allDay: boolean;
+}
+
+/** 다가오는 일정 — 스펙 02에서 실제 연동됨 */
 export function CalendarUpcomingWidget({
-  pendingSpec,
+  events,
 }: {
-  pendingSpec: string;
+  events: UpcomingEvent[];
 }) {
   return (
     <Card>
@@ -132,9 +141,34 @@ export function CalendarUpcomingWidget({
             다가오는 일정
           </span>
         }
+        action={
+          <Link href="/calendar" className="text-label text-primary hover:underline">
+            전체보기
+          </Link>
+        }
       />
       <CardBody>
-        <NotConnected pendingSpec={pendingSpec} />
+        {events.length === 0 ? (
+          <EmptyState
+            icon={Calendar}
+            title="향후 7일간 일정이 없습니다"
+            description="캘린더에서 일정을 추가할 수 있습니다."
+            compact
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {events.map((event) => (
+              <li key={event.id} className="flex items-center gap-3 py-2.5">
+                <span className="w-24 shrink-0 text-label tabular-nums text-muted">
+                  {event.allDay
+                    ? `${toSeoulYmd(event.startsAt)} 종일`
+                    : `${toSeoulYmd(event.startsAt).slice(5)} ${toSeoulTime(event.startsAt)}`}
+                </span>
+                <span className="truncate text-body text-ink">{event.title}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardBody>
     </Card>
   );

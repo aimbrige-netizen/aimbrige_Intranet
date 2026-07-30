@@ -258,8 +258,41 @@ export async function updateEmployee(
     });
   }
 
+  // 조직 이동·승진은 프로필 상세 타임라인(스펙 02 · 3.2)에 별도 action으로 남긴다.
+  // 위의 employee_updated 로그는 관리자용이고, 이쪽은 전 직원이 보는 이력이다.
+  const movedOrg =
+    before.department_id !== patch.department_id ||
+    before.team_id !== patch.team_id;
+  if (movedOrg) {
+    await writeAuditLog({
+      actorId: me.id,
+      action: "employee_transferred",
+      targetId: id,
+      detail: {
+        before: {
+          department_id: before.department_id,
+          team_id: before.team_id,
+        },
+        after: { department_id: patch.department_id, team_id: patch.team_id },
+      },
+    });
+  }
+
+  if ((before.position ?? null) !== (patch.position ?? null)) {
+    await writeAuditLog({
+      actorId: me.id,
+      action: "employee_promoted",
+      targetId: id,
+      detail: {
+        before: { position: before.position },
+        after: { position: patch.position },
+      },
+    });
+  }
+
   revalidatePath("/admin/employees");
   revalidatePath(`/admin/employees/${id}`);
+  revalidatePath("/directory");
   return { ok: true, employeeId: id };
 }
 

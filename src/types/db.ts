@@ -17,7 +17,16 @@ export type AuditAction =
   | "employee_updated"
   | "employment_status_changed"
   | "role_changed"
-  | "profile_updated";
+  | "profile_updated"
+  // 스펙 02 — 조직 변경 이력 (3.2 프로필 상세 타임라인)
+  | "employee_transferred"
+  | "employee_promoted"
+  | "department_created"
+  | "department_updated"
+  | "department_deleted"
+  | "team_created"
+  | "team_updated"
+  | "team_deleted";
 
 export type WidgetKey =
   | "approval_pending"
@@ -61,11 +70,17 @@ export interface Employee {
   employment_status: EmploymentStatus;
   hire_date: string | null;
   phone: string | null;
-  emergency_contact: string | null;
+  /** 담당업무 (스펙 02 · 3.2) */
+  responsibilities: string | null;
   profile_image_url: string | null;
   created_at: string;
   updated_at: string;
 }
+
+/**
+ * 비상연락처는 컬럼 권한으로 일반 조회에서 제외돼 있어 Employee에 포함하지 않는다.
+ * 본인·관리자는 get_emergency_contact() RPC로만 읽는다 (마이그레이션 03 참고).
+ */
 
 /** 목록·상세에서 조인해 쓰는 형태 */
 export interface EmployeeWithRelations extends Employee {
@@ -113,4 +128,97 @@ export interface SessionEmployee extends EmployeeWithRelations {
   roleName: RoleName;
   isSystemAdmin: boolean;
   isManager: boolean;
+}
+
+// =====================================================================
+// 스펙 02 — 조직도 & 디렉토리, 캘린더
+// =====================================================================
+
+export type ContactCategory = "vendor" | "client" | "partner";
+
+export interface ExternalContact {
+  id: string;
+  name: string;
+  company: string | null;
+  role: string | null;
+  phone: string | null;
+  email: string | null;
+  memo: string | null;
+  category: ContactCategory | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExternalContactWithCreator extends ExternalContact {
+  creator: Pick<Employee, "id" | "name"> | null;
+}
+
+export type EventVisibility = "personal" | "team" | "company";
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description: string | null;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  visibility: EventVisibility;
+  owner_id: string;
+  team_id: string | null;
+  google_calendar_event_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CalendarEventWithOwner extends CalendarEvent {
+  owner: Pick<Employee, "id" | "name" | "profile_image_url"> | null;
+}
+
+export type ResourceType = "meeting_room" | "vehicle" | "equipment";
+
+export interface Resource {
+  id: string;
+  name: string;
+  type: ResourceType;
+  capacity: number | null;
+  location: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ResourceBooking {
+  id: string;
+  resource_id: string;
+  booked_by: string;
+  start_at: string;
+  end_at: string;
+  purpose: string | null;
+  created_at: string;
+}
+
+export interface ResourceBookingWithRelations extends ResourceBooking {
+  resource: Pick<Resource, "id" | "name" | "type" | "location"> | null;
+  booker: Pick<Employee, "id" | "name"> | null;
+}
+
+/** 캘린더 화면에서 종류가 다른 항목을 한 배열로 다루기 위한 표현 */
+export type CalendarItemKind =
+  | "personal"
+  | "team"
+  | "company"
+  | "resource_booking";
+
+export interface CalendarItem {
+  id: string;
+  kind: CalendarItemKind;
+  title: string;
+  description: string | null;
+  startAt: string;
+  endAt: string;
+  allDay: boolean;
+  ownerId: string | null;
+  ownerName: string | null;
+  /** 본인이 수정·삭제할 수 있는 항목인지 */
+  editable: boolean;
 }

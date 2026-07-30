@@ -64,9 +64,7 @@ export default async function DashboardPage({
       <NoticesWidget pendingSpec={notices.connected ? "" : notices.pendingSpec} />
     ),
     calendar_upcoming: (
-      <CalendarUpcomingWidget
-        pendingSpec={calendar.connected ? "" : calendar.pendingSpec}
-      />
+      <CalendarUpcomingWidget events={calendar.connected ? calendar.data : []} />
     ),
     favorites: <FavoritesWidget favorites={favorites} />,
   };

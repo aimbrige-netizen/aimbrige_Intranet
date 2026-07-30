@@ -5,7 +5,10 @@ import { EmploymentStatusBadge, RoleBadge } from "@/components/ui/Badge";
 import { ProfileEditForm } from "@/features/profile/ProfileEditForm";
 import { FavoriteList } from "@/features/profile/FavoriteList";
 import { SignOutButton } from "@/features/profile/SignOutButton";
-import { requireSessionEmployee } from "@/lib/auth/session";
+import {
+  getEmergencyContact,
+  requireSessionEmployee,
+} from "@/lib/auth/session";
 import { getFavorites } from "@/features/dashboard/widget-data";
 import { formatDate } from "@/lib/utils";
 
@@ -13,7 +16,10 @@ export const metadata: Metadata = { title: "내 프로필" };
 
 export default async function ProfilePage() {
   const me = await requireSessionEmployee();
-  const favorites = await getFavorites(me.id);
+  const [favorites, emergencyContact] = await Promise.all([
+    getFavorites(me.id),
+    getEmergencyContact(me.id),
+  ]);
 
   const basicInfo = [
     { label: "이름", value: me.name },
@@ -67,7 +73,7 @@ export default async function ProfilePage() {
               name={me.name}
               initial={{
                 phone: me.phone ?? "",
-                emergency_contact: me.emergency_contact ?? "",
+                emergency_contact: emergencyContact ?? "",
                 profile_image_url: me.profile_image_url,
               }}
             />

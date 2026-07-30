@@ -6,9 +6,11 @@ import type { EmployeeWithRelations, SessionEmployee } from "@/types/db";
 // departments!department_id / teams!team_id: employees<->departments,teams 사이에
 // FK가 두 방향(소속 department_id/team_id, 그리고 부서·팀의 manager_id)으로 있어서
 // 힌트 없이 embed하면 PostgREST가 "more than one relationship" 에러를 낸다.
+// emergency_contact는 컬럼 권한에서 제외돼 있어 여기서 조회하지 않는다.
+// 필요한 화면에서 getEmergencyContact()로 따로 가져온다.
 const EMPLOYEE_SELECT = `
   id, auth_user_id, email, name, department_id, team_id, position, role_id,
-  employment_status, hire_date, phone, emergency_contact, profile_image_url,
+  employment_status, hire_date, phone, responsibilities, profile_image_url,
   created_at, updated_at,
   role:roles(id, name, label),
   department:departments!department_id(id, name),
@@ -49,6 +51,25 @@ export const getSessionEmployee = cache(
     };
   },
 );
+
+/**
+ * 비상연락처 조회. 컬럼 권한으로 일반 SELECT에서 막혀 있어 RPC로만 읽는다.
+ * 본인 또는 시스템 관리자가 아니면 DB 함수가 예외를 던진다.
+ */
+export async function getEmergencyContact(
+  employeeId: string,
+): Promise<string | null> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase.rpc("get_emergency_contact", {
+    target_employee_id: employeeId,
+  });
+
+  if (error) {
+    console.error("[session] 비상연락처 조회 실패:", error.message);
+    return null;
+  }
+  return (data as string | null) ?? null;
+}
 
 /** 로그인 필수 페이지에서 사용 */
 export async function requireSessionEmployee(): Promise<SessionEmployee> {

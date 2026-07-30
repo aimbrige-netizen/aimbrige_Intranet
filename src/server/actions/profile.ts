@@ -3,7 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { requireSessionEmployee } from "@/lib/auth/session";
+import {
+  getEmergencyContact,
+  requireSessionEmployee,
+} from "@/lib/auth/session";
 import { diffFields, writeAuditLog } from "@/lib/audit";
 
 const schema = z.object({
@@ -55,6 +58,9 @@ export async function updateMyProfile(
   const values = parsed.data;
   const supabase = createServerSupabase();
 
+  // 변경 여부 판단을 위해 반드시 UPDATE 전에 이전 값을 읽는다.
+  const previousEmergency = await getEmergencyContact(me.id);
+
   const { error } = await supabase
     .from("employees")
     .update({
@@ -69,18 +75,26 @@ export async function updateMyProfile(
   const changes = diffFields(
     {
       phone: me.phone,
-      emergency_contact: me.emergency_contact,
       profile_image_url: me.profile_image_url,
     } as Record<string, unknown>,
-    values as unknown as Record<string, unknown>,
+    {
+      phone: values.phone,
+      profile_image_url: values.profile_image_url,
+    } as Record<string, unknown>,
   );
 
-  if (changes) {
+  // 비상연락처는 민감정보라 값 자체를 감사 로그에 남기지 않고 변경 사실만 기록한다.
+  const emergencyChanged = previousEmergency !== values.emergency_contact;
+
+  if (changes || emergencyChanged) {
     await writeAuditLog({
       actorId: me.id,
       action: "profile_updated",
       targetId: me.id,
-      detail: changes,
+      detail: {
+        ...(changes ?? {}),
+        ...(emergencyChanged ? { emergency_contact_changed: true } : {}),
+      },
     });
   }
 

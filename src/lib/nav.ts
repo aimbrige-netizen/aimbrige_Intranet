@@ -1,4 +1,5 @@
 import {
+  Boxes,
   Building2,
   Calendar,
   Clock,
@@ -43,18 +44,16 @@ export const NAV_SECTIONS: NavSection[] = [
       {
         key: "org",
         label: "조직도",
-        href: "/org",
+        href: "/directory",
         icon: Users,
-        ready: false,
-        spec: "스펙 02 조직도·디렉토리",
+        ready: true,
       },
       {
         key: "calendar",
         label: "캘린더",
         href: "/calendar",
         icon: Calendar,
-        ready: false,
-        spec: "스펙 02 캘린더",
+        ready: true,
       },
       {
         key: "attendance",
@@ -111,6 +110,15 @@ export const NAV_SECTIONS: NavSection[] = [
         short: "권한",
         href: "/admin/roles",
         icon: Shield,
+        ready: true,
+        roles: ["system_admin"],
+      },
+      {
+        key: "admin-resources",
+        label: "리소스 관리",
+        short: "리소스",
+        href: "/admin/resources",
+        icon: Boxes,
         ready: true,
         roles: ["system_admin"],
       },

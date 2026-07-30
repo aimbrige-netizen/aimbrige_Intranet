@@ -13,4 +13,13 @@ export const AUDIT_ACTION_OPTIONS: { value: AuditAction; label: string }[] = [
   { value: "employment_status_changed", label: "재직상태 변경" },
   { value: "role_changed", label: "역할 변경" },
   { value: "profile_updated", label: "프로필 수정" },
+  // 스펙 02
+  { value: "employee_transferred", label: "조직 이동" },
+  { value: "employee_promoted", label: "승진" },
+  { value: "department_created", label: "부서 생성" },
+  { value: "department_updated", label: "부서 수정" },
+  { value: "department_deleted", label: "부서 삭제" },
+  { value: "team_created", label: "팀 생성" },
+  { value: "team_updated", label: "팀 수정" },
+  { value: "team_deleted", label: "팀 삭제" },
 ];

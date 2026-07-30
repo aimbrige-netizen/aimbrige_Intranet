@@ -43,11 +43,42 @@ export async function getNotices(): Promise<
   return { connected: false, pendingSpec: "스펙 05 게시판&공지사항" };
 }
 
-/** 다가오는 일정 → 스펙 02 캘린더 */
+/**
+ * 다가오는 일정 — 스펙 02에서 실제 연동 완료 (스펙 02 · 6장)
+ * 본인의 향후 7일 일정 상위 5건. RLS가 볼 수 있는 범위를 이미 제한한다.
+ */
 export async function getCalendarUpcoming(): Promise<
-  WidgetData<{ id: string; title: string; startsAt: string; kind: string }[]>
+  WidgetData<
+    { id: string; title: string; startsAt: string; allDay: boolean; kind: string }[]
+  >
 > {
-  return { connected: false, pendingSpec: "스펙 02 캘린더" };
+  const supabase = createServerSupabase();
+  const now = new Date();
+  const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+  const { data, error } = await supabase
+    .from("calendar_events")
+    .select("id, title, start_at, all_day, visibility")
+    .gte("end_at", now.toISOString())
+    .lte("start_at", weekLater.toISOString())
+    .order("start_at")
+    .limit(5);
+
+  if (error) {
+    console.error("[widget] 다가오는 일정 조회 실패:", error.message);
+    return { connected: true, data: [] };
+  }
+
+  return {
+    connected: true,
+    data: (data ?? []).map((row) => ({
+      id: row.id as string,
+      title: row.title as string,
+      startsAt: row.start_at as string,
+      allDay: row.all_day as boolean,
+      kind: row.visibility as string,
+    })),
+  };
 }
 
 /** 즐겨찾기 — 이번 모듈에서 실제 동작 */

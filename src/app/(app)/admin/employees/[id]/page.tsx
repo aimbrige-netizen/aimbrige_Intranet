@@ -7,7 +7,7 @@ import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmploymentStatusBadge, RoleBadge } from "@/components/ui/Badge";
 import { EmployeeEditForm } from "@/features/employees/EmployeeEditForm";
-import { requireSystemAdmin } from "@/lib/auth/session";
+import { getEmergencyContact, requireSystemAdmin } from "@/lib/auth/session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import type { AuditLog, EmployeeWithRelations } from "@/types/db";
@@ -36,7 +36,7 @@ export default async function EmployeeDetailPage({
     .from("employees")
     .select(
       `id, auth_user_id, email, name, department_id, team_id, position, role_id,
-       employment_status, hire_date, phone, emergency_contact, profile_image_url,
+       employment_status, hire_date, phone, responsibilities, profile_image_url,
        created_at, updated_at,
        role:roles(id, name, label),
        department:departments!department_id(id, name),
@@ -47,7 +47,7 @@ export default async function EmployeeDetailPage({
 
   if (!employee) notFound();
 
-  const [{ data: departments }, { data: teams }, { data: logs }] =
+  const [{ data: departments }, { data: teams }, { data: logs }, emergency] =
     await Promise.all([
       supabase.from("departments").select("id, name").order("name"),
       supabase.from("teams").select("id, name, department_id").order("name"),
@@ -57,6 +57,7 @@ export default async function EmployeeDetailPage({
         .eq("target_id", params.id)
         .order("created_at", { ascending: false })
         .limit(10),
+      getEmergencyContact(params.id),
     ]);
 
   const isSystemAdminTarget = employee.role?.name === "system_admin";
@@ -119,7 +120,7 @@ export default async function EmployeeDetailPage({
               <dl className="grid grid-cols-1 gap-4 md:grid-cols-3">
                 {[
                   { label: "휴대폰번호", value: employee.phone },
-                  { label: "비상연락처", value: employee.emergency_contact },
+                  { label: "비상연락처", value: emergency },
                   {
                     label: "최초 로그인 연결",
                     value: employee.auth_user_id ? "연결됨" : "미연결",
