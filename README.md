@@ -71,10 +71,20 @@ Supabase 대시보드 → **SQL Editor** → **New query** 에서, 아래 파일
    - 스펙 02 캘린더 동기화: `https://www.googleapis.com/auth/calendar.events`
    - 스펙 06 Drive / 스펙 11 Gmail 은 해당 모듈 작업 때 추가
 
-   > 스코프를 등록한 뒤 `.env.local`의 `NEXT_PUBLIC_GOOGLE_EXTRA_SCOPES`에 넣어야
-   > 로그인 요청에 실제로 포함됩니다. **콘솔에 등록하기 전에 env를 채우면 동의 화면에서
-   > 막혀 로그인이 실패**하므로 반드시 콘솔 → env 순서로 진행하세요.
+6. **테스트 사용자 등록** — 좌측 **대상(Audience)** → **테스트 사용자** → 사용자 추가
+
+   앱 게시 상태가 "테스트"인 동안 **민감 스코프(`calendar.events` 등)는 여기 등록된
+   계정만 통과**합니다. 미등록 계정은 `403 access_denied`로 **로그인 자체가 막힙니다.**
+   기본 스코프(email·profile)만 쓸 때는 이 제한이 걸리지 않아 눈치채기 어렵습니다.
+   임직원을 새로 추가할 때 이 목록에도 넣어야 합니다(최대 100명).
+
+   > **순서 주의**: ① 스코프 등록 → ② 테스트 사용자 등록 → ③ `.env.local`의
+   > `NEXT_PUBLIC_GOOGLE_EXTRA_SCOPES` 채우기. 순서를 건너뛰면 전 사용자 로그인이 막힙니다.
    > 이미 로그인한 사용자는 로그아웃 후 다시 로그인해야 새 스코프가 토큰에 반영됩니다.
+   >
+   > 회사 Workspace 도메인(`aimbrige.kr`)을 만들어 User Type을 **내부(Internal)**로 바꾸면
+   > 테스트 사용자 등록·검증 심사가 모두 불필요해집니다. 전 직원용 인트라넷이므로
+   > 장기적으로는 이 방향이 맞습니다.
 
 **Supabase 대시보드** → **Authentication → Sign In / Providers → Google**
 
