@@ -43,6 +43,12 @@ grant update (phone, emergency_contact, profile_image_url)
   on public.employees to authenticated;
 
 -- 비상연락처는 본인 또는 시스템 관리자만 조회
+--
+-- 주의: NULL이 섞인 boolean 식을 if 조건에 바로 쓰면 안 된다.
+-- employees 행이 없는 계정은 current_employee_id()가 NULL이라
+--   not (target = NULL or false) -> not NULL -> NULL
+-- 이 되어 `if NULL then`이 분기를 타지 않고 검사가 통째로 건너뛰어진다.
+-- 이 함수는 SECURITY DEFINER라 RLS까지 우회하므로 반드시 먼저 NULL을 걸러낸다.
 create or replace function public.get_emergency_contact(target_employee_id uuid)
 returns text
 language plpgsql
@@ -51,12 +57,19 @@ security definer
 set search_path = public
 as $$
 declare
-  result text;
+  caller_id uuid := public.current_employee_id();
+  is_admin  boolean := coalesce(public.is_system_admin(), false);
+  result    text;
 begin
-  if not (
-    target_employee_id = public.current_employee_id()
-    or public.is_system_admin()
-  ) then
+  if target_employee_id is null then
+    raise exception '조회 대상이 지정되지 않았습니다.';
+  end if;
+
+  if caller_id is null then
+    raise exception '비상연락처를 조회할 권한이 없습니다.';
+  end if;
+
+  if target_employee_id <> caller_id and not is_admin then
     raise exception '비상연락처를 조회할 권한이 없습니다.';
   end if;
 
@@ -201,22 +214,29 @@ create index if not exists audit_logs_target_idx on public.audit_logs (target_id
 
 create or replace function public.list_org_history(target_employee_id uuid)
 returns table (id uuid, action text, created_at timestamptz)
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public
 as $$
-  select l.id, l.action, l.created_at
-  from public.audit_logs l
-  where l.target_id = target_employee_id
-    and l.action in (
-      'employee_created',
-      'employee_transferred',
-      'employee_promoted'
-    )
-  order by l.created_at desc
-  limit 30
-$$;
+begin
+  -- SECURITY DEFINER라 RLS를 우회하므로 등록된 임직원인지 먼저 확인한다
+  if public.current_employee_id() is null then
+    raise exception '조회 권한이 없습니다.';
+  end if;
+
+  return query
+    select l.id, l.action, l.created_at
+    from public.audit_logs l
+    where l.target_id = target_employee_id
+      and l.action in (
+        'employee_created',
+        'employee_transferred',
+        'employee_promoted'
+      )
+    order by l.created_at desc
+    limit 30;
+end $$;
 
 revoke all on function public.list_org_history(uuid) from public;
 grant execute on function public.list_org_history(uuid) to authenticated;
@@ -259,12 +279,15 @@ stable
 security definer
 set search_path = public
 as $$
-  select target_team_id is not null
-     and exists (
-       select 1 from public.employees e
-       where e.auth_user_id = auth.uid()
-         and e.team_id = target_team_id
-     )
+  select coalesce(
+    target_team_id is not null
+    and exists (
+      select 1 from public.employees e
+      where e.auth_user_id = auth.uid()
+        and e.team_id = target_team_id
+    ),
+    false
+  )
 $$;
 
 revoke all on function public.is_my_team(uuid) from public;

@@ -58,6 +58,23 @@ export const allowedEmailDomains: string[] = (
 export const googleHostedDomain: string | null =
   process.env.NEXT_PUBLIC_GOOGLE_HOSTED_DOMAIN?.trim() || null;
 
+/**
+ * 로그인 시 기본(email·profile) 외에 추가로 요청할 Google 스코프.
+ *
+ * 캘린더 동기화(스펙 02 · 5장)에는 calendar.events 스코프가 필요하다.
+ * 다만 Google Cloud Console의 "데이터 액세스"에 해당 스코프를 등록하기 전에
+ * 요청하면 동의 화면에서 막혀 로그인 자체가 실패한다. 그래서 기본값을 비워두고,
+ * 콘솔 설정을 끝낸 뒤 .env.local에서 켜는 방식으로 둔다.
+ *
+ *   NEXT_PUBLIC_GOOGLE_EXTRA_SCOPES=https://www.googleapis.com/auth/calendar.events
+ */
+export const googleExtraScopes: string =
+  process.env.NEXT_PUBLIC_GOOGLE_EXTRA_SCOPES?.trim() || "";
+
+/** 캘린더 동기화가 활성화된 상태인지 (스코프를 요청하고 있는지) */
+export const isGoogleCalendarSyncEnabled =
+  googleExtraScopes.includes("calendar");
+
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const domain = email.toLowerCase().split("@")[1];

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { googleHostedDomain } from "@/lib/env";
+import { googleExtraScopes, googleHostedDomain } from "@/lib/env";
 
 /** Google 계정 로그인 버튼 — 로그인 화면에는 이 버튼 하나만 노출 (스펙 3.1) */
 export function GoogleSignInButton({ next }: { next?: string }) {
@@ -21,6 +21,8 @@ export function GoogleSignInButton({ next }: { next?: string }) {
       provider: "google",
       options: {
         redirectTo: callback.toString(),
+        // 캘린더 동기화용 추가 스코프. 콘솔에 등록된 뒤에만 값이 채워진다(env 참고).
+        ...(googleExtraScopes ? { scopes: googleExtraScopes } : {}),
         queryParams: {
           // hd를 설정한 경우에만 Google 계정 선택창을 해당 워크스페이스로 제한.
           // (허용 도메인이 여러 개일 땐 hd 하나로 표현할 수 없어 생략 — 서버 검증이 실제 통제선)

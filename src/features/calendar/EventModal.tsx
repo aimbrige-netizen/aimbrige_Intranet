@@ -10,6 +10,7 @@ import {
   updateCalendarEvent,
 } from "@/server/actions/calendar";
 import { toSeoulTime, toSeoulYmd, addDaysYmd } from "@/features/calendar/date";
+import { isGoogleCalendarSyncEnabled } from "@/lib/env";
 import type { CalendarItem } from "@/types/db";
 
 interface FormValues {
@@ -226,9 +227,11 @@ export function EventModal({
           />
         </Field>
 
-        <p className="text-caption">
-          저장하면 본인 Google 캘린더에도 함께 등록됩니다(연결된 경우).
-        </p>
+        {isGoogleCalendarSyncEnabled ? (
+          <p className="text-caption">
+            저장하면 본인 Google 캘린더에도 함께 등록됩니다.
+          </p>
+        ) : null}
 
         {message ? <p className="text-label text-danger">{message}</p> : null}
       </div>
