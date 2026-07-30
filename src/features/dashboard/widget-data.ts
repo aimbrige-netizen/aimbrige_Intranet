@@ -6,6 +6,7 @@ import {
   getTodayAttendance,
 } from "@/features/attendance/data";
 import { getMyPendingApprovals } from "@/features/approvals/data";
+import { getUnreadNotices } from "@/features/boards/data";
 import type {
   AttendanceRecord,
   Favorite,
@@ -72,11 +73,15 @@ export async function getAttendanceToday(
   };
 }
 
-/** 미열람 공지 → 스펙 05 게시판&공지사항 */
-export async function getNotices(): Promise<
+/**
+ * 미열람 공지 — 스펙 05에서 실제 연동 완료 (스펙 05 · 7장)
+ * 공지 게시판의 최근 글 중 본인이 아직 읽지 않은 것.
+ */
+export async function getNotices(employeeId: string): Promise<
   WidgetData<{ id: string; title: string; boardName: string; createdAt: string }[]>
 > {
-  return { connected: false, pendingSpec: "스펙 05 게시판&공지사항" };
+  const notices = await getUnreadNotices(employeeId);
+  return { connected: true, data: notices };
 }
 
 /**

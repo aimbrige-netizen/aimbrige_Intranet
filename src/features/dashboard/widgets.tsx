@@ -1,12 +1,5 @@
 import Link from "next/link";
-import {
-  Calendar,
-  Clock,
-  FileCheck,
-  Megaphone,
-  Star,
-  Plug,
-} from "lucide-react";
+import { Calendar, Clock, FileCheck, Megaphone, Star } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Badge } from "@/components/ui/Badge";
@@ -14,17 +7,9 @@ import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
 import { CheckInOut } from "@/features/attendance/CheckInOut";
 import type { AttendanceRecord, Favorite } from "@/types/db";
 
-/** 아직 연동되지 않은 위젯의 공통 빈 상태 */
-function NotConnected({ pendingSpec }: { pendingSpec: string }) {
-  return (
-    <EmptyState
-      icon={Plug}
-      title="아직 연동되지 않았습니다"
-      description={`${pendingSpec} 작업 때 실제 데이터가 연결됩니다.`}
-      compact
-    />
-  );
-}
+// 스펙 01에서 껍데기로 만든 위젯 5종이 이제 모두 실제 데이터에 연결됐다.
+// (결재 대기=스펙04, 오늘의 근태=스펙03, 공지사항=스펙05,
+//  다가오는 일정=스펙02, 즐겨찾기=스펙01)
 
 export interface PendingApproval {
   id: string;
@@ -134,7 +119,15 @@ export function AttendanceTodayWidget({
   );
 }
 
-export function NoticesWidget({ pendingSpec }: { pendingSpec: string }) {
+export interface NoticeItem {
+  id: string;
+  title: string;
+  boardName: string;
+  createdAt: string;
+}
+
+/** 공지사항 — 스펙 05에서 실제 연동됨 (미열람 글) */
+export function NoticesWidget({ notices }: { notices: NoticeItem[] }) {
   return (
     <Card>
       <CardHeader
@@ -144,9 +137,47 @@ export function NoticesWidget({ pendingSpec }: { pendingSpec: string }) {
             공지사항
           </span>
         }
+        action={
+          <span className="flex items-center gap-2">
+            {notices.length > 0 ? (
+              <Badge tone="danger">{notices.length}</Badge>
+            ) : null}
+            <Link href="/board" className="text-label text-primary hover:underline">
+              전체보기
+            </Link>
+          </span>
+        }
       />
       <CardBody>
-        <NotConnected pendingSpec={pendingSpec} />
+        {notices.length === 0 ? (
+          <EmptyState
+            icon={Megaphone}
+            title="미열람 공지가 없습니다"
+            description="새 공지가 올라오면 여기에 표시됩니다."
+            compact
+          />
+        ) : (
+          <ul className="divide-y divide-line">
+            {notices.map((notice) => (
+              <li key={notice.id}>
+                <Link
+                  href={`/board`}
+                  className="flex items-center gap-3 rounded px-1 py-2.5 transition-colors hover:bg-canvas"
+                >
+                  <span className="shrink-0 text-label text-muted">
+                    {notice.boardName}
+                  </span>
+                  <span className="truncate text-body font-medium text-ink">
+                    {notice.title}
+                  </span>
+                  <span className="ml-auto shrink-0 text-caption">
+                    {toSeoulYmd(notice.createdAt).slice(5)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </CardBody>
     </Card>
   );

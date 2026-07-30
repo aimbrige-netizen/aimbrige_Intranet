@@ -43,7 +43,7 @@ export default async function DashboardPage({
     await Promise.all([
       getApprovalPending(me.id),
       getAttendanceToday(me.id, me.hire_date),
-      getNotices(),
+      getNotices(me.id),
       getCalendarUpcoming(),
       getFavorites(me.id),
       getWidgetSettings(me.id),
@@ -59,9 +59,7 @@ export default async function DashboardPage({
         remainingLeave={attendance.connected ? attendance.data.remainingLeave : 0}
       />
     ),
-    notices: (
-      <NoticesWidget pendingSpec={notices.connected ? "" : notices.pendingSpec} />
-    ),
+    notices: <NoticesWidget notices={notices.connected ? notices.data : []} />,
     calendar_upcoming: (
       <CalendarUpcomingWidget events={calendar.connected ? calendar.data : []} />
     ),
