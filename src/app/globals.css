@@ -4,25 +4,32 @@
 
 /*
  * 에임브릿지 인트라넷 전역 스타일
- * 디자인 근거: aimbridge_intranet_design_system.md v1.1
- * - 전체 라이트 톤. 사이드바도 화이트로 두고 경계선·활성색으로만 구분한다
- * - 면을 나눌 때 테두리보다 여백과 옅은 그림자를 우선한다
- * - 다크모드는 지원하지 않는다(그룹웨어 톤 통일 목적)
+ * 디자인 근거: aimbridge_intranet_design_system.md v2.0 (SEED Design 기반)
+ *
+ * SEED 원칙:
+ *  - 오렌지(#ff6f0f)는 희소하게. 주요 액션·활성 상태에만.
+ *  - 콘텐츠가 주인공, 크롬은 조용하게. 그림자 대신 hairline으로 면을 나눈다.
+ *  - 모든 치수는 4px 그리드.
+ *  - 다크모드는 지원하지 않는다.
  */
 
 :root {
-  --color-primary: #1d4e8f;
-  --color-primary-light: #eaf1fb;
-  --color-sidebar-text: #5b6270;
-  --color-ink: #1f2430;
-  --color-canvas: #f5f7fa;
-  --color-line: #e7eaf0;
-  --color-success: #2fa36b;
-  --color-warn: #e0a72e;
-  --color-danger: #db4c4c;
-  --color-muted: #6b7280;
+  /* 이름은 tailwind.config.ts의 토큰과 1:1로 맞춘다 */
+  --seed-primary: #ff6f0f;
+  --seed-primary-hover: #ff9e66;
+  --seed-primary-light: #fff5f0;
+  --seed-canvas: #f2f3f6; /* 페이지 바닥 */
+  --seed-surface: #ffffff; /* 카드·시트 */
+  --seed-subtle: #f7f8fa; /* 표 헤더·호버 */
+  --seed-ink: #212124;
+  --seed-muted: #868b94;
+  --seed-line: #eaebee;
+  --seed-line-strong: #dcdee3;
+  --seed-danger: #fa2314;
+  --seed-info: #009ceb;
+  --seed-success: #1aa174;
 
-  --layout-topbar: 60px;
+  --layout-topbar: 56px;
   --layout-rail: 76px;
   --layout-drawer: 248px;
 
@@ -32,13 +39,14 @@
 @layer base {
   /*
    * html의 font-size는 건드리지 않는다(브라우저 기본 16px 유지).
-   * 여기를 14px로 낮추면 Tailwind의 rem 기반 간격·크기 유틸리티가 전부 87.5%로
-   * 축소돼 여백이 설계와 달라진다. 본문 14px은 body에서 지정한다.
+   * 여기를 낮추면 Tailwind의 rem 기반 간격 유틸리티가 전부 축소돼
+   * 4px 그리드가 깨진다.
    */
   body {
     @apply bg-canvas text-ink antialiased;
-    font-size: 14px;
-    line-height: 1.6;
+    font-size: 15px;
+    line-height: 1.5;
+    letter-spacing: -0.02em;
     -webkit-font-smoothing: antialiased;
   }
 
@@ -50,31 +58,34 @@
     @apply text-h2;
   }
 
-  /* 폼 요소가 브라우저 기본 폰트로 떨어지지 않게 */
   input,
   select,
   textarea,
   button {
     font-family: inherit;
     font-size: inherit;
+    letter-spacing: inherit;
   }
 
-  /* 포커스 링은 Primary 톤으로 통일 */
+  /* 포커스 링은 브랜드 오렌지로 통일 */
   :focus-visible {
-    outline: 2px solid var(--color-primary);
+    outline: 2px solid var(--seed-primary);
     outline-offset: 1px;
   }
 }
 
 @layer components {
-  /* 카드: radius 12px + 옅은 그림자, 장식보다 여백으로 구분 */
+  /*
+   * 카드: radius 8px + hairline. 그림자를 쓰지 않는다(SEED §6 — 검사된
+   * 공개 컨트롤은 전부 flat이었다). 면 구분은 배경 대비와 경계선으로.
+   */
   .ab-card {
-    @apply rounded-card border border-line bg-surface shadow-card;
+    @apply rounded-card border border-line bg-surface;
   }
 
-  /* 선택형 카드(옵션 뱃지): 다크 배경 + 흰 텍스트 + radius 12px */
+  /* 선택형 카드(옵션 뱃지): 다크 배경 + 흰 텍스트 */
   .ab-pick-card {
-    @apply rounded-pick bg-pick text-white transition-colors hover:bg-[#242832];
+    @apply rounded-pick bg-pick text-white transition-colors duration-fast ease-standard hover:bg-[#37373b];
   }
 
   /* 라벨-옆-인풋 밀도 높은 표 형태 폼 (결재·신청서류용) */
@@ -83,7 +94,7 @@
   }
 
   .ab-form-label {
-    @apply flex items-center border-line bg-canvas px-4 py-3 text-label font-medium text-ink md:border-b md:border-r;
+    @apply flex items-center border-line bg-subtle px-4 py-3 text-label font-bold text-muted md:border-b md:border-r;
   }
 
   .ab-form-field {
@@ -92,14 +103,13 @@
 
   /* 테이블: zebra 없이 hover 시에만 행 강조 */
   .ab-table {
-    @apply w-full border-collapse text-body;
+    @apply w-full border-collapse text-body-sm;
   }
 
   .ab-table thead th {
-    @apply whitespace-nowrap border-b border-line bg-canvas px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted;
+    @apply whitespace-nowrap border-b border-line bg-subtle px-4 py-3 text-left text-label font-bold text-muted;
   }
 
-  /* 행을 조금 더 높여 숨통을 틔운다 — 촘촘한 표는 스캔이 어렵다 */
   .ab-table tbody td {
     @apply border-b border-line px-4 py-3.5 align-middle;
   }
@@ -109,23 +119,22 @@
   }
 
   .ab-table tbody tr {
-    @apply transition-colors hover:bg-canvas;
+    @apply transition-colors duration-fast ease-standard hover:bg-subtle;
   }
 }
 
 @layer utilities {
-  /* 캡션·라벨 텍스트 */
+  /* 캡션·보조 텍스트 */
   .text-caption {
     @apply text-label text-muted;
   }
 
-  /* 스크롤바를 사이드바 톤에 맞춤 */
   .scrollbar-thin {
     scrollbar-width: thin;
   }
 
   /*
-   * 76px 레일은 스크롤바가 차지하는 폭(약 15px)만으로도 아이콘이 눌려 보인다.
+   * 76px 레일은 스크롤바가 차지하는 폭만으로도 아이콘이 눌려 보인다.
    * 스크롤 자체는 살리고 막대만 숨긴다.
    */
   .scrollbar-none {
@@ -135,5 +144,17 @@
 
   .scrollbar-none::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* SEED §15: prefers-reduced-motion이면 모든 모션을 즉시로 접는다 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

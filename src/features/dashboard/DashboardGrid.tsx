@@ -74,17 +74,17 @@ export function DashboardGrid({
 
         {editing ? (
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={cancelEditing} disabled={pending}>
+            <Button variant="ghost" size="small" onClick={cancelEditing} disabled={pending}>
               <X className="size-3.5" />
               취소
             </Button>
-            <Button size="sm" onClick={save} disabled={pending}>
+            <Button size="small" onClick={save} disabled={pending}>
               <Check className="size-3.5" />
               {pending ? "저장 중…" : "저장"}
             </Button>
           </div>
         ) : (
-          <Button variant="secondary" size="sm" onClick={startEditing}>
+          <Button variant="secondary" size="small" onClick={startEditing}>
             <Pencil className="size-3.5" />
             편집
           </Button>
@@ -102,7 +102,7 @@ export function DashboardGrid({
           >
             {editing ? (
               <label
-                className="absolute right-3 top-3.5 z-10 flex cursor-pointer items-center gap-1.5 rounded bg-surface/90 px-1.5 py-0.5 text-label text-ink"
+                className="absolute right-3 top-3.5 z-10 flex cursor-pointer items-center gap-1.5 rounded-sm bg-surface/90 px-1.5 py-0.5 text-label text-ink"
                 title={`${slot.label} 표시 여부`}
               >
                 <input
@@ -114,7 +114,7 @@ export function DashboardGrid({
                       [slot.key]: event.target.checked,
                     }))
                   }
-                  className="size-3.5 accent-[#1D4E8F]"
+                  className="size-3.5 accent-[#ff6f0f]"
                 />
                 표시
               </label>

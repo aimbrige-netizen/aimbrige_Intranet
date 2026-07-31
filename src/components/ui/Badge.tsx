@@ -1,13 +1,21 @@
 import { cn } from "@/lib/utils";
 import type { EmploymentStatus, RoleName } from "@/types/db";
 
-type Tone = "neutral" | "primary" | "success" | "warn" | "danger";
+/**
+ * SEED 기반 상태 뱃지.
+ *
+ * 원칙 4 "신뢰는 차분함에서": 빨강(critical)은 실제 오류·위반에만 쓴다.
+ * 진행중·대기 같은 중간 상태는 브랜드 톤(primary-low)이나 중립으로 둔다.
+ */
+type Tone = "neutral" | "primary" | "success" | "warn" | "danger" | "info";
 
 const TONES: Record<Tone, string> = {
-  neutral: "bg-line-strong/70 text-muted",
+  neutral: "bg-subtle text-muted",
   primary: "bg-primary-light text-primary",
+  // warn은 별도 색을 만들지 않고 브랜드 톤을 쓴다(SEED는 amber를 두지 않음)
+  warn: "bg-primary-light text-primary",
   success: "bg-success/10 text-success",
-  warn: "bg-warn/15 text-[#8A6316]",
+  info: "bg-info/10 text-info",
   danger: "bg-danger/10 text-danger",
 };
 
@@ -23,7 +31,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded px-2 py-0.5 text-label font-medium",
+        "inline-flex items-center whitespace-nowrap rounded-sm px-2 py-0.5 text-label font-bold",
         TONES[tone],
         className,
       )}
@@ -33,7 +41,7 @@ export function Badge({
   );
 }
 
-/** 재직상태 뱃지 — 재직중=초록 / 휴직=노랑 / 퇴사=회색 (스펙 3.4) */
+/** 재직상태 뱃지 (스펙 01 · 3.4) */
 const STATUS_META: Record<EmploymentStatus, { label: string; tone: Tone }> = {
   active: { label: "재직중", tone: "success" },
   leave: { label: "휴직", tone: "warn" },
@@ -51,7 +59,7 @@ export function EmploymentStatusBadge({
 
 const ROLE_META: Record<RoleName, { label: string; tone: Tone }> = {
   system_admin: { label: "시스템 관리자", tone: "primary" },
-  manager: { label: "팀장/매니저", tone: "primary" },
+  manager: { label: "팀장/매니저", tone: "info" },
   employee: { label: "일반직원", tone: "neutral" },
 };
 

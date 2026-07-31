@@ -61,7 +61,7 @@ export function ApprovalPendingWidget({
               <li key={doc.id}>
                 <Link
                   href={`/approvals/${doc.id}`}
-                  className="flex items-center gap-3 rounded px-1 py-2.5 transition-colors hover:bg-canvas"
+                  className="flex items-center gap-3 rounded-sm px-1 py-2.5 transition-colors hover:bg-canvas"
                 >
                   <span className="w-16 shrink-0 text-label text-muted">
                     {doc.requester}
@@ -162,12 +162,12 @@ export function NoticesWidget({ notices }: { notices: NoticeItem[] }) {
               <li key={notice.id}>
                 <Link
                   href={`/board`}
-                  className="flex items-center gap-3 rounded px-1 py-2.5 transition-colors hover:bg-canvas"
+                  className="flex items-center gap-3 rounded-sm px-1 py-2.5 transition-colors hover:bg-canvas"
                 >
                   <span className="shrink-0 text-label text-muted">
                     {notice.boardName}
                   </span>
-                  <span className="truncate text-body font-medium text-ink">
+                  <span className="truncate text-body font-bold text-ink">
                     {notice.title}
                   </span>
                   <span className="ml-auto shrink-0 text-caption">
@@ -276,7 +276,7 @@ export function FavoritesWidget({
               <li key={favorite.id}>
                 <Link
                   href={favorite.target_path}
-                  className="flex items-center justify-between gap-2 rounded px-1 py-2.5 transition-colors hover:bg-primary-light"
+                  className="flex items-center justify-between gap-2 rounded-sm px-1 py-2.5 transition-colors hover:bg-primary-light"
                 >
                   <span className="truncate text-body text-ink">
                     {favorite.label}

@@ -2,29 +2,27 @@ import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
- * 지표 카드 — 큰 숫자 + 톤별 색으로 무엇이 중요한지 한눈에 보이게 한다.
+ * 지표 카드 (SEED 기반)
  *
- * 수치를 표 형태로 나열하면 전부 같은 무게로 읽혀서 정작 봐야 할 값이 묻힌다.
- * 그래서 값은 크게, 성격은 색으로 구분한다(디자인시스템 v1.2 지표 카드).
+ * SEED 원칙 6 "액센트는 하나": 항목마다 다른 브랜드 색을 만들지 않는다.
+ * 브랜드 오렌지는 화면에서 가장 중요한 값 하나에만 쓰고(brand),
+ * 나머지는 중립 또는 시맨틱(positive/critical/informative) 유틸리티 색으로 둔다.
+ *
+ * 원칙 1 "오렌지는 희소하게": 한 화면에 tone="brand"는 하나만 두는 것을 전제로 한다.
  */
-export type StatTone = "sky" | "mint" | "peach" | "lavender" | "rose" | "slate";
+export type StatTone =
+  | "brand"
+  | "neutral"
+  | "positive"
+  | "critical"
+  | "informative";
 
-const TONES: Record<StatTone, { chip: string; value: string }> = {
-  sky: { chip: "bg-tint-sky text-tint-sky-ink", value: "text-tint-sky-ink" },
-  mint: { chip: "bg-tint-mint text-tint-mint-ink", value: "text-tint-mint-ink" },
-  peach: {
-    chip: "bg-tint-peach text-tint-peach-ink",
-    value: "text-tint-peach-ink",
-  },
-  lavender: {
-    chip: "bg-tint-lavender text-tint-lavender-ink",
-    value: "text-tint-lavender-ink",
-  },
-  rose: { chip: "bg-tint-rose text-tint-rose-ink", value: "text-tint-rose-ink" },
-  slate: {
-    chip: "bg-tint-slate text-tint-slate-ink",
-    value: "text-tint-slate-ink",
-  },
+const ACCENTS: Record<StatTone, { value: string; chip: string }> = {
+  brand: { value: "text-primary", chip: "bg-primary-light text-primary" },
+  neutral: { value: "text-ink", chip: "bg-subtle text-muted" },
+  positive: { value: "text-success", chip: "bg-success/10 text-success" },
+  critical: { value: "text-danger", chip: "bg-danger/10 text-danger" },
+  informative: { value: "text-info", chip: "bg-info/10 text-info" },
 };
 
 export function StatCard({
@@ -32,7 +30,7 @@ export function StatCard({
   value,
   unit,
   sub,
-  tone = "slate",
+  tone = "neutral",
   icon: Icon,
   emphasis,
   className,
@@ -43,73 +41,49 @@ export function StatCard({
   sub?: string;
   tone?: StatTone;
   icon?: LucideIcon;
-  /** 배경까지 톤으로 채워 더 강조한다 */
+  /** 브랜드 틴트 배경까지 채워 화면에서 가장 중요한 값 하나를 앞세운다 */
   emphasis?: boolean;
   className?: string;
 }) {
-  const t = TONES[tone];
+  const accent = ACCENTS[tone];
+
   return (
     <div
       className={cn(
-        "rounded-card border p-4 transition-colors",
+        "rounded-card border p-4",
         emphasis
-          ? cn(t.chip, "border-transparent")
-          : "border-line bg-surface shadow-card",
+          ? "border-primary/20 bg-primary-light"
+          : "border-line bg-surface",
         className,
       )}
     >
       <div className="flex items-center justify-between gap-2">
-        <p
-          className={cn(
-            "text-label font-medium",
-            emphasis ? "opacity-80" : "text-muted",
-          )}
-        >
-          {label}
-        </p>
+        <p className="text-label text-muted">{label}</p>
         {Icon ? (
           <span
             className={cn(
-              "grid size-7 shrink-0 place-items-center rounded-lg",
-              emphasis ? "bg-white/50" : t.chip,
+              "grid size-7 shrink-0 place-items-center rounded-sm",
+              emphasis ? "bg-white text-primary" : accent.chip,
             )}
           >
-            <Icon className="size-3.5" aria-hidden />
+            <Icon className="size-4" aria-hidden />
           </span>
         ) : null}
       </div>
 
-      <p className="mt-2 flex items-baseline gap-1">
+      <p className="mt-3 flex items-baseline gap-1">
         <span
           className={cn(
-            "text-[26px] font-bold leading-none tabular-nums",
-            emphasis ? "" : t.value,
+            "text-[28px] font-bold leading-none tabular-nums",
+            emphasis ? "text-primary" : accent.value,
           )}
         >
           {value}
         </span>
-        {unit ? (
-          <span
-            className={cn(
-              "text-label",
-              emphasis ? "opacity-70" : "text-muted",
-            )}
-          >
-            {unit}
-          </span>
-        ) : null}
+        {unit ? <span className="text-label text-muted">{unit}</span> : null}
       </p>
 
-      {sub ? (
-        <p
-          className={cn(
-            "mt-1.5 truncate text-label",
-            emphasis ? "opacity-70" : "text-muted",
-          )}
-        >
-          {sub}
-        </p>
-      ) : null}
+      {sub ? <p className="mt-2 truncate text-label text-muted">{sub}</p> : null}
     </div>
   );
 }

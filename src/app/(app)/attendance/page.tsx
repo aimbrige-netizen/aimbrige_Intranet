@@ -98,7 +98,7 @@ export default async function AttendancePage() {
           label="잔여 연차"
           value={summary.remaining}
           unit="일"
-          tone="sky"
+          tone="brand"
           icon={CalendarCheck}
           emphasis
           sub={
@@ -111,7 +111,7 @@ export default async function AttendancePage() {
           label="발생 연차"
           value={summary.accrued}
           unit="일"
-          tone="slate"
+          tone="neutral"
           icon={CalendarPlus}
           sub={
             summary.adjustment !== 0
@@ -123,7 +123,7 @@ export default async function AttendancePage() {
           label="사용 연차"
           value={summary.used}
           unit="일"
-          tone="lavender"
+          tone="neutral"
           icon={CalendarMinus}
           sub={`${monthLabel(ym)} 기준`}
         />
@@ -132,7 +132,11 @@ export default async function AttendancePage() {
           value={week.hours}
           unit="시간"
           tone={
-            week.level === "over" ? "rose" : week.level === "warn" ? "peach" : "mint"
+            week.level === "over"
+              ? "critical"
+              : week.level === "warn"
+                ? "informative"
+                : "positive"
           }
           icon={week.level === "ok" ? CheckCircle2 : AlertTriangle}
           sub={
@@ -147,7 +151,7 @@ export default async function AttendancePage() {
           label="이번 달 누적"
           value={Math.round(monthlyHours * 10) / 10}
           unit="시간"
-          tone="slate"
+          tone="neutral"
           icon={Clock3}
           sub={`근무일 ${workedDays}일`}
         />

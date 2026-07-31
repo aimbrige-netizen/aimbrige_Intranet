@@ -8,17 +8,18 @@ import { cn, initialsOf } from "@/lib/utils";
  * next/image 대신 img를 쓰는 이유: 프로필 이미지 출처가 Google/Supabase Storage 등으로
  * 가변적이어서 next.config의 remotePatterns를 계속 늘려야 하는 부담을 피한다.
  */
+/* 사이즈 이름은 SEED 규격(xsmall~xlarge)을 따라 Button과 통일한다 */
 const SIZES = {
-  sm: "size-6 text-[10px]",
-  md: "size-8 text-label",
-  lg: "size-12 text-body",
-  xl: "size-20 text-h2",
+  small: "size-6 text-[10px]",
+  medium: "size-8 text-label",
+  large: "size-12 text-body",
+  xlarge: "size-20 text-h2",
 } as const;
 
 export function Avatar({
   name,
   src,
-  size = "md",
+  size = "medium",
   className,
 }: {
   name: string;
@@ -30,7 +31,7 @@ export function Avatar({
     <span
       className={cn(
         "inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full",
-        "bg-primary-light font-semibold text-primary",
+        "bg-primary-light font-bold text-primary",
         SIZES[size],
         className,
       )}
@@ -50,7 +51,7 @@ export function AvatarWithName({
   name,
   sub,
   src,
-  size = "md",
+  size = "medium",
 }: {
   name: string;
   sub?: string | null;

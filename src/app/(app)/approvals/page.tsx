@@ -77,11 +77,11 @@ export default async function ApprovalsPage({
       />
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
+        <div className="inline-flex rounded-card border border-line bg-surface p-0.5">
           <Link
             href={linkFor({})}
             className={cn(
-              "rounded-md px-3 py-1.5 text-body transition-colors",
+              "rounded-sm px-3 py-1.5 text-body transition-colors",
               tab === "mine"
                 ? "bg-primary text-white"
                 : "text-muted hover:bg-canvas hover:text-ink",
@@ -94,7 +94,7 @@ export default async function ApprovalsPage({
             <Link
               href={linkFor({ tab: "inbox" })}
               className={cn(
-                "rounded-md px-3 py-1.5 text-body transition-colors",
+                "rounded-sm px-3 py-1.5 text-body transition-colors",
                 tab === "inbox"
                   ? "bg-primary text-white"
                   : "text-muted hover:bg-canvas hover:text-ink",
@@ -117,9 +117,9 @@ export default async function ApprovalsPage({
                 key={filter.value}
                 href={linkFor(filter.value ? { status: filter.value } : {})}
                 className={cn(
-                  "rounded-md px-2.5 py-1 text-label transition-colors",
+                  "rounded-sm px-2.5 py-1 text-label transition-colors",
                   status === filter.value
-                    ? "bg-primary-light font-medium text-primary"
+                    ? "bg-primary-light font-bold text-primary"
                     : "text-muted hover:bg-canvas",
                 )}
               >
@@ -214,7 +214,7 @@ export default async function ApprovalsPage({
                       <td>
                         <AvatarWithName
                           name={row.document.requester?.name ?? "-"}
-                          size="sm"
+                          size="small"
                         />
                       </td>
                       <td className="whitespace-nowrap">

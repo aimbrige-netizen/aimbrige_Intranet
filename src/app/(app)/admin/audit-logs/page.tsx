@@ -230,7 +230,7 @@ function DetailCell({ detail }: { detail: AuditLog["detail"] }) {
               <span className="mx-1">→</span>
             </>
           ) : null}
-          <span className="font-medium text-ink">{display(after[key])}</span>
+          <span className="font-bold text-ink">{display(after[key])}</span>
         </li>
       ))}
     </ul>

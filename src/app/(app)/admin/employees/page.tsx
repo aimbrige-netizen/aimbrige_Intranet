@@ -133,7 +133,7 @@ export default async function EmployeesPage({
                         <AvatarWithName
                           name={employee.name}
                           src={employee.profile_image_url}
-                          size="sm"
+                          size="small"
                         />
                       </Link>
                     </td>

@@ -61,7 +61,7 @@ export function PostList({
 
         {canWrite ? (
           <Link href={`/board/${board.id}/new`} className="ml-auto">
-            <Button size="sm">
+            <Button size="small">
               <Plus className="size-3.5" />새 글
             </Button>
           </Link>
@@ -104,7 +104,7 @@ export function PostList({
                     <span
                       className={cn(
                         "min-w-0 flex-1 truncate text-body",
-                        post.isRead ? "text-muted" : "font-medium text-ink",
+                        post.isRead ? "text-muted" : "font-bold text-ink",
                       )}
                     >
                       {post.title}
@@ -134,7 +134,7 @@ export function PostList({
                       <AvatarWithName
                         name={post.author?.name ?? "-"}
                         src={post.author?.profile_image_url}
-                        size="sm"
+                        size="small"
                       />
                     </span>
 

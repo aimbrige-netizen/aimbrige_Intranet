@@ -139,9 +139,9 @@ export default async function ApprovalsPage() {
                           className={cn(
                             "tabular-nums",
                             over
-                              ? "font-semibold text-danger"
+                              ? "font-bold text-danger"
                               : warn
-                                ? "font-semibold text-warn"
+                                ? "font-bold text-warn"
                                 : undefined,
                           )}
                         >

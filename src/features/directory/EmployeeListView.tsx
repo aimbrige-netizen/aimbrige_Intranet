@@ -95,7 +95,7 @@ export function EmployeeListView({
             onChange={(event) => setKeyword(event.target.value)}
             placeholder="이름·부서·직책·이메일 검색"
             aria-label="임직원 통합검색"
-            className="h-9 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
+            className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
           />
         </div>
 
@@ -137,7 +137,7 @@ export function EmployeeListView({
               type="checkbox"
               checked={includeInactive}
               onChange={(event) => onToggleInactive(event.target.checked)}
-              className="size-3.5 accent-[#1D4E8F]"
+              className="size-3.5 accent-[#ff6f0f]"
             />
             휴직·퇴사 포함
           </label>
@@ -177,7 +177,7 @@ export function EmployeeListView({
                       <AvatarWithName
                         name={employee.name}
                         src={employee.profile_image_url}
-                        size="sm"
+                        size="small"
                       />
                       {employee.employment_status !== "active" ? (
                         <EmploymentStatusBadge

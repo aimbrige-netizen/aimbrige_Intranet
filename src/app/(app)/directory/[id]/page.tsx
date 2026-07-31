@@ -71,7 +71,7 @@ export default async function DirectoryEmployeePage({
             <Avatar
               name={employee.name}
               src={employee.profile_image_url}
-              size="xl"
+              size="xlarge"
             />
             <div>
               <p className="text-h2 text-ink">{employee.name}</p>
@@ -81,7 +81,7 @@ export default async function DirectoryEmployeePage({
             <div className="w-full space-y-2 border-t border-line pt-3 text-left">
               <a
                 href={`mailto:${employee.email}`}
-                className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-body text-ink transition-colors hover:bg-canvas"
+                className="flex items-center gap-2 rounded-card px-2 py-1.5 text-body text-ink transition-colors hover:bg-canvas"
               >
                 <Mail className="size-4 shrink-0 text-muted" aria-hidden />
                 <span className="truncate">{employee.email}</span>
@@ -89,7 +89,7 @@ export default async function DirectoryEmployeePage({
               {employee.phone ? (
                 <a
                   href={`tel:${employee.phone}`}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-body text-ink transition-colors hover:bg-canvas"
+                  className="flex items-center gap-2 rounded-card px-2 py-1.5 text-body text-ink transition-colors hover:bg-canvas"
                 >
                   <Phone className="size-4 shrink-0 text-muted" aria-hidden />
                   {employee.phone}

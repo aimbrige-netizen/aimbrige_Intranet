@@ -66,7 +66,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
 
   return (
     <>
-      <div className="mb-4 inline-flex rounded-lg border border-line bg-surface p-0.5">
+      <div className="mb-4 inline-flex rounded-card border border-line bg-surface p-0.5">
         {(
           [
             ["pending", `대기 ${pendingItems.length}`],
@@ -79,7 +79,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
             aria-pressed={tab === key}
             onClick={() => setTab(key)}
             className={cn(
-              "rounded-md px-3 py-1.5 text-body transition-colors",
+              "rounded-sm px-3 py-1.5 text-body transition-colors",
               tab === key
                 ? "bg-primary text-white"
                 : "text-muted hover:bg-canvas hover:text-ink",
@@ -134,7 +134,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
                   {shown.map((item) => (
                     <tr key={`${item.kind}-${item.id}`}>
                       <td>
-                        <AvatarWithName name={item.employeeName} size="sm" />
+                        <AvatarWithName name={item.employeeName} size="small" />
                       </td>
                       <td>{item.typeLabel}</td>
                       <td className="whitespace-nowrap tabular-nums">
@@ -153,7 +153,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
                         {item.status === "pending" ? (
                           <span className="flex gap-1.5">
                             <Button
-                              size="sm"
+                              size="small"
                               onClick={() => approve(item)}
                               disabled={pending}
                             >
@@ -161,7 +161,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
                               승인
                             </Button>
                             <Button
-                              size="sm"
+                              size="small"
                               variant="secondary"
                               onClick={() => {
                                 setRejecting(item);

@@ -125,12 +125,12 @@ export function OrgEditor({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => open({ mode: "create-department" })}>
+        <Button size="small" onClick={() => open({ mode: "create-department" })}>
           <Plus className="size-3.5" />
           부서 추가
         </Button>
         <Button
-          size="sm"
+          size="small"
           variant="secondary"
           onClick={() => open({ mode: "create-team" })}
         >
@@ -140,7 +140,7 @@ export function OrgEditor({
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-label font-semibold text-muted">
+          <h3 className="mb-2 flex items-center gap-1.5 text-label font-bold text-muted">
             <Building2 className="size-3.5" aria-hidden />
             부서 {departments.length}개
           </h3>
@@ -189,7 +189,7 @@ export function OrgEditor({
         </section>
 
         <section>
-          <h3 className="mb-2 flex items-center gap-1.5 text-label font-semibold text-muted">
+          <h3 className="mb-2 flex items-center gap-1.5 text-label font-bold text-muted">
             <Users className="size-3.5" aria-hidden />팀 {teams.length}개
           </h3>
           <ul className="divide-y divide-line rounded-card border border-line bg-surface">
@@ -339,8 +339,8 @@ function IconButton({
       title={label}
       className={
         danger
-          ? "rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
-          : "rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+          ? "rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+          : "rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
       }
     >
       {children}

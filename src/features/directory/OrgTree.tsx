@@ -80,7 +80,7 @@ export function OrgTree({
 
   return (
     <div className="text-body">
-      <div className="flex items-center gap-2 rounded-lg bg-primary-light px-3 py-2 font-semibold text-primary">
+      <div className="flex items-center gap-2 rounded-card bg-primary-light px-3 py-2 font-bold text-primary">
         <Building2 className="size-4" aria-hidden />
         {companyName}
       </div>
@@ -149,7 +149,7 @@ function DepartmentNode({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-canvas"
+        className="flex w-full items-center gap-1.5 rounded-card px-2 py-1.5 text-left transition-colors hover:bg-canvas"
         aria-expanded={open}
       >
         <ChevronRight
@@ -161,7 +161,7 @@ function DepartmentNode({
           aria-hidden
         />
         <Building2 className="size-4 shrink-0 text-primary" aria-hidden />
-        <span className="font-medium text-ink">{department.name}</span>
+        <span className="font-bold text-ink">{department.name}</span>
         {memberCount > 0 ? (
           <span className="text-caption">{memberCount}명</span>
         ) : null}
@@ -198,7 +198,7 @@ function TeamNode({ team, index }: { team: Team; index: TreeIndex }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-canvas"
+        className="flex w-full items-center gap-1.5 rounded-card px-2 py-1.5 text-left transition-colors hover:bg-canvas"
         aria-expanded={open}
       >
         <ChevronRight
@@ -231,13 +231,13 @@ function EmployeeRow({ employee }: { employee: DirectoryEmployee }) {
   return (
     <Link
       href={`/directory/${employee.id}`}
-      className="flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-canvas"
+      className="flex items-center gap-2 rounded-card px-2 py-1.5 transition-colors hover:bg-canvas"
     >
       <UserRound className="size-3.5 shrink-0 text-transparent" aria-hidden />
       <Avatar
         name={employee.name}
         src={employee.profile_image_url}
-        size="sm"
+        size="small"
       />
       <span className="truncate text-ink">{employee.name}</span>
       {employee.position ? (

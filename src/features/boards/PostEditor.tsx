@@ -104,7 +104,7 @@ export function PostEditor({
                       checked={isPinned}
                       onChange={(e) => setIsPinned(e.target.checked)}
                       disabled={pending}
-                      className="size-4 accent-[#1D4E8F]"
+                      className="size-4 accent-[#ff6f0f]"
                     />
                     목록 상단에 고정
                   </label>

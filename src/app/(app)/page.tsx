@@ -107,7 +107,7 @@ export default async function DashboardPage({
           label="잔여 연차"
           value={attendance.connected ? attendance.data.remainingLeave : 0}
           unit="일"
-          tone="sky"
+          tone="brand"
           icon={CalendarCheck}
           emphasis
         />
@@ -120,8 +120,8 @@ export default async function DashboardPage({
           }
           tone={
             attendance.connected && attendance.data.record?.check_in_at
-              ? "mint"
-              : "slate"
+              ? "positive"
+              : "neutral"
           }
           icon={Clock3}
           sub={
@@ -136,8 +136,11 @@ export default async function DashboardPage({
           label="결재 대기"
           value={approval.connected ? approval.data.length : 0}
           unit="건"
+          // 대기 문서는 "문제"가 아니라 할 일이다 — 빨강 대신 informative
           tone={
-            approval.connected && approval.data.length > 0 ? "peach" : "slate"
+            approval.connected && approval.data.length > 0
+              ? "informative"
+              : "neutral"
           }
           icon={FileCheck}
           sub={
@@ -150,7 +153,11 @@ export default async function DashboardPage({
           label="미열람 공지"
           value={notices.connected ? notices.data.length : 0}
           unit="건"
-          tone={notices.connected && notices.data.length > 0 ? "rose" : "slate"}
+          tone={
+            notices.connected && notices.data.length > 0
+              ? "informative"
+              : "neutral"
+          }
           icon={Megaphone}
           sub={
             notices.connected && notices.data.length > 0

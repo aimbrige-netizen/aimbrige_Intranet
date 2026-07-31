@@ -56,7 +56,7 @@ export function LibraryList({ documents }: { documents: LibraryRow[] }) {
             onChange={(e) => setKeyword(e.target.value)}
             placeholder="문서 이름 검색"
             aria-label="문서 검색"
-            className="h-9 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
+            className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
           />
         </div>
         <span className="text-caption">{total}건</span>

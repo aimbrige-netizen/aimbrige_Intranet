@@ -112,7 +112,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
           예약 가능 리소스 {resources.filter((r) => r.is_active).length}개 / 전체{" "}
           {resources.length}개
         </p>
-        <Button size="sm" onClick={openCreate}>
+        <Button size="small" onClick={openCreate}>
           <Plus className="size-3.5" />
           리소스 추가
         </Button>
@@ -140,7 +140,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
             <tbody>
               {resources.map((resource) => (
                 <tr key={resource.id}>
-                  <td className="font-medium text-ink">{resource.name}</td>
+                  <td className="font-bold text-ink">{resource.name}</td>
                   <td>{TYPE_LABELS[resource.type]}</td>
                   <td>{resource.capacity ? `${resource.capacity}인` : "-"}</td>
                   <td>{resource.location ?? "-"}</td>
@@ -152,7 +152,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
                   <td>
                     <span className="flex gap-1.5">
                       <Button
-                        size="sm"
+                        size="small"
                         variant="secondary"
                         onClick={() => openEdit(resource)}
                         disabled={pending}
@@ -161,7 +161,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
                         수정
                       </Button>
                       <Button
-                        size="sm"
+                        size="small"
                         variant="ghost"
                         onClick={() => toggleActive(resource)}
                         disabled={pending}
@@ -255,7 +255,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
                 setValues((v) => ({ ...v, isActive: e.target.checked }))
               }
               disabled={pending}
-              className="size-4 accent-[#1D4E8F]"
+              className="size-4 accent-[#ff6f0f]"
             />
             예약 가능(활성)
           </label>

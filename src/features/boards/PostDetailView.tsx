@@ -114,7 +114,7 @@ export function PostDetailView({
                   name={post.author?.name ?? "-"}
                   src={post.author?.profile_image_url}
                   sub={post.author?.position ?? undefined}
-                  size="md"
+                  size="medium"
                 />
                 <span className="text-caption">
                   {formatDateTime(post.created_at)}
@@ -129,7 +129,7 @@ export function PostDetailView({
               {isNotice && post.readCount !== null ? (
                 canSeeReads ? (
                   <Button
-                    size="sm"
+                    size="small"
                     variant="secondary"
                     onClick={() => setReadOpen(true)}
                   >
@@ -146,13 +146,13 @@ export function PostDetailView({
               {canEdit ? (
                 <>
                   <Link href={`/board/${post.board_id}/${post.id}/edit`}>
-                    <Button size="sm" variant="secondary">
+                    <Button size="small" variant="secondary">
                       <Pencil className="size-3.5" />
                       수정
                     </Button>
                   </Link>
                   <Button
-                    size="sm"
+                    size="small"
                     variant="ghost"
                     onClick={removePost}
                     disabled={pending}
@@ -229,11 +229,11 @@ export function PostDetailView({
                   <Avatar
                     name={c.author?.name ?? "-"}
                     src={c.author?.profile_image_url}
-                    size="md"
+                    size="medium"
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-body font-medium text-ink">
+                      <span className="text-body font-bold text-ink">
                         {c.author?.name ?? "-"}
                       </span>
                       <span className="text-caption">
@@ -244,7 +244,7 @@ export function PostDetailView({
                           type="button"
                           onClick={() => removeComment(c.id)}
                           disabled={pending}
-                          className="ml-auto rounded p-1 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="ml-auto rounded-sm p-1 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                           aria-label="댓글 삭제"
                         >
                           <Trash2 className="size-3.5" />
@@ -301,7 +301,7 @@ export function PostDetailView({
         <div className="space-y-4">
           {unread.length > 0 ? (
             <div className="rounded-card border border-warn/40 bg-warn/10 px-4 py-3 text-body text-ink">
-              <p className="flex items-center gap-2 font-medium">
+              <p className="flex items-center gap-2 font-bold">
                 <Users className="size-4 text-warn" aria-hidden />
                 미열람 {unread.length}명
               </p>

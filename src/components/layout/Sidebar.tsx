@@ -10,10 +10,11 @@ import type { Favorite, RoleName } from "@/types/db";
 import { addFavorite, removeFavorite } from "@/server/actions/favorites";
 
 /**
- * 좌측 고정 사이드바 (디자인시스템 v1.1 레이아웃)
+ * 좌측 고정 사이드바 (디자인시스템 v2.0 / SEED)
  * - 화이트 배경 76px 레일. 아이콘 + 짧은 라벨을 항상 노출한다(호버 확장 없음).
  *   호버로만 라벨이 보이는 방식은 클릭 전까지 메뉴를 못 읽어서 폐기했다.
- * - 활성 항목은 아이콘을 Primary 사각 블록으로 채워 한눈에 구분한다.
+ * - 활성 항목은 Primary Low(연한 주황 면 + 주황 글자)로만 표시한다.
+ *   진한 주황 면은 화면당 하나뿐인 주요 액션 버튼에만 남겨둔다.
  * - 768px 미만에서는 라벨이 옆에 붙는 드로어로 전환한다.
  */
 export function Sidebar({
@@ -58,16 +59,16 @@ export function Sidebar({
       >
         {/* 로고 — 상단바와 같은 높이로 맞춰 가로선이 이어지게 */}
         <div className="flex h-topbar shrink-0 items-center gap-2.5 border-b border-line px-4 md:justify-center md:px-0">
-          <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-primary text-[12px] font-bold tracking-tight text-white">
+          <span className="grid size-8 shrink-0 place-items-center rounded-card bg-primary text-[12px] font-bold tracking-tight text-white">
             AB
           </span>
-          <span className="text-body font-semibold text-ink md:hidden">
+          <span className="text-body font-bold text-ink md:hidden">
             에임브릿지
           </span>
           <button
             type="button"
             onClick={onMobileClose}
-            className="ml-auto rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink md:hidden"
+            className="ml-auto rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink md:hidden"
             aria-label="메뉴 닫기"
           >
             <X className="size-4" />
@@ -81,7 +82,7 @@ export function Sidebar({
                 <hr className="mx-3 my-2 border-line md:mx-4" />
               ) : null}
               {section.title ? (
-                <p className="px-4 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-muted/70 md:text-center">
+                <p className="px-4 pb-1 pt-1 text-[11px] font-bold text-muted md:text-center">
                   {section.title}
                 </p>
               ) : null}
@@ -99,7 +100,7 @@ export function Sidebar({
           {favorites.length > 0 ? (
             <>
               <hr className="mx-3 my-2 border-line md:mx-4" />
-              <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted/70 md:text-center">
+              <p className="px-4 pb-1 text-[11px] font-bold text-muted md:text-center">
                 즐겨찾기
               </p>
               {favorites.map((favorite) => (
@@ -109,18 +110,19 @@ export function Sidebar({
                   title={favorite.label}
                   aria-label={`즐겨찾기: ${favorite.label}`}
                   className={cn(
-                    "mx-1.5 flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-sidebar-hover",
-                    "md:flex-col md:gap-1 md:px-1 md:py-2",
-                    pathname === favorite.target_path && "text-primary",
+                    "flex items-center gap-3 rounded-card px-3 py-2 transition-colors duration-fast ease-standard hover:bg-sidebar-hover",
+                    "md:mx-2 md:flex-col md:gap-1 md:px-1 md:py-2",
+                    pathname === favorite.target_path &&
+                      "bg-primary-light font-bold text-primary hover:bg-primary-light",
                   )}
                 >
                   <Star
-                    className="size-[18px] shrink-0 fill-warn text-warn"
+                    className="size-[18px] shrink-0 fill-primary text-primary"
                     aria-hidden
                   />
                   <span
                     aria-hidden
-                    className="truncate text-body md:max-w-[68px] md:text-[10px] md:leading-tight"
+                    className="truncate text-body-sm md:max-w-[68px] md:text-[11px] md:leading-tight"
                   >
                     {favorite.label}
                   </span>
@@ -178,14 +180,14 @@ function NavRow({
 
   const body = (
     <>
-      {/* 활성 상태는 아이콘 블록을 Primary로 채운다 */}
+      {/* 활성 상태는 색으로만 구분한다(면 채움 없음) */}
       <span
         className={cn(
-          "grid size-9 shrink-0 place-items-center rounded-[10px] transition-colors",
+          "grid size-9 shrink-0 place-items-center transition-colors duration-fast ease-standard",
           active
-            ? "bg-primary text-white"
+            ? "text-primary"
             : item.ready
-              ? "text-muted group-hover/nav:text-primary"
+              ? "text-muted group-hover/nav:text-ink"
               : "text-muted/45",
         )}
       >
@@ -199,9 +201,9 @@ function NavRow({
       <span
         aria-hidden
         className={cn(
-          "truncate text-body transition-colors md:max-w-[68px] md:text-[10px] md:leading-tight",
+          "truncate text-body-sm transition-colors duration-fast ease-standard md:max-w-[68px] md:text-[11px] md:leading-tight",
           active
-            ? "font-semibold text-primary"
+            ? "font-bold text-primary"
             : item.ready
               ? "text-sidebar-text"
               : "text-muted/45",
@@ -214,10 +216,10 @@ function NavRow({
   );
 
   const rowClass = cn(
-    "group/nav flex items-center gap-3 rounded-lg px-3 py-1.5 transition-colors",
-    "md:mx-1.5 md:flex-col md:gap-1 md:px-1 md:py-2",
+    "group/nav flex items-center gap-3 rounded-card px-3 py-1.5 transition-colors duration-fast ease-standard",
+    "md:mx-2 md:flex-col md:gap-1 md:px-1 md:py-2",
     item.ready ? "hover:bg-sidebar-hover" : "cursor-not-allowed",
-    active && "bg-primary-light/60",
+    active && "bg-primary-light hover:bg-primary-light",
   );
 
   return (
@@ -254,7 +256,7 @@ function NavRow({
       )}
 
       {menuOpen ? (
-        <div className="absolute left-full top-1 z-50 ml-1 w-44 overflow-hidden rounded-lg border border-line bg-surface py-1 text-ink shadow-pop">
+        <div className="absolute left-full top-1 z-50 ml-1 w-44 overflow-hidden rounded-card border border-line bg-surface py-1 text-ink shadow-pop">
           <button
             type="button"
             onClick={toggleFavorite}
@@ -268,7 +270,7 @@ function NavRow({
               </>
             ) : (
               <>
-                <Star className="size-4 text-warn" />
+                <Star className="size-4 text-primary" />
                 즐겨찾기 추가
               </>
             )}

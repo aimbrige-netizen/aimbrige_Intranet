@@ -116,7 +116,7 @@ export default async function ApprovalDetailPage({
               {/* 경비청구서는 항목별 표로 (스펙 3.4) */}
               {expenseItems.length > 0 ? (
                 <div className="border-t border-line p-5">
-                  <p className="mb-2 text-label font-semibold text-muted">
+                  <p className="mb-2 text-label font-bold text-muted">
                     청구 항목
                   </p>
                   <table className="ab-table">
@@ -136,8 +136,8 @@ export default async function ApprovalDetailPage({
                         </tr>
                       ))}
                       <tr>
-                        <td className="font-semibold text-ink">합계</td>
-                        <td className="text-right font-semibold tabular-nums text-primary">
+                        <td className="font-bold text-ink">합계</td>
+                        <td className="text-right font-bold tabular-nums text-primary">
                           {expenseItems
                             .reduce((s, i) => s + Number(i.amount || 0), 0)
                             .toLocaleString("ko-KR")}
@@ -230,7 +230,7 @@ export default async function ApprovalDetailPage({
                       <p className="flex items-center gap-1.5 text-caption">
                         {step.approver ? (
                           <>
-                            <Avatar name={step.approver.name} size="sm" />
+                            <Avatar name={step.approver.name} size="small" />
                             {step.approver.name}
                             {step.approver.position
                               ? ` ${step.approver.position}`
@@ -248,7 +248,7 @@ export default async function ApprovalDetailPage({
                       {step.comment ? (
                         <p
                           className={cn(
-                            "mt-1 whitespace-pre-wrap rounded-lg px-2.5 py-1.5 text-label",
+                            "mt-1 whitespace-pre-wrap rounded-card px-2.5 py-1.5 text-label",
                             step.status === "rejected"
                               ? "bg-danger/10 text-danger"
                               : "bg-canvas text-ink",

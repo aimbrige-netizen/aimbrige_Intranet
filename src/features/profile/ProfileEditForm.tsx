@@ -117,12 +117,12 @@ export function ProfileEditForm({
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-4">
-        <Avatar name={name} src={imageUrl} size="xl" />
+        <Avatar name={name} src={imageUrl} size="xlarge" />
         <div className="space-y-2">
           <div className="flex gap-2">
             <Button
               variant="secondary"
-              size="sm"
+              size="small"
               onClick={() => fileRef.current?.click()}
               disabled={busy}
             >
@@ -132,7 +132,7 @@ export function ProfileEditForm({
             {imageUrl ? (
               <Button
                 variant="ghost"
-                size="sm"
+                size="small"
                 onClick={() => setImageUrl(null)}
                 disabled={busy}
               >

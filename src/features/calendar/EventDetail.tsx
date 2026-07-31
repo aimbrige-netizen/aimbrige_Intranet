@@ -108,7 +108,7 @@ export function EventDetail({
         ) : null}
 
         {item.description ? (
-          <p className="whitespace-pre-wrap rounded-lg bg-canvas px-3 py-2 text-body text-ink">
+          <p className="whitespace-pre-wrap rounded-card bg-canvas px-3 py-2 text-body text-ink">
             {item.description}
           </p>
         ) : null}

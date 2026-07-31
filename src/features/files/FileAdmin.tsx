@@ -148,7 +148,7 @@ export function FileAdmin({
           description="Drive 폴더 주소를 붙여넣으면 폴더 ID를 자동으로 추출합니다."
           action={
             <Button
-              size="sm"
+              size="small"
               onClick={() => {
                 setErrors({});
                 setMessage(null);
@@ -177,7 +177,7 @@ export function FileAdmin({
                 <tbody>
                   {folderLinks.map((row) => (
                     <tr key={row.id}>
-                      <td className="font-medium text-ink">
+                      <td className="font-bold text-ink">
                         {row.label ?? row.scopeName}
                       </td>
                       <td>
@@ -194,7 +194,7 @@ export function FileAdmin({
                           onClick={() => removeFolder(row)}
                           disabled={pending}
                           aria-label="연결 해제"
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -219,7 +219,7 @@ export function FileAdmin({
           description="삭제하면 목록에서만 빠지고 Drive의 실제 파일은 그대로 남습니다."
           action={
             <Button
-              size="sm"
+              size="small"
               onClick={() => {
                 setErrors({});
                 setMessage(null);
@@ -248,7 +248,7 @@ export function FileAdmin({
                 <tbody>
                   {libraryDocs.map((row) => (
                     <tr key={row.id}>
-                      <td className="font-medium text-ink">{row.displayName}</td>
+                      <td className="font-bold text-ink">{row.displayName}</td>
                       <td>{row.category ?? "기타"}</td>
                       <td className="max-w-56 truncate text-caption">
                         {row.driveFileId}
@@ -259,7 +259,7 @@ export function FileAdmin({
                           onClick={() => removeDoc(row)}
                           disabled={pending}
                           aria-label="목록에서 제외"
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>

@@ -144,7 +144,7 @@ export default async function EmployeeDetailPage({
               <Avatar
                 name={employee.name}
                 src={employee.profile_image_url}
-                size="xl"
+                size="xlarge"
               />
               <div>
                 <p className="text-h2 text-ink">{employee.name}</p>

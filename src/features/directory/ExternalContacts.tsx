@@ -140,7 +140,7 @@ export function ExternalContacts({
         <p className="text-caption">
           벤더·거래처 등 외부 비즈니스 연락처 {contacts.length}건
         </p>
-        <Button size="sm" onClick={openCreate}>
+        <Button size="small" onClick={openCreate}>
           <Plus className="size-3.5" />
           연락처 추가
         </Button>
@@ -170,7 +170,7 @@ export function ExternalContacts({
             <tbody>
               {contacts.map((contact) => (
                 <tr key={contact.id}>
-                  <td className="font-medium text-ink">{contact.name}</td>
+                  <td className="font-bold text-ink">{contact.name}</td>
                   <td>{contact.company ?? "-"}</td>
                   <td>{contact.role ?? "-"}</td>
                   <td className="text-muted">{contact.phone ?? "-"}</td>
@@ -194,7 +194,7 @@ export function ExternalContacts({
                           type="button"
                           onClick={() => openEdit(contact)}
                           aria-label={`${contact.name} 수정`}
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -202,7 +202,7 @@ export function ExternalContacts({
                           type="button"
                           onClick={() => remove(contact)}
                           aria-label={`${contact.name} 삭제`}
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                         >
                           <Trash2 className="size-3.5" />
                         </button>

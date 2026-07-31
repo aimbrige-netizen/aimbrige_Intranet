@@ -33,7 +33,7 @@ export function EmptyState({
           aria-hidden
         />
       ) : null}
-      <p className="text-body font-medium text-ink">{title}</p>
+      <p className="text-body font-bold text-ink">{title}</p>
       {description ? (
         <p className="max-w-sm text-caption">{description}</p>
       ) : null}

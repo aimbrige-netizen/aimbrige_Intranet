@@ -24,7 +24,7 @@ export function BoardNav({
     const Icon = icon;
     return (
       <div className="mb-3 last:mb-0">
-        <p className="mb-1 flex items-center gap-1.5 px-2 text-label font-semibold text-muted">
+        <p className="mb-1 flex items-center gap-1.5 px-2 text-label font-bold text-muted">
           <Icon className="size-3.5" aria-hidden />
           {label}
         </p>
@@ -34,9 +34,9 @@ export function BoardNav({
               <Link
                 href={`/board/${board.id}`}
                 className={cn(
-                  "flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-body transition-colors",
+                  "flex items-center justify-between gap-2 rounded-card px-2 py-1.5 text-body transition-colors",
                   board.id === activeBoardId
-                    ? "bg-primary-light font-medium text-primary"
+                    ? "bg-primary-light font-bold text-primary"
                     : "text-ink hover:bg-canvas",
                 )}
               >

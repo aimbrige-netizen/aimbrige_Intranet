@@ -65,7 +65,7 @@ export function ApprovalLineEditor({
           <tbody>
             {rows.map((row) => (
               <tr key={row.documentType}>
-                <td className="font-medium text-ink">
+                <td className="font-bold text-ink">
                   {DOCUMENT_TYPE_META[row.documentType].label}
                 </td>
                 <td className="text-caption">

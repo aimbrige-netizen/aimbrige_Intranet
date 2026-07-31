@@ -89,19 +89,19 @@ export function CheckInOut({
       <div className="grid grid-cols-3 divide-x divide-line rounded-card bg-canvas py-3 text-center">
         <div>
           <p className="text-caption">출근</p>
-          <p className="mt-0.5 text-body font-semibold tabular-nums text-ink">
+          <p className="mt-0.5 text-body font-bold tabular-nums text-ink">
             {record?.check_in_at ? toSeoulTime(record.check_in_at) : "--:--"}
           </p>
         </div>
         <div>
           <p className="text-caption">퇴근</p>
-          <p className="mt-0.5 text-body font-semibold tabular-nums text-ink">
+          <p className="mt-0.5 text-body font-bold tabular-nums text-ink">
             {record?.check_out_at ? toSeoulTime(record.check_out_at) : "--:--"}
           </p>
         </div>
         <div>
           <p className="text-caption">근무상태</p>
-          <p className="mt-0.5 text-body font-semibold text-ink">
+          <p className="mt-0.5 text-body font-bold text-ink">
             {record ? WORK_STATUS_LABELS[record.work_status] : "-"}
           </p>
         </div>
@@ -143,7 +143,7 @@ export function CheckInOut({
       </div>
 
       {warning ? (
-        <p className="flex items-start gap-1.5 rounded-lg bg-warn/10 px-3 py-2 text-label text-[#8A6316]">
+        <p className="flex items-start gap-1.5 rounded-card bg-warn/10 px-3 py-2 text-label text-primary">
           <MapPinOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           {warning}
         </p>

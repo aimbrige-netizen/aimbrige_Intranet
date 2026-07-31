@@ -102,7 +102,7 @@ export default async function RolesPage() {
                 }
                 description={meta.scope}
                 action={
-                  <span className="text-label font-semibold text-ink">
+                  <span className="text-label font-bold text-ink">
                     {members.length}명
                   </span>
                 }
@@ -126,7 +126,7 @@ export default async function RolesPage() {
                           <AvatarWithName
                             name={member.name}
                             src={member.profile_image_url}
-                            size="sm"
+                            size="small"
                             sub={
                               [member.department?.name, member.position]
                                 .filter(Boolean)

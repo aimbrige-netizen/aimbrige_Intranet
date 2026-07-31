@@ -37,7 +37,7 @@ export default function LoginPage({
           >
             <CircleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
             <div>
-              <p className="text-body font-medium text-danger">{error.title}</p>
+              <p className="text-body font-bold text-danger">{error.title}</p>
               <p className="mt-0.5 text-label text-ink/80">{error.message}</p>
             </div>
           </div>

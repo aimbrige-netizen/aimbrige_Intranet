@@ -149,7 +149,7 @@ export function CalendarBoard({
         {/* 뷰 탭: 개인/팀/전사 */}
         <div
           role="tablist"
-          className="inline-flex rounded-lg border border-line bg-surface p-0.5"
+          className="inline-flex rounded-card border border-line bg-surface p-0.5"
         >
           {(Object.keys(SCOPE_LABELS) as CalendarScope[]).map((key) => (
             <button
@@ -159,7 +159,7 @@ export function CalendarBoard({
               aria-selected={scope === key}
               onClick={() => setParam({ scope: key === "personal" ? null : key })}
               className={cn(
-                "rounded-md px-3 py-1.5 text-body transition-colors",
+                "rounded-sm px-3 py-1.5 text-body transition-colors",
                 scope === key
                   ? "bg-primary text-white"
                   : "text-muted hover:bg-canvas hover:text-ink",
@@ -171,7 +171,7 @@ export function CalendarBoard({
         </div>
 
         {/* 월간/주간/리스트 */}
-        <div className="inline-flex rounded-lg border border-line bg-surface p-0.5">
+        <div className="inline-flex rounded-card border border-line bg-surface p-0.5">
           {(Object.keys(VIEW_LABELS) as CalendarView[]).map((key) => (
             <button
               key={key}
@@ -185,9 +185,9 @@ export function CalendarBoard({
                 })
               }
               className={cn(
-                "rounded-md px-3 py-1.5 text-body transition-colors",
+                "rounded-sm px-3 py-1.5 text-body transition-colors",
                 view === key
-                  ? "bg-primary-light font-medium text-primary"
+                  ? "bg-primary-light font-bold text-primary"
                   : "text-muted hover:bg-canvas hover:text-ink",
               )}
             >
@@ -197,14 +197,14 @@ export function CalendarBoard({
         </div>
 
         <div className="flex items-center gap-1">
-          <Button size="sm" variant="secondary" onClick={() => shift(-1)}>
+          <Button size="small" variant="secondary" onClick={() => shift(-1)}>
             <ChevronLeft className="size-3.5" />
             <span className="sr-only">이전</span>
           </Button>
-          <Button size="sm" variant="secondary" onClick={goToday}>
+          <Button size="small" variant="secondary" onClick={goToday}>
             오늘
           </Button>
-          <Button size="sm" variant="secondary" onClick={() => shift(1)}>
+          <Button size="small" variant="secondary" onClick={() => shift(1)}>
             <ChevronRight className="size-3.5" />
             <span className="sr-only">다음</span>
           </Button>
@@ -213,12 +213,12 @@ export function CalendarBoard({
         <span className="text-h2 text-ink">{headingLabel}</span>
 
         <div className="ml-auto flex gap-2">
-          <Button size="sm" onClick={() => openCreate()}>
+          <Button size="small" onClick={() => openCreate()}>
             <Plus className="size-3.5" />
             일정 추가
           </Button>
           <Button
-            size="sm"
+            size="small"
             variant="secondary"
             onClick={() => setBookingModalOpen(true)}
           >
@@ -315,7 +315,7 @@ function EventChip({
       onClick={() => onPick(item)}
       title={item.title}
       className={cn(
-        "flex w-full items-center gap-1 truncate rounded px-1.5 py-0.5 text-left text-[11px] transition-opacity hover:opacity-80",
+        "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-[11px] transition-opacity hover:opacity-80",
         color.chip,
       )}
     >
@@ -353,7 +353,7 @@ function MonthGrid({
           <div
             key={label}
             className={cn(
-              "px-2 py-2 text-center text-label font-medium",
+              "px-2 py-2 text-center text-label font-bold",
               index === 0
                 ? "text-danger"
                 : index === 6
@@ -391,7 +391,7 @@ function MonthGrid({
                   className={cn(
                     "grid size-6 place-items-center rounded-full text-label transition-colors hover:bg-primary-light",
                     isToday
-                      ? "bg-primary font-semibold text-white hover:bg-primary"
+                      ? "bg-primary font-bold text-white hover:bg-primary"
                       : dayToneClass(weekday, !!holiday, inMonth),
                   )}
                 >
@@ -454,7 +454,7 @@ function WeekGrid({
           <div
             key={day}
             className={cn(
-              "rounded-lg border border-line p-2",
+              "rounded-card border border-line p-2",
               isToday && "border-primary bg-primary-light/40",
             )}
           >
@@ -467,7 +467,7 @@ function WeekGrid({
               <span className="flex items-baseline gap-1.5">
                 <span
                   className={cn(
-                    "text-label font-medium",
+                    "text-label font-bold",
                     index === 0
                       ? "text-danger"
                       : index === 6
@@ -481,7 +481,7 @@ function WeekGrid({
                   className={cn(
                     "text-body",
                     isToday
-                      ? "font-semibold text-primary"
+                      ? "font-bold text-primary"
                       : dayToneClass(index, !!holiday, true),
                   )}
                 >
@@ -541,7 +541,7 @@ function ListView({
     <ul className="divide-y divide-line">
       {Array.from(groups.entries()).map(([date, group]: [string, CalendarItem[]]) => (
         <li key={date} className="px-4 py-3">
-          <p className="mb-2 flex items-center gap-2 text-label font-semibold text-muted">
+          <p className="mb-2 flex items-center gap-2 text-label font-bold text-muted">
             <span
               className={cn(
                 weekdayOf(date) === 0
@@ -567,7 +567,7 @@ function ListView({
                   <button
                     type="button"
                     onClick={() => onPick(item)}
-                    className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-canvas"
+                    className="flex w-full items-center gap-2 rounded-card px-2 py-1.5 text-left transition-colors hover:bg-canvas"
                   >
                     <span
                       className={cn("size-2 shrink-0 rounded-full", color.dot)}

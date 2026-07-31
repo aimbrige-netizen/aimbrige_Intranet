@@ -134,7 +134,7 @@ export function AttachmentPanel({
                 onClick={() => download(file.file_url)}
                 disabled={pending}
                 aria-label={`${file.file_name ?? "첨부"} 다운로드`}
-                className="shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50"
+                className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50"
               >
                 <Download className="size-4" />
               </button>
@@ -144,7 +144,7 @@ export function AttachmentPanel({
                   onClick={() => remove(file.id, file.file_name ?? "첨부")}
                   disabled={pending}
                   aria-label="첨부 삭제"
-                  className="shrink-0 rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                  className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                 >
                   <Trash2 className="size-4" />
                 </button>
@@ -157,7 +157,7 @@ export function AttachmentPanel({
       {canUpload ? (
         <div className="mt-3">
           <Button
-            size="sm"
+            size="small"
             variant="secondary"
             onClick={() => inputRef.current?.click()}
             disabled={pending}

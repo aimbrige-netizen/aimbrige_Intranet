@@ -127,7 +127,7 @@ export function ApprovalForm({
         <div className="flex gap-2.5 rounded-card border border-danger/30 bg-danger/10 px-4 py-3">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
           <div className="text-body text-ink">
-            <p className="font-medium text-danger">최종 승인자 미지정</p>
+            <p className="font-bold text-danger">최종 승인자 미지정</p>
             <p className="mt-0.5 text-label">
               이 문서유형의 최종 승인자가 지정되지 않아 기안할 수 없습니다. 시스템
               관리자가 결재라인 설정에서 지정해야 합니다.
@@ -281,14 +281,14 @@ export function ApprovalForm({
                           }
                           disabled={pending || items.length === 1}
                           aria-label={`항목 ${index + 1} 삭제`}
-                          className="shrink-0 rounded-md p-2 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+                          className="shrink-0 rounded-sm p-2 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
                         >
                           <Trash2 className="size-4" />
                         </button>
                       </div>
                     ))}
                     <Button
-                      size="sm"
+                      size="small"
                       variant="secondary"
                       onClick={() =>
                         setItems((prev) => [...prev, { name: "", amount: 0 }])
@@ -411,14 +411,14 @@ export function ApprovalForm({
         <CardHeader title="결재라인" description="제출 시 아래 순서로 진행됩니다." />
         <CardBody>
           <ol className="flex flex-wrap items-center gap-2 text-body">
-            <li className="rounded-lg bg-canvas px-3 py-2">
+            <li className="rounded-card bg-canvas px-3 py-2">
               <span className="text-caption">기안</span>
               <span className="ml-2 text-ink">본인</span>
             </li>
             {line.step1 ? (
               <>
                 <li className="text-muted">→</li>
-                <li className="rounded-lg bg-canvas px-3 py-2">
+                <li className="rounded-card bg-canvas px-3 py-2">
                   <span className="text-caption">1차 검토</span>
                   <span className="ml-2 text-ink">
                     {line.step1.name}
@@ -428,9 +428,9 @@ export function ApprovalForm({
               </>
             ) : null}
             <li className="text-muted">→</li>
-            <li className="rounded-lg bg-primary-light px-3 py-2">
+            <li className="rounded-card bg-primary-light px-3 py-2">
               <span className="text-caption">최종 승인</span>
-              <span className="ml-2 font-medium text-primary">
+              <span className="ml-2 font-bold text-primary">
                 {line.step2
                   ? `${line.step2.name}${line.step2.position ? ` ${line.step2.position}` : ""}`
                   : "미지정"}

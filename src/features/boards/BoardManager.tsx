@@ -66,7 +66,7 @@ export function BoardManager({
       <div className="mb-4 flex items-center justify-between gap-2">
         <p className="text-caption">게시판 {boards.length}개</p>
         <Button
-          size="sm"
+          size="small"
           onClick={() => {
             setName("");
             setBoardType("notice");
@@ -97,7 +97,7 @@ export function BoardManager({
             <tbody>
               {boards.map((board) => (
                 <tr key={board.id}>
-                  <td className="font-medium text-ink">{board.name}</td>
+                  <td className="font-bold text-ink">{board.name}</td>
                   <td>
                     <Badge
                       tone={board.board_type === "notice" ? "primary" : "neutral"}
@@ -112,7 +112,7 @@ export function BoardManager({
                       onClick={() => remove(board)}
                       disabled={pending}
                       aria-label={`${board.name} 삭제`}
-                      className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                      className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
                     >
                       <Trash2 className="size-3.5" />
                     </button>

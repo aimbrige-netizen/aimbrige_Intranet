@@ -190,7 +190,7 @@ export function AdminAttendance({
           label="재직 임직원"
           value={rows.length}
           unit="명"
-          tone="sky"
+          tone="brand"
           icon={Users}
           emphasis
           sub={`${monthLabel} 기준`}
@@ -199,7 +199,7 @@ export function AdminAttendance({
           label="지각 합계"
           value={lateTotal}
           unit="건"
-          tone={lateTotal > 0 ? "peach" : "mint"}
+          tone={lateTotal > 0 ? "informative" : "positive"}
           icon={AlarmClock}
           sub={`조퇴 ${earlyTotal}건`}
         />
@@ -207,7 +207,7 @@ export function AdminAttendance({
           label={`주 ${WEEKLY_LIMIT_HOURS}시간 근접·초과`}
           value={overLimit}
           unit="명"
-          tone={overLimit > 0 ? "rose" : "mint"}
+          tone={overLimit > 0 ? "critical" : "positive"}
           icon={AlertTriangle}
           sub={overLimit > 0 ? "확인이 필요합니다" : "이상 없음"}
         />
@@ -215,7 +215,7 @@ export function AdminAttendance({
           label="보상휴가 가산율"
           value={compensatoryRate}
           unit="배"
-          tone="lavender"
+          tone="neutral"
           icon={Settings2}
           sub="8시간 = 1일 환산"
         />
@@ -266,7 +266,7 @@ export function AdminAttendance({
                     {rows.map((r) => (
                       <tr key={r.employeeId}>
                         <td>
-                          <AvatarWithName name={r.name} size="sm" />
+                          <AvatarWithName name={r.name} size="small" />
                         </td>
                         <td>{r.departmentName ?? "-"}</td>
                         <td className="tabular-nums">{r.workDays}일</td>
@@ -275,9 +275,9 @@ export function AdminAttendance({
                           <span
                             className={
                               r.weeklyHours > WEEKLY_LIMIT_HOURS
-                                ? "font-semibold text-danger"
+                                ? "font-bold text-danger"
                                 : r.weeklyHours >= 48
-                                  ? "font-semibold text-warn"
+                                  ? "font-bold text-warn"
                                   : undefined
                             }
                           >
@@ -286,12 +286,12 @@ export function AdminAttendance({
                         </td>
                         <td className="tabular-nums">{r.lateCount}</td>
                         <td className="tabular-nums">{r.earlyLeaveCount}</td>
-                        <td className="tabular-nums font-medium text-primary">
+                        <td className="tabular-nums font-bold text-primary">
                           {r.remainingLeave}일
                         </td>
                         <td>
                           <Button
-                            size="sm"
+                            size="small"
                             variant="secondary"
                             onClick={() => {
                               setAdjusting(r);
@@ -361,7 +361,7 @@ export function AdminAttendance({
                             type="button"
                             onClick={() => openEdit(r)}
                             aria-label="기록 수정"
-                            className="rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+                            className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
                           >
                             <Pencil className="size-3.5" />
                           </button>

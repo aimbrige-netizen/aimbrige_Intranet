@@ -63,7 +63,7 @@ export function AuditFilters() {
       {hasFilter ? (
         <Button
           variant="ghost"
-          size="sm"
+          size="small"
           onClick={() => apply({ action: "", from: "", to: "" })}
         >
           필터 초기화

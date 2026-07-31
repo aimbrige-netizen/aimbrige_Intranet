@@ -2,9 +2,16 @@ import { forwardRef } from "react";
 import { CircleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+/**
+ * SEED Text Field (v2.seed-design.io/component/text-field)
+ * 문서화된 상태: outlined / focused / disabled / readonly / required / invalid
+ * outlined를 기본으로 쓰고, 포커스는 테두리 색 + 링으로 표시한다.
+ */
 const CONTROL_BASE =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-body text-ink placeholder:text-muted " +
-  "transition-colors focus:border-primary disabled:bg-canvas disabled:text-muted";
+  "w-full rounded-card border border-line-strong bg-surface px-3.5 py-2.5 text-body-sm text-ink placeholder:text-muted " +
+  "transition-colors duration-fast ease-standard " +
+  "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 " +
+  "disabled:bg-subtle disabled:text-muted read-only:bg-subtle";
 
 export const Input = forwardRef<
   HTMLInputElement,
@@ -119,7 +126,7 @@ export function Field({
   return (
     <div className={cn("space-y-1", className)}>
       <label
-        className="block text-label font-medium text-ink"
+        className="block text-label font-bold text-ink"
         htmlFor={htmlFor}
       >
         {label}

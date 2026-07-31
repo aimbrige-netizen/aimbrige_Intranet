@@ -115,7 +115,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
           등록된 휴일 {holidays.length}일
           {years.length > 0 ? ` · ${years.join(", ")}년` : ""}
         </p>
-        <Button size="sm" onClick={openCreate}>
+        <Button size="small" onClick={openCreate}>
           <Plus className="size-3.5" />
           휴일 추가
         </Button>
@@ -159,7 +159,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                     >
                       {WEEKDAY_LABELS[weekday]}
                     </td>
-                    <td className="font-medium text-ink">{holiday.name}</td>
+                    <td className="font-bold text-ink">{holiday.name}</td>
                     <td>
                       <Badge tone={KIND_TONES[holiday.kind]}>
                         {KIND_LABELS[holiday.kind]}
@@ -172,7 +172,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                           type="button"
                           onClick={() => openEdit(holiday)}
                           aria-label={`${holiday.name} 수정`}
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -180,7 +180,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                           type="button"
                           onClick={() => remove(holiday)}
                           aria-label={`${holiday.name} 삭제`}
-                          className="rounded-md p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -266,7 +266,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                 setValues((v) => ({ ...v, isNonWorking: e.target.checked }))
               }
               disabled={pending}
-              className="mt-0.5 size-4 accent-[#1D4E8F]"
+              className="mt-0.5 size-4 accent-[#ff6f0f]"
             />
             <span>
               근무일에서 제외

@@ -48,7 +48,7 @@ export function EmployeeFilters({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="이름 또는 이메일 검색"
-          className="h-9 w-full rounded-lg border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
+          className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
           aria-label="이름 또는 이메일 검색"
         />
       </form>

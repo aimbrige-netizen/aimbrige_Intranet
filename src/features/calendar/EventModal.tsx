@@ -131,7 +131,7 @@ export function EventModal({
             checked={values.allDay}
             onChange={(e) => patch({ allDay: e.target.checked })}
             disabled={pending}
-            className="size-4 accent-[#1D4E8F]"
+            className="size-4 accent-[#ff6f0f]"
           />
           종일
         </label>

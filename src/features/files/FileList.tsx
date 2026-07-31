@@ -75,7 +75,7 @@ export function FileList({
         <div className="ml-auto flex gap-2">
           <Button
             variant="ghost"
-            size="sm"
+            size="small"
             onClick={() => router.refresh()}
             disabled={pending}
           >
@@ -84,7 +84,7 @@ export function FileList({
           </Button>
           {canUpload ? (
             <Button
-              size="sm"
+              size="small"
               onClick={() => inputRef.current?.click()}
               disabled={pending}
             >

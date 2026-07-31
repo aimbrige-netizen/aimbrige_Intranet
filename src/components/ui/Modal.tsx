@@ -68,7 +68,7 @@ export function Modal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded p-1 text-muted transition-colors hover:bg-canvas hover:text-ink"
+              className="rounded-sm p-1 text-muted transition-colors hover:bg-canvas hover:text-ink"
               aria-label="닫기"
             >
               <X className="size-4" />

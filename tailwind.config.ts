@@ -1,108 +1,126 @@
 import type { Config } from "tailwindcss";
 
 /**
- * 에임브릿지 인트라넷 디자인 토큰
- * 출처: aimbridge_intranet_design_system.md v1.0
- * 색상값을 바꿀 때는 이 파일과 globals.css의 CSS 변수를 함께 수정한다.
+ * 에임브릿지 인트라넷 디자인 토큰 — SEED Design(당근) 기반
+ * 출처: aimbridge_intranet_design_system.md v2.0
+ *
+ * SEED의 시맨틱 색을 그대로 가져오되, 인트라넷 특성상 필요한 것만 더한다.
+ * 핵심 원칙(SEED §12):
+ *   1. 오렌지는 희소하게 — 한 화면에 주요 오렌지 요소는 하나
+ *   2. 콘텐츠가 주인공, 크롬은 조용하게
+ *   3. 모든 치수는 4px 그리드
+ *   4. 액센트는 하나. 두 번째 브랜드 색을 만들지 않는다
  */
 const config: Config = {
   /*
    * src 전체를 스캔한다.
    * create-next-app 기본값은 app/components/pages 세 폴더만 훑기 때문에
    * src/features 같은 폴더를 추가하면 그 안의 클래스가 CSS로 생성되지 않는다.
-   * (실제로 캘린더의 grid-cols-7이 누락돼 월간 격자가 1열로 무너졌다)
    */
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
   theme: {
     extend: {
       colors: {
+        // SEED semantic primary (carrot-500). 마케팅용 #ff6600과 구분해서 쓴다.
         primary: {
-          DEFAULT: "#1D4E8F",
-          hover: "#17406F",
-          light: "#EAF1FB",
+          DEFAULT: "#ff6f0f",
+          hover: "#ff9e66",
+          pressed: "#ff9e66",
+          light: "#fff5f0", // carrot-50 / paper-accent
         },
-        // 사이드바는 라이트(화이트) — 메인 콘텐츠와 톤을 통일하고 경계선으로만 구분한다
+        // 사이드바는 canvas(흰색). 경계선과 활성 상태로만 구분한다.
         sidebar: {
-          DEFAULT: "#FFFFFF",
-          hover: "#F3F6FB",
-          text: "#5B6270",
-          active: "#1D4E8F",
+          DEFAULT: "#ffffff",
+          hover: "#f7f8fa",
+          text: "#868b94",
+          active: "#ff6f0f",
         },
-        // 선택형 카드(연차 유형 등)처럼 의도적으로 대비를 주는 다크 블록 전용
-        pick: "#1A1D24",
-        ink: "#1F2430",
-        muted: "#6B7280",
-        surface: "#FFFFFF",
-        canvas: "#F5F7FA",
-        line: "#E7EAF0",
-        "line-strong": "#DDE1E8",
-        success: "#2FA36B",
-        warn: "#E0A72E",
-        danger: "#DB4C4C",
+        // 선택형 카드처럼 의도적으로 대비를 주는 다크 블록
+        pick: "#212124",
+        ink: "#212124", // gray-900 / ink-text
+        muted: "#868b94", // gray-600 / ink-text-low
+        canvas: "#f2f3f6", // gray-100 / paper-background — 페이지 배경
+        surface: "#ffffff", // gray-00 / paper-default — 카드 면
+        subtle: "#f7f8fa", // gray-50 / paper-contents — 옅은 면
+        line: "#eaebee", // gray-200 / divider-2
+        "line-strong": "#dcdee3",
+        success: "#1aa174", // green-500
+        info: "#009ceb", // blue-500
+        warn: "#ff6f0f", // 별도 경고색을 만들지 않고 primary를 쓴다(원칙 6)
+        danger: "#fa2314", // red-600
         /*
          * 캘린더 이벤트 색상 (스펙 02 · 3.4)
-         * 개인=primary, 팀=success는 기존 토큰을 재사용하고 전사·리소스만 신규.
-         * hex를 클래스에 직접 쓰지 않고 토큰으로 두는 이유: `bg-[#7C5CBF]/12` 처럼
-         * 임의 hex에 투명도 수식자를 붙이면 Tailwind가 클래스를 생성하지 못한다.
+         * SEED는 브랜드 색을 하나만 두므로, 이벤트 구분은 브랜드가 아니라
+         * 유틸리티(semantic) 색으로 처리한다.
          */
         event: {
-          company: "#7C5CBF",
-          "company-ink": "#5F44A0",
-          resource: "#D97C3C",
-          "resource-ink": "#B25F26",
-        },
-        /*
-         * 지표 카드용 파스텔 톤.
-         * 숫자를 나열만 하면 무엇이 중요한지 안 보인다. 항목 성격별로
-         * 옅은 배경 + 진한 글자 한 쌍을 묶어 두고 StatCard에서 골라 쓴다.
-         * 배경은 아주 옅게(가독성), 글자는 충분히 진하게(대비) 잡았다.
-         */
-        tint: {
-          sky: "#EAF1FB",
-          "sky-ink": "#1D4E8F",
-          mint: "#E6F6EF",
-          "mint-ink": "#1F8A5B",
-          peach: "#FDF0E6",
-          "peach-ink": "#C26A28",
-          lavender: "#F1ECFB",
-          "lavender-ink": "#5F44A0",
-          rose: "#FDECEC",
-          "rose-ink": "#C13B3B",
-          slate: "#F1F3F7",
-          "slate-ink": "#5B6270",
+          company: "#009ceb", // info
+          "company-ink": "#0077b0",
+          resource: "#868b94", // muted
+          "resource-ink": "#5c6068",
         },
       },
       fontFamily: {
+        /*
+         * SEED §3: 시스템 폰트를 쓴다. 커스텀 웹폰트를 얹지 않는 이유는
+         * "콘텐츠가 브랜드"이기 때문 — UI가 콘텐츠 뒤로 물러나야 한다.
+         * Pretendard는 선언된 폴백으로만 남긴다.
+         */
         sans: [
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "system-ui",
+          "Segoe UI",
           "var(--font-pretendard)",
           "Pretendard",
-          "system-ui",
+          "Apple SD Gothic Neo",
+          "Malgun Gothic",
           "sans-serif",
         ],
       },
       fontSize: {
-        // 디자인시스템 타이포 스케일
+        // SEED 타이포 스케일 (§3). 인트라넷은 밀도가 높아 h1/h2를 실사용 크기로 조정.
         h1: ["24px", { lineHeight: "1.35", fontWeight: "700" }],
-        h2: ["18px", { lineHeight: "1.4", fontWeight: "600" }],
-        body: ["14px", { lineHeight: "1.6", fontWeight: "400" }],
-        label: ["12px", { lineHeight: "1.5", fontWeight: "400" }],
+        h2: ["19px", { lineHeight: "1.35", fontWeight: "700" }],
+        h3: ["17px", { lineHeight: "1.35", fontWeight: "700" }],
+        title: ["24px", { lineHeight: "1.35", fontWeight: "700" }],
+        body: ["15px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
+        "body-sm": ["14px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
+        label: ["13px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
       },
       borderRadius: {
-        card: "12px",
-        pick: "12px",
+        // SEED §5: sm 6 / md 8 / full 9999
+        sm: "6px",
+        card: "8px",
+        pick: "8px",
+        pill: "9999px",
       },
       boxShadow: {
-        // 테두리로 가두기보다 옅은 그림자로 띄운다
-        card: "0 1px 2px rgba(16,24,40,0.04), 0 1px 3px rgba(16,24,40,0.05)",
-        pop: "0 8px 24px rgba(16,24,40,0.12)",
+        /*
+         * SEED §6: 검사된 공개 컨트롤은 전부 flat(box-shadow: none)이었다.
+         * 그림자로 띄우지 않고 hairline으로 면을 나눈다.
+         */
+        card: "none",
+        pop: "0 4px 16px rgba(33,33,36,0.10)",
       },
       spacing: {
-        topbar: "60px",
+        // SEED §5: 4px 그리드. 레이아웃 고정값만 별도 토큰으로.
+        topbar: "56px",
         rail: "76px",
         drawer: "248px",
       },
+      transitionTimingFunction: {
+        // SEED §15. 스프링·오버슈트는 금지.
+        enter: "cubic-bezier(0, 0, 0.2, 1)",
+        exit: "cubic-bezier(0.4, 0, 1, 1)",
+        standard: "cubic-bezier(0.4, 0, 0.2, 1)",
+      },
+      transitionDuration: {
+        fast: "150ms",
+        standard: "250ms",
+        slow: "350ms",
+      },
       screens: {
-        // 디자인시스템: 모바일 브레이크포인트 768px
         md: "768px",
       },
     },
