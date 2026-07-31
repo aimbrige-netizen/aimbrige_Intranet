@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:check": "node scripts/build-check.mjs",
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
@@ -12,7 +13,8 @@
     "seed:demo": "tsx scripts/seed-demo.ts",
     "e2e:approval": "tsx scripts/e2e-approval.ts",
     "e2e:storage": "tsx scripts/e2e-storage.ts",
-    "e2e:worklog": "tsx scripts/e2e-worklog.ts"
+    "e2e:worklog": "tsx scripts/e2e-worklog.ts",
+    "check:mail": "tsx scripts/check-mail-format.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

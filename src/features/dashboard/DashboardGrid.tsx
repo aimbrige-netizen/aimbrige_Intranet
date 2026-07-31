@@ -108,7 +108,10 @@ export function DashboardGrid({
           <EmptyState
             icon={LayoutGrid}
             title="표시 중인 위젯이 없습니다"
-            description="결재 대기·주간 근태·공지·일정·즐겨찾기 중 필요한 것을 골라 두세요."
+            /* 목록을 문구에 박아두면 위젯이 늘 때마다 여기만 옛날 목록으로 남는다 */
+            description={`${slots
+              .map((slot) => slot.label)
+              .join("·")} 중 필요한 것을 골라 두세요.`}
             action={
               <Button size="small" variant="secondary" onClick={startEditing}>
                 <Pencil className="size-3.5" />

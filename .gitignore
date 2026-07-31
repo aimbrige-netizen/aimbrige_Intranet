@@ -41,3 +41,5 @@ next-env.d.ts
 
 # env (안전장치)
 .env
+
+.next-build/

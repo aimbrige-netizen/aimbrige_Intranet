@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { CalendarCheck, CalendarDays, Clock3, FileCheck } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
@@ -31,6 +32,10 @@ import {
   getWidgetSettings,
   getWorkSnapshot,
 } from "@/features/dashboard/widget-data";
+import {
+  MailWidget,
+  MailWidgetSkeleton,
+} from "@/features/mail/MailWidget";
 import { formatDays, formatHours } from "@/features/attendance/format";
 import {
   addDaysYmd,
@@ -51,6 +56,7 @@ const WIDGET_LABELS: Record<WidgetKey, string> = {
   notices: "공지사항",
   calendar_upcoming: "다가오는 일정",
   favorites: "즐겨찾기",
+  mail: "메일",
 };
 
 /**
@@ -164,6 +170,16 @@ export default async function DashboardPage({
       />
     ),
     favorites: <FavoritesWidget favorites={favorites} />,
+    /*
+      메일만 Suspense로 감싼다. 다른 위젯의 데이터는 위에서 Promise.all로 이미
+      다 받아둔 상태고, 이건 지금부터 구글에 다녀와야 한다. 여기서 await하면
+      구글 응답이 늦는 만큼 대시보드 전체가 늦게 뜬다.
+    */
+    mail: (
+      <Suspense fallback={<MailWidgetSkeleton />}>
+        <MailWidget email={me.email} canConfigure={me.isSystemAdmin} />
+      </Suspense>
+    ),
   };
 
   const slots: WidgetSlot[] = defaultWidgetOrder(me.roleName).map((key) => ({

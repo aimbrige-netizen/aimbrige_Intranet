@@ -75,6 +75,15 @@ export const googleExtraScopes: string =
 export const isGoogleCalendarSyncEnabled =
   googleExtraScopes.includes("calendar");
 
+/**
+ * 메일 미리보기(스펙 11 · 3.2)가 활성화된 상태인지.
+ *
+ * 딥링크(상단바 메일 아이콘)는 스코프와 무관하게 항상 동작한다 —
+ * 그냥 mail.google.com을 여는 링크라서 API를 부르지 않는다.
+ * 이 플래그가 끄는 것은 위젯의 API 조회뿐이다.
+ */
+export const isGmailEnabled = googleExtraScopes.includes("gmail");
+
 export function isAllowedEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   const domain = email.toLowerCase().split("@")[1];

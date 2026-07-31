@@ -3,15 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireSessionEmployee } from "@/lib/auth/session";
-import type { WidgetKey } from "@/types/db";
-
-const WIDGET_KEYS: WidgetKey[] = [
-  "approval_pending",
-  "attendance_today",
-  "notices",
-  "calendar_upcoming",
-  "favorites",
-];
+import { WIDGET_KEYS } from "@/types/db";
 
 /**
  * 위젯 표시/숨김 저장 (스펙 3.3)
@@ -34,7 +26,19 @@ export async function saveWidgetSettings(
     .from("dashboard_widgets")
     .upsert(rows, { onConflict: "employee_id,widget_key" });
 
-  if (error) return { ok: false, message: error.message };
+  if (error) {
+    /*
+     * 원문을 그대로 올리면 화면에
+     *   new row for relation "dashboard_widgets" violates check constraint ...
+     * 이 뜬다. 임직원이 읽고 할 수 있는 게 없는 문장이다.
+     * 원인 추적에 필요한 건 서버 로그에 남기고 화면에는 상태만 알린다.
+     */
+    console.error("[widgets] 설정 저장 실패", error.message);
+    return {
+      ok: false,
+      message: "위젯 설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요.",
+    };
+  }
 
   revalidatePath("/");
   return { ok: true };

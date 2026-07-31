@@ -28,12 +28,26 @@ export type AuditAction =
   | "team_updated"
   | "team_deleted";
 
-export type WidgetKey =
-  | "approval_pending"
-  | "attendance_today"
-  | "notices"
-  | "calendar_upcoming"
-  | "favorites";
+/**
+ * 대시보드 위젯 키 — 이 배열이 유일한 목록이다.
+ *
+ * 예전에는 같은 목록이 세 군데(타입 선언·저장 액션·기본 순서)에 따로 적혀 있었다.
+ * 그래서 메일 위젯을 추가했을 때 화면에는 토글이 생겼는데 저장 액션은 그 키를
+ * 모르는 상태가 됐다 — 끄고 저장하면 "저장했습니다"가 뜨고 위젯은 그대로 남았다.
+ * 실패를 알리지도 않으니 화면만 보고는 원인을 알 수 없다.
+ *
+ * 새 위젯을 넣을 때 손대야 할 곳은 여기 + 마이그레이션 20의 CHECK 목록 둘뿐이다.
+ */
+export const WIDGET_KEYS = [
+  "approval_pending",
+  "attendance_today",
+  "notices",
+  "calendar_upcoming",
+  "favorites",
+  "mail",
+] as const;
+
+export type WidgetKey = (typeof WIDGET_KEYS)[number];
 
 export interface Department {
   id: string;

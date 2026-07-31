@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { Bell, Menu, Search, LogOut, CircleUser } from "lucide-react";
+import { Bell, Mail, Menu, Search, LogOut, CircleUser } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
+import { gmailInboxUrl } from "@/features/mail/format";
 import { cn } from "@/lib/utils";
 
 export interface TopbarUser {
@@ -96,6 +97,21 @@ export function Topbar({
       </div>
 
       <div className="ml-auto flex flex-1 items-center justify-end gap-1.5">
+        {/*
+          메일은 인트라넷 안에서 열지 않고 Gmail로 보낸다(스펙 11 · 3.1).
+          별도 인증이 없다 — 같은 구글 계정으로 이미 로그인돼 있다.
+        */}
+        <a
+          href={gmailInboxUrl(user.email)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-sm p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle"
+          aria-label="Gmail 새 탭으로 열기"
+          title="Gmail"
+        >
+          <Mail className="size-[18px]" />
+        </a>
+
         <button
           type="button"
           className="relative rounded-sm p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle"

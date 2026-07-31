@@ -10,6 +10,7 @@ import {
 import { getMyPendingApprovals } from "@/features/approvals/data";
 import { getUnreadNotices } from "@/features/boards/data";
 import { seoulToDate } from "@/features/calendar/date";
+import { WIDGET_KEYS } from "@/types/db";
 import type { Favorite, RoleName, WidgetKey } from "@/types/db";
 
 /**
@@ -247,22 +248,21 @@ export async function getWidgetSettings(
 /**
  * 역할별 기본 위젯 순서.
  * 팀장/매니저는 결재 대기가 상단, 일반직원은 주간 근태가 상단.
+ *
+ * 메일은 둘 다 마지막이다. 상단바에 딥링크가 늘 떠 있어서 위젯은
+ * "지금 안읽은 게 있나" 확인용 보조 수단이고, 외부 API라 다른 위젯보다
+ * 늦게 채워질 수 있다 — 늦게 채워지는 칸이 위에 있으면 그 아래가 밀린다.
  */
 export function defaultWidgetOrder(role: RoleName): WidgetKey[] {
-  if (role === "manager" || role === "system_admin") {
-    return [
-      "approval_pending",
-      "attendance_today",
-      "notices",
-      "calendar_upcoming",
-      "favorites",
-    ];
-  }
-  return [
-    "attendance_today",
-    "approval_pending",
-    "notices",
-    "calendar_upcoming",
-    "favorites",
-  ];
+  const order: WidgetKey[] =
+    role === "manager" || role === "system_admin"
+      ? ["approval_pending", "attendance_today", "notices", "calendar_upcoming"]
+      : ["attendance_today", "approval_pending", "notices", "calendar_upcoming"];
+
+  /*
+   * 여기 빠진 키는 화면에 아예 안 나온다 — 타입만으로는 못 잡는 누락이라
+   * 나머지를 뒤에 붙여 "새 위젯이 조용히 사라지는" 경우를 없앤다.
+   * 순서를 정하고 싶으면 위 배열에 명시하면 된다.
+   */
+  return [...order, ...WIDGET_KEYS.filter((key) => !order.includes(key))];
 }
