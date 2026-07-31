@@ -3,7 +3,6 @@ import { Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { FileTabs } from "@/features/files/FileTabs";
 import { FileList } from "@/features/files/FileList";
 import { DriveReauthNotice } from "@/features/files/DriveReauthNotice";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -56,8 +55,6 @@ export default async function TeamFilesPage() {
             : "관리자가 등록한 팀 공유폴더를 표시합니다."
         }
       />
-
-      <FileTabs active="/files/team" />
 
       {!folderId ? (
         <Card>

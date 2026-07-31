@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApprovalList } from "@/features/attendance/ApprovalList";
 import {
@@ -92,14 +90,6 @@ export default async function ApprovalsPage() {
 
   return (
     <>
-      <Link
-        href="/attendance"
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        내 근태
-      </Link>
-
       <PageHeader
         title="근태 승인함"
         description={

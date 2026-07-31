@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { FileTabs } from "@/features/files/FileTabs";
 import { LibraryList, type LibraryRow } from "@/features/files/LibraryList";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { createServerSupabase } from "@/lib/supabase/server";
@@ -44,8 +43,6 @@ export default async function LibraryPage() {
         title="사내 규정 라이브러리"
         description="계약서 템플릿·사규·복지제도 안내 문서입니다. 클릭하면 Drive에서 열립니다."
       />
-
-      <FileTabs active="/files/library" />
 
       <LibraryList documents={documents} />
     </>

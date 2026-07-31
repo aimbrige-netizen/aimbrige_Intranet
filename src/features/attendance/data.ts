@@ -5,7 +5,12 @@ import { createAdminSupabase } from "@/lib/supabase/admin";
 import { addDaysYmd, todayYmd, weekdayOf } from "@/features/calendar/date";
 import { computeAccruedDays, nextAccrual } from "./leave-accrual";
 import type { AbsentDay, AttendanceRow } from "./data-client";
-import { DAILY_WORK_HOURS, WEEKLY_LIMIT_HOURS, WEEKLY_WARN_HOURS } from "./constants";
+import {
+  DAILY_WORK_HOURS,
+  WEEKLY_LIMIT_HOURS,
+  WEEKLY_TARGET_HOURS,
+  WEEKLY_WARN_HOURS,
+} from "./constants";
 import type {
   AttendanceRecord,
   CorrectionRequest,
@@ -110,62 +115,179 @@ export function workedHours(record: AttendanceRecord): number | null {
   return Math.round((ms / 3_600_000) * 10) / 10;
 }
 
+export interface WeeklyDay {
+  /** YYYY-MM-DD */
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  /** 정규 근무시간. 퇴근 전이면 0 */
+  workedHours: number;
+  /** 승인된 초과근무 */
+  overtimeHours: number;
+  isWeekend: boolean;
+  holidayName: string | null;
+  onLeave: boolean;
+}
+
 export interface WeeklyHours {
   weekStart: string;
+  weekEnd: string;
+  /** 정규 + 승인 초과 */
   hours: number;
+  regularHours: number;
+  overtimeHours: number;
   level: "ok" | "warn" | "over";
+  /** 요일 스트립·일별 분해용 7칸 */
+  days: WeeklyDay[];
+  workedDayCount: number;
+  /** 주중에서 공휴일을 뺀 근무 예정일 수 — "2d /5d"의 분모 */
+  plannedWorkDayCount: number;
+  targetHours: number;
+  warnHours: number;
+  limitHours: number;
 }
 
 /**
- * 주 52시간 경고 (스펙 3.2)
- * 정규 근무시간 + 승인된 초과근무를 합산한다.
+ * 주간 근무 요약 (스펙 3.2)
+ *
+ * 예전에는 주간 레코드를 전부 fetch한 뒤 시간 합계 스칼라 하나로 접어버려서,
+ * "2d /5d"·"14h46m /40h" 같은 분모도, 요일 칩 스트립의 일별 값도 만들 수 없었다.
+ * 이미 손에 들고 있던 데이터였다.
+ *
+ * 승인된 초과근무는 합계에는 더하되 일별로도 따로 남긴다 —
+ * 정규 근무와 섞이면 칩을 나눠 표시할 수 없다.
  */
 export async function getThisWeekHours(
   employeeId: string,
+  weekStartYmd?: string,
 ): Promise<WeeklyHours> {
   const today = todayYmd();
-  const weekStart = addDaysYmd(today, -weekdayOf(today));
+  const weekStart = weekStartYmd ?? addDaysYmd(today, -weekdayOf(today));
   const weekEnd = addDaysYmd(weekStart, 6);
 
   const supabase = createServerSupabase();
-  const [{ data: records }, { data: overtimes }] = await Promise.all([
-    supabase
-      .from("attendance_records")
-      .select("check_in_at, check_out_at")
-      .eq("employee_id", employeeId)
-      .gte("work_date", weekStart)
-      .lte("work_date", weekEnd),
-    supabase
-      .from("overtime_requests")
-      .select("start_time, end_time")
-      .eq("employee_id", employeeId)
-      .eq("status", "approved")
-      .gte("work_date", weekStart)
-      .lte("work_date", weekEnd),
-  ]);
+  const [{ data: records }, { data: overtimes }, { data: holidays }, { data: leaves }] =
+    await Promise.all([
+      supabase
+        .from("attendance_records")
+        .select("work_date, check_in_at, check_out_at")
+        .eq("employee_id", employeeId)
+        .gte("work_date", weekStart)
+        .lte("work_date", weekEnd),
+      supabase
+        .from("overtime_requests")
+        .select("work_date, start_time, end_time")
+        .eq("employee_id", employeeId)
+        .eq("status", "approved")
+        .gte("work_date", weekStart)
+        .lte("work_date", weekEnd),
+      supabase
+        .from("holidays")
+        .select("date, name")
+        .eq("is_non_working", true)
+        .gte("date", weekStart)
+        .lte("date", weekEnd),
+      supabase
+        .from("leave_requests")
+        .select("start_date, end_date")
+        .eq("employee_id", employeeId)
+        .eq("status", "approved")
+        .lte("start_date", weekEnd)
+        .gte("end_date", weekStart),
+    ]);
 
-  let hours = 0;
+  const byDate = new Map<string, { checkIn: string | null; checkOut: string | null }>();
   (records ?? []).forEach((r) => {
-    if (!r.check_in_at || !r.check_out_at) return;
-    hours +=
-      (new Date(r.check_out_at as string).getTime() -
-        new Date(r.check_in_at as string).getTime()) /
-      3_600_000;
-  });
-  (overtimes ?? []).forEach((o) => {
-    hours += diffTimeHours(o.start_time as string, o.end_time as string);
+    byDate.set(r.work_date as string, {
+      checkIn: (r.check_in_at as string | null) ?? null,
+      checkOut: (r.check_out_at as string | null) ?? null,
+    });
   });
 
-  const rounded = Math.round(hours * 10) / 10;
+  const overtimeByDate = new Map<string, number>();
+  (overtimes ?? []).forEach((o) => {
+    const date = o.work_date as string;
+    const add = diffTimeHours(o.start_time as string, o.end_time as string);
+    overtimeByDate.set(date, (overtimeByDate.get(date) ?? 0) + add);
+  });
+
+  const holidayByDate = new Map<string, string>();
+  (holidays ?? []).forEach((h) => {
+    holidayByDate.set(h.date as string, h.name as string);
+  });
+
+  const onLeave = new Set<string>();
+  (leaves ?? []).forEach((l) => {
+    let cursor = l.start_date as string;
+    for (
+      let guard = 0;
+      guard < 400 && cursor <= (l.end_date as string);
+      guard += 1
+    ) {
+      onLeave.add(cursor);
+      cursor = addDaysYmd(cursor, 1);
+    }
+  });
+
+  const days: WeeklyDay[] = [];
+  let regular = 0;
+  let overtime = 0;
+  let workedDayCount = 0;
+  let plannedWorkDayCount = 0;
+
+  for (let i = 0; i < 7; i += 1) {
+    const date = addDaysYmd(weekStart, i);
+    const record = byDate.get(date);
+    const weekday = weekdayOf(date);
+    const isWeekend = weekday === 0 || weekday === 6;
+    const holidayName = holidayByDate.get(date) ?? null;
+
+    const worked =
+      record?.checkIn && record?.checkOut
+        ? (new Date(record.checkOut).getTime() -
+            new Date(record.checkIn).getTime()) /
+          3_600_000
+        : 0;
+    const ot = overtimeByDate.get(date) ?? 0;
+
+    regular += worked;
+    overtime += ot;
+    if (record?.checkIn) workedDayCount += 1;
+    if (!isWeekend && !holidayName) plannedWorkDayCount += 1;
+
+    days.push({
+      date,
+      checkIn: record?.checkIn ?? null,
+      checkOut: record?.checkOut ?? null,
+      workedHours: Math.round(worked * 10) / 10,
+      overtimeHours: Math.round(ot * 10) / 10,
+      isWeekend,
+      holidayName,
+      onLeave: onLeave.has(date),
+    });
+  }
+
+  const round = (n: number) => Math.round(n * 10) / 10;
+  const total = round(regular + overtime);
+
   return {
     weekStart,
-    hours: rounded,
+    weekEnd,
+    hours: total,
+    regularHours: round(regular),
+    overtimeHours: round(overtime),
     level:
-      rounded > WEEKLY_LIMIT_HOURS
+      total > WEEKLY_LIMIT_HOURS
         ? "over"
-        : rounded >= WEEKLY_WARN_HOURS
+        : total >= WEEKLY_WARN_HOURS
           ? "warn"
           : "ok",
+    days,
+    workedDayCount,
+    plannedWorkDayCount,
+    targetHours: WEEKLY_TARGET_HOURS,
+    warnHours: WEEKLY_WARN_HOURS,
+    limitHours: WEEKLY_LIMIT_HOURS,
   };
 }
 

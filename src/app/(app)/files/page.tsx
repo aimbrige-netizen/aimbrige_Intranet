@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { FileTabs } from "@/features/files/FileTabs";
 import { FileList } from "@/features/files/FileList";
 import { DriveReauthNotice } from "@/features/files/DriveReauthNotice";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -49,8 +48,6 @@ export default async function FilesPage() {
         title="개인 파일함"
         description={`내 Google Drive의 "${INTRANET_FOLDER_NAME}" 폴더와 연결됩니다. 이름변경·삭제·공유는 Drive에서 처리하세요.`}
       />
-
-      <FileTabs active="/files" />
 
       {notice || !folderId || !listing?.ok ? (
         <DriveReauthNotice

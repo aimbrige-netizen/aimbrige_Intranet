@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import {
   AlertTriangle,
   CalendarCheck,
@@ -80,16 +79,6 @@ export default async function AttendancePage() {
       <PageHeader
         title="내 근태"
         description={`${me.name} · 입사일 ${formatDate(me.hire_date)}`}
-        action={
-          me.isManager ? (
-            <Link
-              href="/attendance/approvals"
-              className="text-label text-primary hover:underline"
-            >
-              승인함으로 이동
-            </Link>
-          ) : null
-        }
       />
 
       {/* 핵심 지표를 큰 숫자 카드로 (스펙 3.2) */}

@@ -15,6 +15,7 @@ export const LATE_THRESHOLD = "09:10";
 export const DAILY_WORK_HOURS = 8;
 
 /** 주 52시간 = 법정 40 + 연장 12. 48시간부터 경고 (스펙 3.2) */
+export const WEEKLY_TARGET_HOURS = 40;
 export const WEEKLY_WARN_HOURS = 48;
 export const WEEKLY_LIMIT_HOURS = 52;
 

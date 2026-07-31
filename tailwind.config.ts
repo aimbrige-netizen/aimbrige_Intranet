@@ -143,6 +143,7 @@ const config: Config = {
         topbar: "56px",
         rail: "76px",
         panel: "224px", // 모듈 사이드 패널 (2뎁스 셸)
+        shell: "300px", // rail + panel — 패널이 있는 화면의 본문 들여쓰기
         drawer: "248px",
       },
       transitionTimingFunction: {

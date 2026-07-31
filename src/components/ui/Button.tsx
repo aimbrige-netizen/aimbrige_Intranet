@@ -1,4 +1,6 @@
 import { forwardRef } from "react";
+import Link from "next/link";
+import type { LinkProps } from "next/link";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,6 +38,21 @@ const SIZES: Record<Size, string> = {
   large: "h-12 gap-2 px-5 text-body",
 };
 
+const BASE =
+  "inline-flex items-center justify-center whitespace-nowrap rounded-card font-bold transition-colors duration-fast ease-standard disabled:cursor-not-allowed";
+
+export function buttonClass({
+  variant = "primary",
+  size = "medium",
+  className,
+}: {
+  variant?: Variant;
+  size?: Size;
+  className?: string;
+} = {}) {
+  return cn(BASE, VARIANTS[variant], SIZES[size], className);
+}
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
@@ -43,19 +60,36 @@ export interface ButtonProps
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ variant = "primary", size = "medium", className, type, ...props }, ref) => (
+  ({ variant, size, className, type, ...props }, ref) => (
     <button
       ref={ref}
       type={type ?? "button"}
-      className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-card font-bold",
-        "transition-colors duration-fast ease-standard disabled:cursor-not-allowed",
-        VARIANTS[variant],
-        SIZES[size],
-        className,
-      )}
+      className={buttonClass({ variant, size, className })}
       {...props}
     />
   ),
 );
 Button.displayName = "Button";
+
+/**
+ * 이동이 목적인 버튼.
+ * button을 Link로 감싸면 중첩 인터랙티브 요소가 되고, Link에 버튼 클래스만
+ * 붙이면 호출부마다 클래스 문자열이 복제된다. 그래서 별도 컴포넌트로 둔다.
+ */
+export function LinkButton({
+  variant,
+  size,
+  className,
+  children,
+  ...props
+}: LinkProps &
+  Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, "href"> & {
+    variant?: Variant;
+    size?: Size;
+  }) {
+  return (
+    <Link className={buttonClass({ variant, size, className })} {...props}>
+      {children}
+    </Link>
+  );
+}

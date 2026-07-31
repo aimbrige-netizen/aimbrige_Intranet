@@ -17,8 +17,13 @@ export interface TopbarUser {
 }
 
 /**
- * 상단바 56px (스펙 3.2 / 디자인시스템 v2.0)
- * 통합검색은 placeholder만, 알림은 count만 — 상세는 후순위(스펙 6장)
+ * 상단바 56px — 전체 폭.
+ *
+ * 좌측 끝에 심볼 + "에임브릿지" 워드마크를 상시 노출한다. 예전에는 상단바와
+ * 레일의 워드마크가 둘 다 md:hidden이라 데스크톱 어디에도 회사 이름이
+ * 렌더되지 않았고, 최고 가치 영역인 좌상단을 disabled된 검색창이 차지했다.
+ *
+ * 통합검색은 아직 placeholder다(스펙 6장).
  */
 export function Topbar({
   user,
@@ -52,7 +57,7 @@ export function Topbar({
   };
 
   return (
-    <header className="sticky top-0 z-20 flex h-topbar items-center gap-3 border-b border-line bg-surface px-4 md:px-6">
+    <header className="sticky top-0 z-30 flex h-topbar items-center gap-3 border-b border-line bg-surface px-4 md:px-5">
       <button
         type="button"
         onClick={onMenuClick}
@@ -62,12 +67,22 @@ export function Topbar({
         <Menu className="size-5" />
       </button>
 
-      <Link href="/" className="text-body font-bold text-ink md:hidden">
-        에임브릿지 인트라넷
+      <Link
+        href="/"
+        className="flex shrink-0 items-center gap-2 rounded-sm transition-opacity duration-fast ease-standard hover:opacity-80"
+      >
+        <span className="grid size-7 shrink-0 place-items-center rounded-sm bg-primary text-nano font-bold tracking-tight text-white">
+          AB
+        </span>
+        <span className="text-body font-bold tracking-tight text-ink">
+          에임브릿지
+        </span>
       </Link>
 
-      {/* 통합검색 — placeholder만, 실제 검색은 후순위 */}
-      <div className="relative ml-auto hidden w-full max-w-md md:ml-0 md:block">
+      {/* 양쪽 spacer로 검색을 가운데 둔다 */}
+      <div className="hidden flex-1 md:block" />
+
+      <div className="relative hidden w-full max-w-md md:block">
         <Search
           className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted"
           aria-hidden
@@ -80,7 +95,7 @@ export function Topbar({
         />
       </div>
 
-      <div className="ml-auto flex items-center gap-1.5">
+      <div className="ml-auto flex flex-1 items-center justify-end gap-1.5">
         <button
           type="button"
           className="relative rounded-sm p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle"
@@ -109,11 +124,11 @@ export function Topbar({
               size="medium"
               className="!bg-primary-light !text-primary"
             />
-            <span className="hidden text-left md:block">
+            <span className="hidden text-left lg:block">
               <span className="block text-label font-bold leading-tight text-ink">
                 {user.name}
               </span>
-              <span className="block text-[12px] leading-tight text-muted">
+              <span className="block text-micro leading-tight text-muted">
                 {[user.departmentName, user.position]
                   .filter(Boolean)
                   .join(" · ") || user.email}

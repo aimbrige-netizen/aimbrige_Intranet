@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { BoardNav } from "@/features/boards/BoardNav";
 import { PostList } from "@/features/boards/PostList";
 import { requireSessionEmployee } from "@/lib/auth/session";
-import { getBoard, getBoards, getPosts } from "@/features/boards/data";
+import { getBoard, getPosts } from "@/features/boards/data";
 
 export const metadata: Metadata = { title: "게시판" };
 
@@ -17,10 +16,7 @@ export default async function BoardPage({
 }) {
   const me = await requireSessionEmployee();
 
-  const [board, boards] = await Promise.all([
-    getBoard(params.boardId),
-    getBoards(),
-  ]);
+  const board = await getBoard(params.boardId);
   if (!board) notFound();
 
   const posts = await getPosts(params.boardId, me.id, {
@@ -42,7 +38,6 @@ export default async function BoardPage({
       />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-[220px_1fr]">
-        <BoardNav boards={boards} activeBoardId={board.id} />
         <div>
           <PostList
             board={board}
