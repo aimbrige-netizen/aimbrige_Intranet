@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkButton } from "@/components/ui/Button";
 import { DayStrip, type StripDay } from "@/components/ui/ChipStrip";
 import { toSeoulTime, toSeoulYmd, weekdayOf } from "@/features/calendar/date";
+import { RESPONSE_COLORS } from "@/features/calendar/colors";
 import { formatHours } from "@/features/attendance/format";
 import type { WeeklyDay, WeeklyHours } from "@/features/attendance/data";
 import type {
@@ -311,8 +312,16 @@ export function CalendarUpcomingWidget({
             {events.map((event) => {
               const ymd = toSeoulYmd(event.startsAt);
               const weekday = weekdayOf(ymd);
+              // 불참으로 답한 회의는 캘린더에서도 흐리게 나온다 — 두 화면을 맞춘다
+              const declined = event.myResponse === "declined";
               return (
-                <li key={event.id} className="flex items-center gap-2 py-2">
+                <li
+                  key={event.id}
+                  className={cn(
+                    "flex items-center gap-2 py-2",
+                    declined && "opacity-50",
+                  )}
+                >
                   <span
                     className={cn(
                       "w-11 shrink-0 text-label font-bold tabular-nums",
@@ -328,9 +337,25 @@ export function CalendarUpcomingWidget({
                   <span className="w-11 shrink-0 text-label tabular-nums text-muted">
                     {event.allDay ? "종일" : toSeoulTime(event.startsAt)}
                   </span>
-                  <span className="truncate text-body-sm text-ink">
+                  <span
+                    className={cn(
+                      "truncate text-body-sm text-ink",
+                      declined && "line-through",
+                    )}
+                  >
                     {event.title}
                   </span>
+                  {/* 참석은 기본 기대값이라 표시하지 않는다 — 다른 답만 알린다 */}
+                  {event.myResponse && event.myResponse !== "accepted" ? (
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-sm px-1.5 py-0.5 text-nano font-bold",
+                        RESPONSE_COLORS[event.myResponse].badge,
+                      )}
+                    >
+                      {RESPONSE_COLORS[event.myResponse].label}
+                    </span>
+                  ) : null}
                   <span className="ml-auto shrink-0 text-label text-muted">
                     {EVENT_KIND_LABELS[event.kind] ?? ""}
                   </span>

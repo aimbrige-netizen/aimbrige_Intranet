@@ -1,34 +1,32 @@
-import { addDaysYmd, todayYmd, weekdayOf } from "@/features/calendar/date";
 import { formatDate } from "@/lib/utils";
+import type { PeriodUnit } from "@/lib/period";
 
 /**
  * 게시판 목록의 조회 범위.
  * 게시판을 열면 최신순 전체가 그대로 쏟아져서 "이번 주에 뭐가 올라왔나"를
  * 잘라볼 수단이 없었다. 헤더 세그먼트가 이 값을 바꾼다.
+ *
+ * URL 이름은 공용 규약(lib/period)의 ?period= 를 쓴다. 예전 이름 ?range= 는
+ * parsePeriod가 읽기 전용으로 계속 받아 북마크가 죽지 않는다.
+ * 게시판은 "최근 N" 롤링 윈도우라 ?cursor= 를 싣지 않는다 — 그래서 칩 라벨이
+ * "이번 주"·"이번 달"로 남고 언제나 참이다(단위 이름 "주간"과 뜻이 다르다).
  */
-export type BoardRange = "week" | "month" | "all";
+export type BoardRange = Extract<PeriodUnit, "week" | "month" | "all">;
 
-export const BOARD_RANGES: BoardRange[] = ["week", "month", "all"];
+export const BOARD_RANGES = [
+  "week",
+  "month",
+  "all",
+] as const satisfies readonly BoardRange[];
+
+/** URL에 period가 없을 때의 값 */
+export const BOARD_DEFAULT_RANGE: BoardRange = "all";
 
 export const BOARD_RANGE_LABELS: Record<BoardRange, string> = {
   week: "이번 주",
   month: "이번 달",
   all: "전체",
 };
-
-export function parseRange(value?: string): BoardRange {
-  return value === "week" || value === "month" ? value : "all";
-}
-
-/** 범위의 시작일(서울 기준 YYYY-MM-DD). "all"이면 제한 없음 */
-export function rangeSince(
-  range: BoardRange,
-  today = todayYmd(),
-): string | undefined {
-  if (range === "week") return addDaysYmd(today, -weekdayOf(today));
-  if (range === "month") return `${today.slice(0, 7)}-01`;
-  return undefined;
-}
 
 /**
  * "3시간 전" — 헤더의 최근 갱신 표기.

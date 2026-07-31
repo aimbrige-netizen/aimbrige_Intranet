@@ -9,16 +9,17 @@ import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { Meter, type MeterSegment, type MeterTone } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FilterChip, TableToolbar } from "@/components/ui/TableToolbar";
-import { EVENT_COLORS } from "@/features/calendar/colors";
+import { EVENT_COLORS, RESPONSE_COLORS } from "@/features/calendar/colors";
 import {
   WEEKDAY_LABELS,
   occursOn,
   toSeoulTime,
   weekdayOf,
 } from "@/features/calendar/date";
-import type {
-  AttendeeOption,
-  ResourceBookingBrief,
+import {
+  countResponses,
+  type AttendeeOption,
+  type ResourceBookingBrief,
 } from "@/features/calendar/data-client";
 import {
   SCOPE_LABELS,
@@ -79,14 +80,33 @@ const KIND_METER_TONE: Record<CalendarItemKind, MeterTone> = {
 
 const MONTH_CHIP_LIMIT = 4;
 
-/** '본사 3층 대회의실 · 참석 4명' — 없으면 빈 문자열 */
+/**
+ * '본사 3층 대회의실 · 참석 2/4명' — 없으면 빈 문자열.
+ *
+ * 명단 인원(4명)만으로는 회의가 성립하는지 알 수 없다. 지정된 사람 수가 아니라
+ * "오겠다고 한 사람 / 지정된 사람"을 붙여 분모를 남긴다.
+ */
 function placeLine(item: CalendarItem): string {
+  const summary =
+    item.attendees.length > 0 ? countResponses(item.attendees) : null;
   return [
     item.location,
-    item.attendees.length > 0 ? `참석 ${item.attendees.length}명` : null,
+    summary ? `참석 ${summary.accepted}/${summary.total}명` : null,
   ]
     .filter(Boolean)
     .join(" · ");
+}
+
+/**
+ * 내가 불참으로 답한 항목.
+ *
+ * 목록에서 지우지 않는 이유: 거절은 삭제가 아니다. 숨기면 마음이 바뀌었을 때
+ * 되돌릴 경로가 화면에서 사라지고, 옆자리 동료의 팀 캘린더에는 그대로 있는
+ * 일정이 내 화면에만 없어 같은 화면을 보며 이야기할 수 없게 된다.
+ * 대신 흐리게 + 취소선으로 "내 시간은 비어 있다"를 한눈에 보이게 한다.
+ */
+function declinedClass(item: CalendarItem): string | false {
+  return item.myResponse === "declined" && "opacity-60";
 }
 
 interface DayRow {
@@ -160,6 +180,15 @@ export function CalendarBoard({
   const visible = useMemo(
     () => items.filter((item) => !hidden.has(item.kind)),
     [items, hidden],
+  );
+
+  /*
+   * 아직 답하지 않은 참석 요청. 상세를 하나씩 열기 전에는 "내가 뭔가 답해야
+   * 하는 게 있나"를 알 길이 없었다 — 건수만 툴바에 얹어 둔다.
+   */
+  const awaiting = useMemo(
+    () => visible.filter((item) => item.myResponse === "pending").length,
+    [visible],
   );
 
   /** 날짜 → 그 날 걸치는 항목 */
@@ -262,7 +291,11 @@ export function CalendarBoard({
             })}
           </>
         }
-        count={`${visible.length}건 표시`}
+        count={
+          awaiting > 0
+            ? `${visible.length}건 표시 · 참석 응답 대기 ${awaiting}건`
+            : `${visible.length}건 표시`
+        }
         actions={
           <>
             <Button size="small" onClick={() => openCreate()}>
@@ -536,17 +569,24 @@ function EventChip({
     ? "종일"
     : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`;
   const place = placeLine(item);
+  const declined = item.myResponse === "declined";
 
   return (
     <button
       type="button"
       onClick={() => onPick(item)}
-      title={[`${color.label} · ${time} · ${item.title}`, place]
+      title={[
+        `${color.label} · ${time} · ${item.title}`,
+        place,
+        // 흐린 칩이 "지난 일정"이 아니라 "내가 거절한 일정"임을 말해준다
+        declined ? "내 응답: 불참" : null,
+      ]
         .filter(Boolean)
         .join(" · ")}
       className={cn(
         "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-nano transition-opacity duration-fast ease-standard hover:opacity-80",
         color.chip,
+        declinedClass(item),
       )}
     >
       {!item.allDay ? (
@@ -554,7 +594,10 @@ function EventChip({
           {toSeoulTime(item.startAt)}
         </span>
       ) : null}
-      <span className="truncate">{item.title}</span>
+      {/* 색을 빼는 것만으로는 "옅은 종류"와 구분되지 않는다 — 취소선을 함께 준다 */}
+      <span className={cn("truncate", declined && "line-through")}>
+        {item.title}
+      </span>
     </button>
   );
 }
@@ -872,10 +915,31 @@ function ItemTable({
                     <button
                       type="button"
                       onClick={() => onPick(item)}
-                      className="block w-full text-left transition-colors duration-fast ease-standard hover:text-primary"
+                      className={cn(
+                        "block w-full text-left transition-colors duration-fast ease-standard hover:text-primary",
+                        declinedClass(item),
+                      )}
                     >
-                      <span className="block truncate text-body-sm text-ink">
-                        {item.title}
+                      <span className="flex items-center gap-1.5">
+                        <span
+                          className={cn(
+                            "min-w-0 truncate text-body-sm text-ink",
+                            item.myResponse === "declined" && "line-through",
+                          )}
+                        >
+                          {item.title}
+                        </span>
+                        {/* 내가 답해야 하는 자리인지가 제목 옆에서 끝나야 한다 */}
+                        {item.myResponse ? (
+                          <span
+                            className={cn(
+                              "shrink-0 rounded-sm px-1.5 text-nano",
+                              RESPONSE_COLORS[item.myResponse].badge,
+                            )}
+                          >
+                            {RESPONSE_COLORS[item.myResponse].label}
+                          </span>
+                        ) : null}
                       </span>
                       {/* 회의는 "어디서 · 누가"까지 봐야 갈지 말지가 정해진다 */}
                       {placeLine(item) ? (

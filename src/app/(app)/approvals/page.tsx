@@ -39,14 +39,23 @@ import {
   elapsedLabel,
   stepLabel,
 } from "@/features/approvals/format";
-import { addMonthsYm, monthLabel, todayYmd } from "@/features/calendar/date";
+import { todayYmd } from "@/features/calendar/date";
+import {
+  parsePeriod,
+  periodFields,
+  periodHref,
+  periodRangeArgs,
+  PERIOD_UNIT_LABELS,
+  type PeriodSearchParams,
+  type PeriodUnit,
+} from "@/lib/period";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "전자결재" };
 
-type PeriodView = "month" | "quarter" | "all";
-
-const PERIOD_VIEWS: PeriodView[] = ["month", "quarter", "all"];
+/** 기안 문서는 월·분기·전체로 끊어 본다 (lib/period 규약) */
+const UNITS = ["month", "quarter", "all"] as const satisfies readonly PeriodUnit[];
+const DEFAULT_UNIT = "month";
 
 /**
  * 전자결재 목록.
@@ -58,11 +67,9 @@ const PERIOD_VIEWS: PeriodView[] = ["month", "quarter", "all"];
 export default async function ApprovalsPage({
   searchParams,
 }: {
-  searchParams: {
+  searchParams: PeriodSearchParams & {
     tab?: string;
     status?: string;
-    view?: string;
-    cursor?: string;
     q?: string;
   };
 }) {
@@ -97,33 +104,53 @@ export default async function ApprovalsPage({
   }
 
   // ── 내가 올린 문서 ────────────────────────────────────────────────
-  const view: PeriodView = PERIOD_VIEWS.includes(searchParams.view as PeriodView)
-    ? (searchParams.view as PeriodView)
-    : "month";
-  const cursor = (searchParams.cursor ?? today.slice(0, 7)).slice(0, 7);
-  const period = resolvePeriod(view, cursor);
-  const previous = resolvePeriod(view, addMonthsYm(cursor, view === "quarter" ? -3 : -1));
+  const period = parsePeriod(searchParams, {
+    units: UNITS,
+    defaultUnit: DEFAULT_UNIT,
+    today,
+  });
+  const view = period.unit;
+  const cursor = period.cursor;
+
+  // 직전 기간 — 요약 밴드의 "전 기간 대비" 비교값
+  const previous = parsePeriod(
+    { period: view, cursor: period.prevCursor ?? cursor },
+    { units: UNITS, defaultUnit: DEFAULT_UNIT, today },
+  );
 
   const status = DOCUMENT_STATUS_ORDER.includes(searchParams.status as DocumentStatus)
     ? (searchParams.status as DocumentStatus)
     : undefined;
   const q = searchParams.q?.trim() || undefined;
 
+  const range = periodRangeArgs(period);
+
   const [stats, docs] = await Promise.all([
-    getMyDocumentStats(me.id, period.range, previous.range),
-    getMyDocuments(me.id, { ...period.range, status, q }),
+    getMyDocumentStats(me.id, range, periodRangeArgs(previous)),
+    getMyDocuments(me.id, { ...range, status, q }),
   ]);
 
-  const linkFor = (patch: Record<string, string | undefined>) => {
-    const params = new URLSearchParams();
-    const merged = { view, cursor, status, q, ...patch };
-    if (merged.view && merged.view !== "month") params.set("view", merged.view);
-    if (merged.cursor && merged.view !== "all") params.set("cursor", merged.cursor);
-    if (merged.status) params.set("status", merged.status);
-    if (merged.q) params.set("q", merged.q);
-    const query = params.toString();
-    return query ? `/approvals?${query}` : "/approvals";
-  };
+  /** 기간은 lib/period가, 나머지 조건은 extra가 유지한다 */
+  const linkFor = (patch: {
+    unit?: PeriodUnit;
+    cursor?: string | null;
+    status?: DocumentStatus | null;
+    q?: string | null;
+  }) =>
+    periodHref(
+      "/approvals",
+      {
+        unit: patch.unit ?? view,
+        cursor: patch.cursor === undefined ? cursor : patch.cursor,
+      },
+      {
+        defaultUnit: DEFAULT_UNIT,
+        extra: {
+          status: patch.status === undefined ? status : patch.status,
+          q: patch.q === undefined ? q : patch.q,
+        },
+      },
+    );
 
   const done = stats.byStatus.approved + stats.byStatus.completed;
   const delta = stats.total - stats.previousTotal;
@@ -136,23 +163,27 @@ export default async function ApprovalsPage({
         toolbar={
           <PeriodNavigator
             label={period.label}
-            sublabel={period.sublabel}
-            prevHref={view === "all" ? undefined : linkFor({ cursor: period.prev })}
-            nextHref={view === "all" ? undefined : linkFor({ cursor: period.next })}
-            todayHref={linkFor({ cursor: today.slice(0, 7) })}
-            atToday={view === "all" || period.includesToday}
+            sublabel={view === "all" ? "모든 기안 문서" : period.sublabel}
+            prevHref={
+              period.prevCursor ? linkFor({ cursor: period.prevCursor }) : undefined
+            }
+            nextHref={
+              period.nextCursor ? linkFor({ cursor: period.nextCursor }) : undefined
+            }
+            todayHref={linkFor({ cursor: null })}
+            atToday={period.includesToday}
             className="mb-0"
             right={
               <SegmentedControl
-                options={[
-                  { value: "month", label: "월간", href: linkFor({ view: "month" }) },
-                  {
-                    value: "quarter",
-                    label: "분기",
-                    href: linkFor({ view: "quarter" }),
-                  },
-                  { value: "all", label: "전체", href: linkFor({ view: "all" }) },
-                ]}
+                options={UNITS.map((unit) => ({
+                  value: unit,
+                  label: PERIOD_UNIT_LABELS[unit],
+                  // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
+                  href: linkFor({
+                    unit,
+                    cursor: period.includesToday ? null : cursor,
+                  }),
+                }))}
                 value={view}
                 ariaLabel="조회 기간 단위"
               />
@@ -291,8 +322,15 @@ export default async function ApprovalsPage({
 
       {/* 검색·상태 필터 — 각 필터가 몇 건인지 누르기 전에 보인다 */}
       <form action="/approvals" method="get">
-        {view !== "month" ? <input type="hidden" name="view" value={view} /> : null}
-        {view !== "all" ? <input type="hidden" name="cursor" value={cursor} /> : null}
+        {/* 검색을 눌러도 보고 있던 기간·상태가 유지되게 같은 이름으로 실어 보낸다 */}
+        {periodFields({ unit: view, cursor }, DEFAULT_UNIT).map((field) => (
+          <input
+            key={field.name}
+            type="hidden"
+            name={field.name}
+            value={field.value}
+          />
+        ))}
         {status ? <input type="hidden" name="status" value={status} /> : null}
         <TableToolbar
           search={
@@ -305,7 +343,7 @@ export default async function ApprovalsPage({
           filters={
             <>
               <FilterChip
-                href={linkFor({ status: undefined })}
+                href={linkFor({ status: null })}
                 active={!status}
                 count={stats.total}
               >
@@ -661,51 +699,3 @@ function docStepStates(doc: {
   });
 }
 
-/** 기간 계산 — 월간/분기/전체 */
-function resolvePeriod(view: PeriodView, cursor: string) {
-  const today = todayYmd();
-
-  if (view === "all") {
-    return {
-      label: "전체 기간",
-      sublabel: "모든 기안 문서",
-      range: {} as { from?: string; to?: string },
-      prev: cursor,
-      next: cursor,
-      includesToday: true,
-    };
-  }
-
-  if (view === "quarter") {
-    const [year, month] = cursor.split("-").map(Number);
-    const startMonth = Math.floor((month - 1) / 3) * 3 + 1;
-    const start = `${year}-${String(startMonth).padStart(2, "0")}`;
-    const from = `${start}-01`;
-    const to = lastDayOf(addMonthsYm(start, 2));
-    return {
-      label: `${year}년 ${Math.floor((startMonth - 1) / 3) + 1}분기`,
-      sublabel: `${from} ~ ${to}`,
-      range: { from, to },
-      prev: addMonthsYm(start, -3),
-      next: addMonthsYm(start, 3),
-      includesToday: today >= from && today <= to,
-    };
-  }
-
-  const from = `${cursor}-01`;
-  const to = lastDayOf(cursor);
-  return {
-    label: monthLabel(cursor),
-    sublabel: `${from} ~ ${to}`,
-    range: { from, to },
-    prev: addMonthsYm(cursor, -1),
-    next: addMonthsYm(cursor, 1),
-    includesToday: today >= from && today <= to,
-  };
-}
-
-function lastDayOf(ym: string) {
-  const [year, month] = ym.split("-").map(Number);
-  const date = new Date(Date.UTC(year, month, 0));
-  return date.toISOString().slice(0, 10);
-}

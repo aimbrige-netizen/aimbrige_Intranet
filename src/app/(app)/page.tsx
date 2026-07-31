@@ -6,6 +6,12 @@ import { Callout } from "@/components/ui/Callout";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import {
+  carryPeriod,
+  parsePeriod,
+  periodHref,
+  type PeriodSearchParams,
+} from "@/lib/period";
+import {
   DashboardGrid,
   type WidgetSlot,
 } from "@/features/dashboard/DashboardGrid";
@@ -36,8 +42,6 @@ import type { WidgetKey } from "@/types/db";
 
 export const metadata: Metadata = { title: "대시보드" };
 
-const YMD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
 /** 다가오는 일정 조회 범위 — 오늘부터 며칠 */
 const UPCOMING_DAYS = 7;
 
@@ -64,18 +68,16 @@ const WIDGET_LABELS: Record<WidgetKey, string> = {
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: { denied?: string; week?: string };
+  searchParams: PeriodSearchParams & { denied?: string };
 }) {
   const me = await requireSessionEmployee();
 
   const today = todayYmd();
-  const thisWeekStart = addDaysYmd(today, -weekdayOf(today));
-  const cursor = YMD_PATTERN.test(searchParams.week ?? "")
-    ? searchParams.week!
-    : today;
-  const weekStart = addDaysYmd(cursor, -weekdayOf(cursor));
-  const weekEnd = addDaysYmd(weekStart, 6);
-  const isThisWeek = weekStart === thisWeekStart;
+
+  // 기간은 ?period=week & ?cursor= 로 읽는다 (lib/period 규약)
+  const period = parsePeriod(searchParams, { units: ["week"], today });
+  const weekStart = period.from;
+  const isThisWeek = period.includesToday;
 
   // 다가오는 일정은 기간 스테퍼와 무관하게 늘 "오늘부터 7일"이다.
   // 지난주를 되짚어 보는 중에 다음 일정이 사라지면 안 된다.
@@ -87,7 +89,7 @@ export default async function DashboardPage({
       getApprovalWorkload(me.id),
       getWorkSnapshot(me.id, me.hire_date, weekStart),
       getNotices(me.id),
-      getCalendarUpcoming(upcomingFrom, upcomingTo),
+      getCalendarUpcoming(me.id, upcomingFrom, upcomingTo),
       getFavorites(me.id),
       getWidgetSettings(me.id),
     ]);
@@ -140,8 +142,8 @@ export default async function DashboardPage({
         ? `가장 오래 대기 ${approval.oldestWaitingDays}일`
         : "오늘 올라온 문서";
 
-  const step = (delta: number) =>
-    `/?week=${addDaysYmd(weekStart, delta * 7)}`;
+  const step = (cursor: string | null) =>
+    periodHref("/", { unit: "week", cursor }, { defaultUnit: "week" });
 
   /* ── 위젯 ──────────────────────────────────────────────────────── */
 
@@ -198,12 +200,12 @@ export default async function DashboardPage({
         }
         toolbar={
           <PeriodNavigator
-            label={`${weekStart} ~ ${weekEnd}`}
-            sublabel={isThisWeek ? "이번 주" : "주간"}
-            prevHref={step(-1)}
-            nextHref={step(1)}
+            label={period.label}
+            sublabel={isThisWeek ? "이번 주" : period.sublabel}
+            prevHref={step(period.prevCursor)}
+            nextHref={step(period.nextCursor)}
             nextDisabled={isThisWeek}
-            todayHref="/"
+            todayHref={step(null)}
             atToday={isThisWeek}
             className="mb-0"
           />
@@ -222,6 +224,8 @@ export default async function DashboardPage({
           label={isThisWeek ? "이번 주 근무" : "주간 근무"}
           value={formatHours(week.hours)}
           denominator={`${week.targetHours}h`}
+          // 보고 있던 주를 그대로 들고 내 근태로 넘어간다
+          href={carryPeriod("/attendance", period, { defaultUnit: "week" })}
           tone="neutral"
           icon={Clock3}
           max={week.limitHours}
@@ -247,6 +251,7 @@ export default async function DashboardPage({
           unit="일"
           denominator={week.plannedWorkDayCount}
           denominatorUnit="일"
+          href={carryPeriod("/attendance", period, { defaultUnit: "week" })}
           tone="informative"
           icon={CalendarDays}
           max={week.plannedWorkDayCount || 1}

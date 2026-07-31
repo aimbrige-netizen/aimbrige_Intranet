@@ -1,13 +1,26 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { MapPin, Pencil, Trash2, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { EVENT_COLORS } from "@/features/calendar/colors";
+import { Meter } from "@/components/ui/Progress";
+import {
+  SegmentedControl,
+  type SegmentOption,
+} from "@/components/ui/SegmentedControl";
+import {
+  EVENT_COLORS,
+  RESPONSE_COLORS,
+  RESPONSE_ORDER,
+} from "@/features/calendar/colors";
+import {
+  countResponses,
+  responseSummaryLine,
+} from "@/features/calendar/data-client";
 import {
   WEEKDAY_LABELS,
   addDaysYmd,
@@ -18,9 +31,14 @@ import {
 import {
   deleteCalendarEvent,
   deleteResourceBooking,
+  respondToEvent,
 } from "@/server/actions/calendar";
 import { cn } from "@/lib/utils";
-import type { CalendarItem, CalendarItemKind } from "@/types/db";
+import type {
+  CalendarItem,
+  CalendarItemKind,
+  EventResponse,
+} from "@/types/db";
 
 /** 이 항목이 어디에서 왔고 누가 보는지 */
 const SOURCE_LABELS: Record<CalendarItemKind, string> = {
@@ -42,6 +60,20 @@ const LOCK_NOTES: Partial<Record<CalendarItemKind, string>> = {
 };
 
 /**
+ * 고를 수 있는 답. 'pending'은 답이 아니라 아직 답하지 않은 상태라 버튼이 없다.
+ * 순서는 확정된 참석에서 확정된 불참으로 내려간다.
+ */
+const ANSWERS: EventResponse[] = ["accepted", "tentative", "declined"];
+
+/** 지금 상태가 등록자에게 어떻게 보이는지 + 되돌릴 수 있는지 */
+const RESPONSE_NOTES: Record<EventResponse, string> = {
+  pending: "등록자에게는 아직 미응답으로 보입니다.",
+  accepted: "참석으로 응답했습니다. 언제든 바꿀 수 있습니다.",
+  tentative: "미정으로 응답했습니다. 정해지면 다시 눌러 주세요.",
+  declined: "불참으로 응답했습니다. 이 일정은 목록에서 흐리게 표시됩니다.",
+};
+
+/**
  * 일정 상세 (스펙 02 · 3.4)
  *
  * 예전에는 배지 하나 + 문장 세 줄이라 "언제부터 언제까지 몇 시간짜리인지",
@@ -59,6 +91,16 @@ export function EventDetail({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  /*
+   * 방금 누른 답을 화면에 바로 반영한다.
+   * router.refresh()는 서버 목록을 새로 받아오지만, 이 모달이 들고 있는 item은
+   * 보드가 열 때 넘긴 그 객체 그대로다 — 닫았다 열기 전까지는 옛 값이 남는다.
+   * 일정 id로 키를 두어 다른 일정을 열면 저절로 버려지게 한다.
+   */
+  const [answered, setAnswered] = useState<Record<string, EventResponse>>({});
+  const [failure, setFailure] = useState<{ id: string; message: string } | null>(
+    null,
+  );
 
   if (!item) return null;
 
@@ -85,6 +127,46 @@ export function EventDetail({
       router.refresh();
     });
   };
+
+  /*
+   * 참석 여부는 respond_to_event()만 바꾼다. 테이블 UPDATE를 열면 response뿐
+   * 아니라 event_id·employee_id까지 바꿀 수 있어 남의 응답을 가로챌 수 있다.
+   */
+  const myResponse = answered[item.id] ?? item.myResponse;
+  const errorMessage = failure?.id === item.id ? failure.message : null;
+
+  const respond = (next: EventResponse) => {
+    if (next === myResponse) return;
+    setFailure(null);
+    startTransition(async () => {
+      const result = await respondToEvent(item.id, next);
+      if (!result.ok) {
+        setFailure({
+          id: item.id,
+          message: result.message ?? "응답을 저장하지 못했습니다.",
+        });
+        return;
+      }
+      setAnswered((prev) => ({ ...prev, [item.id]: next }));
+      router.refresh();
+    });
+  };
+
+  /* 방금 누른 답이 명단에도 반영돼야 요약과 목록이 어긋나지 않는다 */
+  const attendees = item.attendees.map((attendee) =>
+    attendee.isMe && myResponse
+      ? { ...attendee, response: myResponse }
+      : attendee,
+  );
+  const summary = countResponses(attendees);
+
+  const answerOptions: SegmentOption<EventResponse>[] = ANSWERS.map(
+    (response) => ({
+      value: response,
+      label: RESPONSE_COLORS[response].label,
+      disabled: pending,
+    }),
+  );
 
   const startYmd = toSeoulYmd(item.startAt);
   // 종일 항목은 종료가 다음 날 자정으로 저장돼 있어 하루 되돌려 보여준다
@@ -173,37 +255,95 @@ export function EventDetail({
           </Row>
         </dl>
 
+        {/*
+          내가 참석자로 지정된 일정에서만 뜬다. 등록자는 자리를 만든 사람이라
+          응답 대상이 아니고(참석자 행이 없다), 휴가·출장·예약에는 답할 것이 없다.
+        */}
+        {myResponse !== null ? (
+          <div className="rounded-card border border-line bg-canvas px-3 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <div className="min-w-0">
+                <p className="text-label font-bold text-ink">참석 여부</p>
+                <p className="mt-0.5 text-caption">
+                  {RESPONSE_NOTES[myResponse]}
+                </p>
+              </div>
+              <SegmentedControl
+                size="small"
+                ariaLabel="내 참석 여부"
+                value={myResponse}
+                onChange={respond}
+                options={answerOptions}
+              />
+            </div>
+            {errorMessage ? (
+              <p className="mt-2 text-label text-danger">{errorMessage}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {showPlace && !isBooking ? (
           <div>
             <p className="mb-1.5 flex items-center gap-1.5 text-label font-bold text-ink">
               <Users className="size-3.5 text-muted" aria-hidden />
               참석자
               <span className="font-normal text-muted tabular-nums">
-                {item.attendees.length > 0
-                  ? `${item.attendees.length + 1}명 (등록자 포함)`
+                {attendees.length > 0
+                  ? `${attendees.length}명 · 등록자 별도`
                   : "등록자만"}
               </span>
             </p>
-            {item.attendees.length === 0 ? (
+            {attendees.length === 0 ? (
               <p className="text-caption">
                 지정된 참석자가 없습니다. 이 일정은 등록자만 참석합니다.
               </p>
             ) : (
-              <ul className="flex flex-wrap gap-1.5">
-                {item.attendees.map((attendee) => (
-                  <li
-                    key={attendee.id}
-                    className="inline-flex items-center gap-1.5 rounded-pill bg-subtle py-0.5 pl-0.5 pr-2 text-label text-ink"
-                  >
-                    <Avatar
-                      name={attendee.name}
-                      src={attendee.profileImageUrl}
-                      size="small"
-                    />
-                    {attendee.name}
-                  </li>
-                ))}
-              </ul>
+              <>
+                {/* 이름을 세지 않고도 "몇 명이 온다고 했는지"가 먼저 읽혀야 한다 */}
+                <Meter
+                  max={summary.total}
+                  segments={RESPONSE_ORDER.map((response) => ({
+                    value: summary[response],
+                    tone: RESPONSE_COLORS[response].tone,
+                    label: `${RESPONSE_COLORS[response].label} ${summary[response]}명`,
+                  }))}
+                  size="sm"
+                  aria-label={`참석 응답 — ${responseSummaryLine(summary)}`}
+                />
+                <p className="mb-2 mt-1.5 text-caption tabular-nums">
+                  {responseSummaryLine(summary)}
+                  <span className="text-muted"> / 참석자 {summary.total}명</span>
+                </p>
+                <ul className="flex flex-wrap gap-1.5">
+                  {attendees.map((attendee) => {
+                    const meta = RESPONSE_COLORS[attendee.response];
+                    return (
+                      <li
+                        key={attendee.id}
+                        className="inline-flex items-center gap-1.5 rounded-pill bg-subtle py-0.5 pl-0.5 pr-1.5 text-label text-ink"
+                      >
+                        <Avatar
+                          name={attendee.name}
+                          src={attendee.profileImageUrl}
+                          size="small"
+                        />
+                        {attendee.name}
+                        {attendee.isMe ? (
+                          <span className="text-muted">(나)</span>
+                        ) : null}
+                        <span
+                          className={cn(
+                            "rounded-sm px-1.5 text-nano",
+                            meta.badge,
+                          )}
+                        >
+                          {meta.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
             )}
           </div>
         ) : null}

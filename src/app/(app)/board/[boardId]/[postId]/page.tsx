@@ -25,11 +25,12 @@ export default async function PostPage({
    * 앞에 두면 없는 postId로도 RPC가 나가고, 무엇보다 접근 권한이 없는
    * 글에도 카운트 호출이 발생한다(UPDATE는 0행이라 피해는 없지만 의미가 틀렸다).
    *
-   * 화면에는 이번 조회까지 더한 값을 보여준다 — 뒤에 올린 탓에 빠지면
-   * 새로고침해야 반영되는 것처럼 보인다. 본인 글은 DB가 세지 않는다.
+   * 화면에는 서버가 준 값을 그대로 보여준다. 조회는 사람·날짜 단위로 묶여
+   * 같은 날 두 번째부터는 오르지 않고, 함수가 반영 여부를 돌려주지 않아
+   * 여기서 더한 +1은 새로고침마다 틀린 값이 된다. 같은 날 첫 조회에서만
+   * 내 한 번이 다음 진입에 반영되는데, 실제보다 부풀리는 쪽보다 낫다.
    */
   await incrementPostView(params.postId);
-  const viewCount = post.author_id === me.id ? post.view_count : post.view_count + 1;
 
   // 조회 시 읽음 기록 (스펙 3.3). 실패해도 화면은 정상 표시된다.
   await markPostRead(params.postId);
@@ -44,7 +45,7 @@ export default async function PostPage({
   // 목록으로 돌아가는 링크는 두지 않는다 — 모듈 패널의 활성 항목이 위치를 말한다
   return (
     <PostDetailView
-      post={{ ...post, view_count: viewCount }}
+      post={post}
       currentEmployeeId={me.id}
       isSystemAdmin={me.isSystemAdmin}
       readStatus={readStatus}

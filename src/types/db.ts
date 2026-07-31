@@ -102,9 +102,6 @@ export interface AuditLog {
   created_at: string;
 }
 
-export interface AuditLogWithActor extends AuditLog {
-  actor: Pick<Employee, "id" | "name" | "email"> | null;
-}
 
 export interface DashboardWidget {
   id: string;
@@ -168,7 +165,10 @@ export interface CalendarEvent {
   location: string | null;
   /**
    * 참석자 employees.id 배열.
-   * SELECT 정책이 이 배열을 보므로, 여기 담긴 사람은 개인 일정이어도 볼 수 있다.
+   *
+   * 참석 여부(수락/거절/미정)는 event_attendees가 진실이고 이 배열은 호환용으로만
+   * 남아 있다. SELECT 정책이 아직 배열과 테이블을 둘 다 보므로 저장할 때는 양쪽에
+   * 같은 값을 쓴다 — 읽을 때는 테이블만 본다.
    */
   attendee_ids: string[];
   owner_id: string;
@@ -180,6 +180,17 @@ export interface CalendarEvent {
 
 export interface CalendarEventWithOwner extends CalendarEvent {
   owner: Pick<Employee, "id" | "name" | "profile_image_url"> | null;
+}
+
+/** 참석 응답. respond_to_event()가 받는 값과 같은 집합 */
+export type EventResponse = "pending" | "accepted" | "declined" | "tentative";
+
+export interface EventAttendee {
+  event_id: string;
+  employee_id: string;
+  response: EventResponse;
+  responded_at: string | null;
+  created_at: string;
 }
 
 export type ResourceType = "meeting_room" | "vehicle" | "equipment";
@@ -355,6 +366,10 @@ export interface CalendarAttendee {
   id: string;
   name: string;
   profileImageUrl: string | null;
+  /** 오겠다고 했는가. 응답 전이면 'pending' */
+  response: EventResponse;
+  /** 이 참석자가 나인가 — 목록에서 '나'를 짚고 응답 버튼을 붙이는 데 쓴다 */
+  isMe: boolean;
 }
 
 export interface CalendarItem {
@@ -371,6 +386,12 @@ export interface CalendarItem {
   location: string | null;
   /** 누가 오는가. 일정 외 종류(휴가·결재·예약)는 빈 배열 */
   attendees: CalendarAttendee[];
+  /**
+   * 내 참석 응답. 내가 참석자로 지정되지 않았으면(등록자이거나 무관한 항목) null.
+   * attendees 안의 isMe 항목과 같은 값이다 — 칩처럼 목록을 훑지 않고 바로
+   * 봐야 하는 자리가 많아 항목 수준에도 올려 둔다.
+   */
+  myResponse: EventResponse | null;
   /** 본인이 수정·삭제할 수 있는 항목인지 */
   editable: boolean;
 }

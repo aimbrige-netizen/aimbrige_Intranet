@@ -24,19 +24,22 @@ import {
   hoursBetween,
 } from "@/features/attendance/format";
 import { requireSessionEmployee } from "@/lib/auth/session";
+import { monthLabel, todayYmd, toSeoulTime } from "@/features/calendar/date";
 import {
-  addDaysYmd,
-  addMonthsYm,
-  monthLabel,
-  todayYmd,
-  toSeoulTime,
-  weekdayOf,
-} from "@/features/calendar/date";
+  parsePeriod,
+  periodHref,
+  PERIOD_UNIT_LABELS,
+  type PeriodSearchParams,
+  type PeriodUnit,
+} from "@/lib/period";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "내 근태" };
 
-type View = "week" | "month";
+/** 이 화면이 지원하는 기간 단위 (= 토글 순서) */
+const UNITS = ["week", "month"] as const satisfies readonly PeriodUnit[];
+/** 개인 근태는 주 단위로 본다 — 주52시간·주휴가 판정의 단위가 주다 */
+const DEFAULT_UNIT = "week";
 
 /**
  * 내 근태 — 모듈의 기준 화면.
@@ -48,24 +51,24 @@ type View = "week" | "month";
 export default async function AttendancePage({
   searchParams,
 }: {
-  searchParams: { view?: string; cursor?: string };
+  searchParams: PeriodSearchParams;
 }) {
   const me = await requireSessionEmployee();
   const today = todayYmd();
-  const view: View = searchParams.view === "month" ? "month" : "week";
 
-  // 주간이면 커서가 그 주의 아무 날, 월간이면 YYYY-MM
-  const cursor =
-    view === "week"
-      ? (searchParams.cursor ?? today).slice(0, 10)
-      : (searchParams.cursor ?? today.slice(0, 7)).slice(0, 7);
+  // 기간은 ?period=week|month & ?cursor= 로 읽는다 (lib/period 규약)
+  const period = parsePeriod(searchParams, {
+    units: UNITS,
+    defaultUnit: DEFAULT_UNIT,
+    today,
+  });
+  const view = period.unit;
+  const cursor = period.cursor;
 
-  const weekStart =
-    view === "week" ? addDaysYmd(cursor, -weekdayOf(cursor)) : null;
-  const rangeFrom = weekStart ?? `${cursor}-01`;
-  const rangeTo = weekStart
-    ? addDaysYmd(weekStart, 6)
-    : addDaysYmd(`${addMonthsYm(cursor, 1)}-01`, -1);
+  // 주간이면 기준점이 곧 그 주의 시작일이다 (parsePeriod가 일요일로 맞춰 준다)
+  const weekStart = view === "week" ? period.cursor : null;
+  const rangeFrom = period.from;
+  const rangeTo = period.to;
 
   const [summary, records, leaves, overtimes, corrections, week, adjustments] =
     await Promise.all([
@@ -86,17 +89,15 @@ export default async function AttendancePage({
     (row) => !isAbsentDay(row) && row.check_in_at,
   ).length;
 
-  const step = (delta: number) => {
-    const next =
-      view === "week"
-        ? addDaysYmd(weekStart as string, delta * 7)
-        : addMonthsYm(cursor, delta);
-    return `/attendance?view=${view}&cursor=${next}`;
-  };
+  const linkTo = (unit: PeriodUnit, next: string | null) =>
+    periodHref(
+      "/attendance",
+      { unit, cursor: next },
+      { defaultUnit: DEFAULT_UNIT },
+    );
 
-  const periodLabel =
-    view === "week" ? `${rangeFrom} ~ ${rangeTo}` : monthLabel(cursor);
-  const inPeriod = today >= rangeFrom && today <= rangeTo;
+  const periodLabel = period.label;
+  const inPeriod = period.includesToday;
 
   return (
     <>
@@ -120,26 +121,20 @@ export default async function AttendancePage({
         toolbar={
           <PeriodNavigator
             label={periodLabel}
-            sublabel={view === "week" ? "주간" : "월간"}
-            prevHref={step(-1)}
-            nextHref={step(1)}
-            todayHref={`/attendance?view=${view}`}
+            sublabel={period.sublabel}
+            prevHref={linkTo(view, period.prevCursor)}
+            nextHref={linkTo(view, period.nextCursor)}
+            todayHref={linkTo(view, null)}
             atToday={inPeriod}
             className="mb-0"
             right={
               <SegmentedControl
-                options={[
-                  {
-                    value: "week",
-                    label: "주간",
-                    href: "/attendance?view=week",
-                  },
-                  {
-                    value: "month",
-                    label: "월간",
-                    href: "/attendance?view=month",
-                  },
-                ]}
+                options={UNITS.map((unit) => ({
+                  value: unit,
+                  label: PERIOD_UNIT_LABELS[unit],
+                  // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
+                  href: linkTo(unit, inPeriod ? null : cursor),
+                }))}
                 value={view}
                 ariaLabel="기간 단위"
               />

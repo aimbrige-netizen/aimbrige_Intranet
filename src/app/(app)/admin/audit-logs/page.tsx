@@ -16,6 +16,11 @@ import {
   AUDIT_ACTION_LABELS,
   AUDIT_GROUPS,
 } from "@/features/audit/constants";
+import {
+  AUDIT_PAGE_SIZE,
+  getAuditActionCounts,
+  listAuditLogs,
+} from "@/features/audit/data";
 import { requireSystemAdmin } from "@/lib/auth/session";
 import {
   ariaSortOf,
@@ -26,13 +31,12 @@ import {
   type SortDir,
 } from "@/lib/sort";
 import { createServerSupabase } from "@/lib/supabase/server";
+import { parsePeriod, type PeriodUnit } from "@/lib/period";
 import { formatDateTime } from "@/lib/utils";
 import { addDaysYmd, todayYmd } from "@/features/calendar/date";
 import type { AuditLog } from "@/types/db";
 
 export const metadata: Metadata = { title: "감사 로그" };
-
-const PAGE_SIZE = 50;
 
 /** 내보내기는 페이지가 아니라 조건 전체를 담는다. 상한만 걸어 둔다 */
 const EXPORT_LIMIT = 500;
@@ -42,6 +46,21 @@ const EXPORT_LIMIT = 500;
  * 있었나"를 보려는 화면이 매년 느려지고, 요약 밴드의 분모도 의미를 잃는다.
  */
 const DEFAULT_RANGE_DAYS = 30;
+
+/**
+ * 이 화면이 지원하는 기간 단위 (lib/period 규약).
+ * 기본은 custom — 감사 조회는 "최근 30일"·"올해" 같은 일수 프리셋으로 오고,
+ * 그건 달력 경계가 아니라 임의 구간이라 from/to로만 정확히 적힌다.
+ * 그래도 주간·월간·분기·연간을 함께 받는 이유는, 근태·결재에서 보던 구간을
+ * 그대로 들고 넘어오는 링크(?period=month&cursor=)를 버리지 않기 위해서다.
+ */
+const AUDIT_UNITS = [
+  "custom",
+  "week",
+  "month",
+  "quarter",
+  "year",
+] as const satisfies readonly PeriodUnit[];
 
 const ACTION_TONES: Record<
   string,
@@ -100,12 +119,16 @@ const AUDIT_SORT_KEYS = ["created_at", "action"] as const;
 type AuditSortKey = (typeof AUDIT_SORT_KEYS)[number];
 
 /**
- * 목록 파라미터 규약: sort / dir / page / from / to + 이 화면 고유의
- * group / action / target. 임직원 목록과 같은 이름을 쓴다.
+ * 목록 파라미터 규약: q / sort / dir / page + 기간(period·cursor·from·to,
+ * lib/period) + 이 화면 고유의 group / action / target.
+ * 임직원 목록과 같은 이름을 쓴다.
  */
 interface SearchParams {
+  q?: string;
   group?: string;
   action?: string;
+  period?: string;
+  cursor?: string;
   from?: string;
   to?: string;
   page?: string;
@@ -131,15 +154,46 @@ export default async function AuditLogsPage({
   const supabase = createServerSupabase();
 
   const today = todayYmd();
-  // URL에 없으면 최근 30일. 화면에는 항상 확정된 구간이 보인다
-  const rangeTo = searchParams.to || today;
-  const rangeFrom =
-    searchParams.from || addDaysYmd(rangeTo, -(DEFAULT_RANGE_DAYS - 1));
-  const isDefaultRange = !searchParams.from && !searchParams.to;
+  /*
+   * 기간은 ?period=custom&from=&to= 로 읽는다 (lib/period 규약).
+   * URL에 아무것도 없으면 최근 30일을 파서에 넣어 확정한다 — 화면에는 언제나
+   * 실제 조회 중인 구간이 보여야 하고, 뒤집힌 구간도 파서가 바로잡는다.
+   */
+  const period = parsePeriod(
+    {
+      ...searchParams,
+      to: searchParams.to || today,
+      from:
+        searchParams.from ||
+        addDaysYmd(searchParams.to || today, -(DEFAULT_RANGE_DAYS - 1)),
+    },
+    { units: AUDIT_UNITS, defaultUnit: "custom", today },
+  );
+  const rangeFrom = period.from;
+  const rangeTo = period.to;
+  const isDefaultRange =
+    !searchParams.period &&
+    !searchParams.cursor &&
+    !searchParams.from &&
+    !searchParams.to;
+
+  const q = (searchParams.q ?? "").trim();
+  const searching = q.length > 0;
+
+  /**
+   * 이름 검색은 행위자를 조인해야 해서 list_audit_logs RPC로만 된다.
+   * 그 함수는 액션을 하나까지만 받고 정렬이 최신순으로 고정돼 있어
+   * 그룹(액션 여러 개)·대상·정렬을 함께 걸 수 없다. 그래서 검색 중에는
+   * 그 셋을 아예 떨어뜨린다 — 걸리지도 않은 필터가 켜진 것처럼 보이는
+   * 쪽이 더 나쁘다. 액션 하나는 검색과 함께 걸린다.
+   */
+  const group = searching ? "" : (searchParams.group ?? "");
+  const target = searching ? "" : (searchParams.target ?? "");
+  const action = searchParams.action ?? "";
+  const groupActions = actionsOfGroup(group);
 
   const page = Math.max(1, Number(searchParams.page ?? "1") || 1);
-  const offset = (page - 1) * PAGE_SIZE;
-  const groupActions = actionsOfGroup(searchParams.group);
+  const offset = (page - 1) * AUDIT_PAGE_SIZE;
 
   const sortKey: AuditSortKey = parseSortKey(searchParams.sort, AUDIT_SORT_KEYS);
   // 감사 로그의 기본은 최신순이다. dir이 없으면 시각만 내림차순으로 시작한다
@@ -150,94 +204,73 @@ export default async function AuditLogsPage({
       : "asc";
   const ascending = sortDir === "asc";
 
-  /** 기간·대상 조건은 목록·그룹 카운트·내보내기가 똑같이 쓴다 */
-  const withPeriod = <T extends { gte: unknown; lte: unknown; eq: unknown }>(
-    query: T,
-  ): T => {
-    let next = query as unknown as {
-      gte: (c: string, v: string) => typeof next;
-      lte: (c: string, v: string) => typeof next;
-      eq: (c: string, v: string) => typeof next;
-    };
-    next = next.gte("created_at", `${rangeFrom}T00:00:00+09:00`);
-    next = next.lte("created_at", `${rangeTo}T23:59:59+09:00`);
-    if (searchParams.target) next = next.eq("target_id", searchParams.target);
-    return next as unknown as T;
+  const filters = {
+    from: rangeFrom,
+    to: rangeTo,
+    q,
+    action,
+    actions: groupActions as string[] | null,
+    target,
+    // 검색 경로는 최신순 고정이라 정렬 헤더도 함께 접는다
+    sortKey: searching ? ("created_at" as const) : sortKey,
+    ascending: searching ? false : ascending,
   };
 
-  /** 액션 조건 — 정밀 액션이 있으면 그것만, 없으면 그룹 전체 */
-  const withAction = <T extends { eq: unknown; in: unknown }>(query: T): T => {
-    const next = query as unknown as {
-      eq: (c: string, v: string) => T;
-      in: (c: string, v: string[]) => T;
-    };
-    if (searchParams.action) return next.eq("action", searchParams.action);
-    if (groupActions) return next.in("action", groupActions);
-    return query;
+  /** 기간(+대상) 안의 건수 — 액션별 건수를 못 받았을 때의 대비 경로 */
+  const countInPeriod = async (actions?: string[]) => {
+    let query = supabase
+      .from("audit_logs")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", `${rangeFrom}T00:00:00+09:00`)
+      .lt("created_at", `${addDaysYmd(rangeTo, 1)}T00:00:00+09:00`);
+    if (target) query = query.eq("target_id", target);
+    if (actions) query = query.in("action", actions);
+    const { count } = await query;
+    return count ?? 0;
   };
 
-  /** 액션 정렬은 동률이 많다 — 같은 액션 안에서는 최신순으로 고정한다 */
-  const ordered = <T extends { order: unknown }>(query: T): T => {
-    let next = query as unknown as {
-      order: (c: string, o: { ascending: boolean }) => typeof next;
-    };
-    next = next.order(sortKey, { ascending });
-    if (sortKey !== "created_at") {
-      next = next.order("created_at", { ascending: false });
-    }
-    return next as unknown as T;
-  };
-
-  const LOG_SELECT = `id, action, target_id, detail, created_at, actor_id,
-         actor:employees(id, name, email)`;
-
-  const [
-    { data, count, error },
-    { count: totalInRange },
-    { count: deniedCount },
-    groupCounts,
-    exportResult,
-  ] = await Promise.all([
-    ordered(
-      withAction(
-        withPeriod(
-          supabase.from("audit_logs").select(LOG_SELECT, { count: "exact" }),
-        ),
-      ),
-    ).range(offset, offset + PAGE_SIZE - 1),
-    withPeriod(
-      supabase.from("audit_logs").select("id", { count: "exact", head: true }),
-    ),
-    withPeriod(
-      supabase.from("audit_logs").select("id", { count: "exact", head: true }),
-    ).eq("action", "login_denied"),
-    Promise.all(
-      AUDIT_GROUPS.map(async (group) => {
-        const { count: value } = await withPeriod(
-          supabase
-            .from("audit_logs")
-            .select("id", { count: "exact", head: true }),
-        ).in("action", group.actions);
-        return value ?? 0;
-      }),
-    ),
-    ordered(
-      withAction(withPeriod(supabase.from("audit_logs").select(LOG_SELECT))),
-    ).range(0, EXPORT_LIMIT - 1),
+  const [list, exportList, actionCounts] = await Promise.all([
+    listAuditLogs({ ...filters, limit: AUDIT_PAGE_SIZE, offset }),
+    listAuditLogs({ ...filters, limit: EXPORT_LIMIT, offset: 0 }),
+    getAuditActionCounts(rangeFrom, rangeTo),
   ]);
 
-  type LogRow = AuditLog & {
-    actor: { id: string; name: string; email: string } | null;
-  };
+  /*
+   * 요약 밴드는 액션별 건수를 합쳐 만든다 — 그룹마다 count 쿼리를 던지던
+   * 여섯 번의 왕복이 한 번으로 준다. 대상으로 좁혀 볼 때는 그 함수가
+   * 대상을 받지 않으므로 직접 센다(밴드의 분모가 표와 어긋나면 안 된다).
+   */
+  const sumOf = (keys: readonly string[]) =>
+    keys.reduce((sum, key) => sum + (actionCounts?.[key] ?? 0), 0);
 
-  const logs = (data ?? []) as unknown as LogRow[];
-  const exportLogs = (exportResult.data ?? []) as unknown as LogRow[];
+  let rangeTotal: number;
+  let deniedCount: number;
+  let groupCounts: number[];
+
+  if (actionCounts && !target) {
+    rangeTotal = sumOf(Object.keys(actionCounts));
+    deniedCount = actionCounts["login_denied"] ?? 0;
+    groupCounts = AUDIT_GROUPS.map((item) => sumOf(item.actions));
+  } else {
+    const [total, denied, counts] = await Promise.all([
+      countInPeriod(),
+      countInPeriod(["login_denied"]),
+      Promise.all(AUDIT_GROUPS.map((item) => countInPeriod(item.actions))),
+    ]);
+    rangeTotal = total;
+    deniedCount = denied;
+    groupCounts = counts;
+  }
+
+  const logs = list.rows;
+  const exportLogs = exportList.rows;
+  const total = list.total;
 
   // 대상(target_id)이 임직원인 경우 이름을 함께 보여준다 (내보내기도 같은 이름을 쓴다)
   const targetIds = Array.from(
     new Set(
       [...logs, ...exportLogs]
-        .map((log) => log.target_id)
+        .map((log) => log.targetId)
         .filter((id): id is string => !!id),
     ),
   );
@@ -247,7 +280,7 @@ export default async function AuditLogsPage({
       .from("employees")
       .select("id, name")
       .in("id", targetIds);
-    (targets ?? []).forEach((target) => targetNames.set(target.id, target.name));
+    (targets ?? []).forEach((row) => targetNames.set(row.id, row.name));
   }
 
   const presets = [
@@ -258,19 +291,24 @@ export default async function AuditLogsPage({
     { label: "올해", from: `${today.slice(0, 4)}-01-01` },
   ];
 
-  const rangeTotal = totalInRange ?? 0;
-
-  /** 링크는 현재 조건을 그대로 이어받는다. 페이지만 버린다 */
+  /**
+   * 링크는 현재 조건을 그대로 이어받는다. 페이지만 버린다.
+   * 검색 중이라 지금은 걸리지 않은 그룹·대상도 URL에는 들고 간다 —
+   * 검색을 풀면 보고 있던 필터로 돌아오게 하기 위해서다.
+   */
   const hrefWith = (patch: Partial<Record<keyof SearchParams, string>>) => {
     const params = new URLSearchParams();
     const merged: Record<string, string | undefined> = {
+      q: q || undefined,
       group: searchParams.group,
-      action: searchParams.action,
+      action: action || undefined,
       target: searchParams.target,
+      period: searchParams.period,
+      cursor: searchParams.cursor,
       from: searchParams.from,
       to: searchParams.to,
-      sort: searchParams.sort,
-      dir: searchParams.dir,
+      sort: searching ? undefined : searchParams.sort,
+      dir: searching ? undefined : searchParams.dir,
       ...patch,
     };
     Object.entries(merged).forEach(([key, value]) => {
@@ -280,19 +318,37 @@ export default async function AuditLogsPage({
     return search ? `/admin/audit-logs?${search}` : "/admin/audit-logs";
   };
 
-  // 스테퍼는 지금 보고 있는 구간의 길이만큼 통째로 옮긴다
+  /*
+   * 스테퍼. 임의 구간(custom)은 지금 보고 있는 길이만큼 통째로 옮기고,
+   * 달력 단위로 들어온 링크는 파서가 준 이전/다음 기준점으로 옮긴다.
+   */
   const windowDays = spanDays(rangeFrom, rangeTo);
-  const shiftHref = (days: number) =>
-    hrefWith({
-      from: addDaysYmd(rangeFrom, days),
-      to: addDaysYmd(rangeTo, days),
+  const stepHref = (direction: -1 | 1) => {
+    if (period.unit === "custom") {
+      const days = windowDays * direction;
+      return hrefWith({
+        period: "custom",
+        cursor: undefined,
+        from: addDaysYmd(rangeFrom, days),
+        to: addDaysYmd(rangeTo, days),
+      });
+    }
+    const next = direction < 0 ? period.prevCursor : period.nextCursor;
+    return hrefWith({
+      period: period.unit,
+      cursor: next ?? undefined,
+      from: undefined,
+      to: undefined,
     });
+  };
 
+  // 그룹·대상·정렬은 검색과 함께 걸리지 않는다 — 누르면 검색어를 놓는다
   const groupHref = (key: string) =>
     hrefWith({
-      group: searchParams.group === key ? undefined : key,
+      group: group === key ? undefined : key,
       // 그룹을 바꾸면 이전 그룹의 정밀 액션은 의미가 없다
       action: undefined,
+      q: undefined,
     });
 
   const sortHref = (key: AuditSortKey) =>
@@ -320,15 +376,15 @@ export default async function AuditLogsPage({
     };
   };
 
-  const timeHeader = sortableHeader("created_at", "시각");
-  const actionHeader = sortableHeader("action", "액션");
+  const timeHeader = searching ? null : sortableHeader("created_at", "시각");
+  const actionHeader = searching ? null : sortableHeader("action", "액션");
 
   const exportRows = exportLogs.map((log) => ({
-    at: formatDateTime(log.created_at),
-    actor: log.actor?.name ?? "시스템",
-    actorEmail: log.actor?.email ?? "",
+    at: formatDateTime(log.createdAt),
+    actor: log.actorName ?? "시스템",
+    actorEmail: log.actorEmail ?? "",
     action: AUDIT_ACTION_LABELS[log.action] ?? log.action,
-    target: log.target_id ? (targetNames.get(log.target_id) ?? log.target_id) : "",
+    target: log.targetId ? (targetNames.get(log.targetId) ?? log.targetId) : "",
     detail: detailText(log.detail),
   }));
 
@@ -338,16 +394,16 @@ export default async function AuditLogsPage({
         title="감사 로그"
         meta={
           <>
-            <span>
-              조회 기간 {rangeTotal.toLocaleString("ko-KR")}건
-            </span>
+            <span>조회 기간 {rangeTotal.toLocaleString("ko-KR")}건</span>
             <span>·</span>
             <span>
-              {sortKey === "created_at"
-                ? sortDir === "desc"
-                  ? "최신순"
-                  : "오래된순"
-                : `액션 ${sortDir === "asc" ? "가나다순" : "역순"}`}
+              {searching
+                ? `'${q}' 검색 ${total.toLocaleString("ko-KR")}건`
+                : sortKey === "created_at"
+                  ? sortDir === "desc"
+                    ? "최신순"
+                    : "오래된순"
+                  : `액션 ${sortDir === "asc" ? "가나다순" : "역순"}`}
             </span>
             <span>·</span>
             <span>
@@ -359,48 +415,49 @@ export default async function AuditLogsPage({
       />
 
       <PeriodNavigator
-        label={`${rangeFrom} ~ ${rangeTo}`}
+        label={period.label}
         sublabel={`${windowDays}일 구간 · ${rangeTotal.toLocaleString("ko-KR")}건`}
-        prevHref={shiftHref(-windowDays)}
-        nextHref={shiftHref(windowDays)}
+        prevHref={stepHref(-1)}
+        nextHref={stepHref(1)}
         nextDisabled={rangeTo >= today}
-        todayHref={hrefWith({ from: undefined, to: undefined })}
+        todayHref={hrefWith({
+          period: undefined,
+          cursor: undefined,
+          from: undefined,
+          to: undefined,
+        })}
         atToday={isDefaultRange}
       />
 
       {/* 요약 밴드가 곧 그룹 필터다 — 선택된 카드는 브랜드 틴트로 표시된다 */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {AUDIT_GROUPS.map((group, index) => {
+        {AUDIT_GROUPS.map((item, index) => {
           const value = groupCounts[index];
-          const active = searchParams.group === group.key;
-          const denied = group.key === "auth" ? (deniedCount ?? 0) : 0;
+          const active = group === item.key;
+          const denied = item.key === "auth" ? deniedCount : 0;
 
           return (
             <StatCard
-              key={group.key}
-              label={group.label}
+              key={item.key}
+              label={item.label}
               value={value}
               unit="건"
               denominator={rangeTotal}
               denominatorUnit="건"
               tone={
-                active
-                  ? "brand"
-                  : denied > 0
-                    ? "warning"
-                    : GROUP_TONES[group.key]
+                active ? "brand" : denied > 0 ? "warning" : GROUP_TONES[item.key]
               }
-              icon={GROUP_ICONS[group.key]}
+              icon={GROUP_ICONS[item.key]}
               emphasis={active}
               max={rangeTotal || 1}
               meterValue={value}
-              href={groupHref(group.key)}
+              href={groupHref(item.key)}
               sub={
                 active
                   ? "다시 누르면 전체"
                   : denied > 0
                     ? `차단 ${denied}건 포함`
-                    : group.description
+                    : item.description
               }
             />
           );
@@ -414,7 +471,7 @@ export default async function AuditLogsPage({
           density="compact"
           action={
             <span className="text-label tabular-nums text-muted">
-              {(count ?? 0).toLocaleString("ko-KR")}건
+              {total.toLocaleString("ko-KR")}건
             </span>
           }
         />
@@ -424,16 +481,14 @@ export default async function AuditLogsPage({
             from={rangeFrom}
             to={rangeTo}
             today={today}
-            targetLabel={
-              searchParams.target
-                ? (targetNames.get(searchParams.target) ?? null)
-                : null
-            }
+            q={q}
+            actionCounts={target ? null : actionCounts}
+            targetLabel={target ? (targetNames.get(target) ?? null) : null}
             actions={
               <AuditExportButton
                 rows={exportRows}
                 filename={`감사로그_${rangeFrom}_${rangeTo}`}
-                capped={(count ?? 0) > EXPORT_LIMIT}
+                capped={exportRows.length < total}
               />
             }
           />
@@ -443,31 +498,48 @@ export default async function AuditLogsPage({
             <table className="ab-table ab-table--compact min-w-[860px]">
               <thead>
                 <tr>
-                  <th className="w-40" aria-sort={timeHeader["aria-sort"]}>
-                    {timeHeader.children}
+                  <th className="w-40" aria-sort={timeHeader?.["aria-sort"]}>
+                    {timeHeader ? timeHeader.children : "시각"}
                   </th>
                   <th className="w-36">행위자</th>
-                  <th className="w-28" aria-sort={actionHeader["aria-sort"]}>
-                    {actionHeader.children}
+                  <th className="w-28" aria-sort={actionHeader?.["aria-sort"]}>
+                    {actionHeader ? actionHeader.children : "액션"}
                   </th>
                   <th className="w-32">대상</th>
                   <th>상세 (변경 전 → 후)</th>
                 </tr>
               </thead>
               <tbody>
-                {error ? (
+                {list.errorMessage ? (
+                  /* 빈 표는 "기록이 없다"로 읽힌다 — 실패는 실패라고 말한다 */
                   <TableEmptyRow
                     colSpan={5}
                     icon={ScrollText}
                     title="로그를 불러오지 못했습니다"
-                    description={error.message}
+                    description={`${list.errorMessage} · 잠시 후 다시 시도하거나 조건을 좁혀 보세요.`}
+                    action={
+                      <Link
+                        href="/admin/audit-logs"
+                        className="text-label text-primary hover:underline"
+                      >
+                        최근 {DEFAULT_RANGE_DAYS}일 전체 보기
+                      </Link>
+                    }
                   />
                 ) : logs.length === 0 ? (
                   <TableEmptyRow
                     colSpan={5}
                     icon={ScrollText}
-                    title="조건에 맞는 기록이 없습니다"
-                    description={`${rangeFrom} ~ ${rangeTo} 구간에는 해당하는 기록이 없습니다. 기간을 넓히거나 그룹을 풀어 보세요.`}
+                    title={
+                      searching
+                        ? `'${q}' 검색 결과가 없습니다`
+                        : "조건에 맞는 기록이 없습니다"
+                    }
+                    description={
+                      searching
+                        ? `${rangeFrom} ~ ${rangeTo} 구간에서 이름·이메일·액션으로 찾습니다. 기간을 넓히거나 낱말을 줄여 보세요.`
+                        : `${rangeFrom} ~ ${rangeTo} 구간에는 해당하는 기록이 없습니다. 기간을 넓히거나 그룹을 풀어 보세요.`
+                    }
                     action={
                       <Link
                         href="/admin/audit-logs"
@@ -481,11 +553,13 @@ export default async function AuditLogsPage({
                   logs.map((log) => (
                     <tr key={log.id} className="group">
                       <td className="whitespace-nowrap tabular-nums text-muted">
-                        {formatDateTime(log.created_at)}
+                        {formatDateTime(log.createdAt)}
                       </td>
                       <td>
-                        {log.actor ? (
-                          <span title={log.actor.email}>{log.actor.name}</span>
+                        {log.actorName ? (
+                          <span title={log.actorEmail ?? undefined}>
+                            {log.actorName}
+                          </span>
                         ) : (
                           <span className="text-muted">시스템</span>
                         )}
@@ -496,18 +570,21 @@ export default async function AuditLogsPage({
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap">
-                        {log.target_id && targetNames.has(log.target_id) ? (
+                        {log.targetId && targetNames.has(log.targetId) ? (
                           <>
                             <Link
-                              href={`/admin/employees/${log.target_id}`}
+                              href={`/admin/employees/${log.targetId}`}
                               className="text-primary hover:underline"
                             >
-                              {targetNames.get(log.target_id)}
+                              {targetNames.get(log.targetId)}
                             </Link>
                             {/* 대상 기준 좁히기 — 행 위에 올렸을 때만 꺼낸다 */}
-                            {searchParams.target !== log.target_id ? (
+                            {target !== log.targetId ? (
                               <Link
-                                href={hrefWith({ target: log.target_id })}
+                                href={hrefWith({
+                                  target: log.targetId,
+                                  q: undefined,
+                                })}
                                 title="이 대상의 기록만 보기"
                                 className="ml-1.5 text-nano text-muted opacity-0 transition-opacity duration-fast ease-standard hover:text-ink group-hover:opacity-100 focus-visible:opacity-100"
                               >
@@ -531,17 +608,20 @@ export default async function AuditLogsPage({
 
           <Pagination
             page={page}
-            pageSize={PAGE_SIZE}
-            total={count ?? 0}
+            pageSize={AUDIT_PAGE_SIZE}
+            total={total}
             basePath="/admin/audit-logs"
             params={{
+              q: q || undefined,
               group: searchParams.group,
-              action: searchParams.action,
+              action: action || undefined,
+              period: searchParams.period,
+              cursor: searchParams.cursor,
               from: searchParams.from,
               to: searchParams.to,
               target: searchParams.target,
-              sort: searchParams.sort,
-              dir: searchParams.dir,
+              sort: searching ? undefined : searchParams.sort,
+              dir: searching ? undefined : searchParams.dir,
             }}
           />
         </CardBody>

@@ -12,9 +12,10 @@ import {
   ToolbarSearch,
 } from "@/components/ui/TableToolbar";
 import { AvatarWithName } from "@/components/ui/Avatar";
+import { periodFields, periodHref } from "@/lib/period";
 import { cn, formatDate } from "@/lib/utils";
 import { POST_CATEGORIES, type Board, type PostListItem } from "./types";
-import type { BoardRange } from "./format";
+import { BOARD_DEFAULT_RANGE, type BoardRange } from "./format";
 
 export interface PostListFilters {
   category: string;
@@ -58,15 +59,21 @@ export function PostList({
   const basePath = `/board/${board.id}`;
   const { category, q, range } = filters;
 
+  /** 기간은 lib/period가, 나머지 조건은 extra가 유지한다 */
   const hrefWith = (next: Partial<PostListFilters>) => {
     const merged = { ...filters, page: 1, ...next };
-    const search = new URLSearchParams();
-    if (merged.category) search.set("category", merged.category);
-    if (merged.q) search.set("q", merged.q);
-    if (merged.range !== "all") search.set("range", merged.range);
-    if (merged.page > 1) search.set("page", String(merged.page));
-    const query = search.toString();
-    return query ? `${basePath}?${query}` : basePath;
+    return periodHref(
+      basePath,
+      { unit: merged.range, cursor: null },
+      {
+        defaultUnit: BOARD_DEFAULT_RANGE,
+        extra: {
+          category: merged.category,
+          q: merged.q,
+          page: merged.page > 1 ? merged.page : undefined,
+        },
+      },
+    );
   };
 
   const columns = isNotice ? 8 : 6;
@@ -84,9 +91,14 @@ export function PostList({
             {category ? (
               <input type="hidden" name="category" value={category} />
             ) : null}
-            {range !== "all" ? (
-              <input type="hidden" name="range" value={range} />
-            ) : null}
+            {periodFields({ unit: range }, BOARD_DEFAULT_RANGE).map((field) => (
+              <input
+                key={field.name}
+                type="hidden"
+                name={field.name}
+                value={field.value}
+              />
+            ))}
             <ToolbarSearch
               name="q"
               defaultValue={q}
@@ -135,8 +147,13 @@ export function PostList({
                 {isNotice ? <th className="w-20">카테고리</th> : null}
                 <th>제목</th>
                 <th className="w-14 !text-right">댓글</th>
-                {/* 열람률(대상자 중 몇 명)과 다른 숫자다 — 이건 총 조회 횟수 */}
-                <th className="w-14 !text-right">조회</th>
+                {/* 열람률(대상자 중 몇 명)과 다른 숫자다 — 이건 열린 횟수 */}
+                <th
+                  className="w-14 !text-right"
+                  title="같은 사람이 같은 날 여러 번 열어도 1회로 셉니다"
+                >
+                  조회
+                </th>
                 {isNotice ? <th className="w-32">열람률</th> : null}
                 <th className="w-32">작성자</th>
                 <th className="w-24">작성일</th>
@@ -247,7 +264,7 @@ export function PostList({
           params={{
             category: category || undefined,
             q: q || undefined,
-            range: range === "all" ? undefined : range,
+            period: range === BOARD_DEFAULT_RANGE ? undefined : range,
           }}
         />
       </Card>

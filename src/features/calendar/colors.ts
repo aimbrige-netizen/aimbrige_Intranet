@@ -1,4 +1,5 @@
-import type { CalendarItemKind } from "@/types/db";
+import type { MeterTone } from "@/components/ui/Progress";
+import type { CalendarItemKind, EventResponse } from "@/types/db";
 
 /**
  * 이벤트 색상 구분 (스펙 02 · 3.4)
@@ -74,3 +75,62 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
     dot: "bg-event-resource",
   },
 };
+
+/**
+ * 참석 응답 색.
+ *
+ * 종류(EVENT_COLORS)와 축이 다르다 — 종류는 "이게 무슨 일정인가", 응답은
+ * "그 자리에 사람이 오는가"다. 그래서 같은 오렌지·초록을 재사용하지 않고
+ * 상태 3색(success/warn/danger)에 중립 하나를 붙인 별도 축으로 둔다.
+ *
+ * 불참에 danger를 쓰는 건 "위반"이어서가 아니라 확정된 부정 응답이기 때문이다.
+ * 아직 답하지 않은 상태(pending)는 대기이므로 중립으로 남긴다 — 사람을 재촉하는
+ * 빨강은 명단을 읽는 사람에게 잘못된 긴급도를 준다.
+ */
+export interface ResponseColor {
+  label: string;
+  /** 이름 옆 작은 배지 */
+  badge: string;
+  /** 목록·요약에서 쓰는 점 */
+  dot: string;
+  /** 응답 분포 막대 조각 */
+  tone: MeterTone;
+}
+
+export const RESPONSE_COLORS: Record<EventResponse, ResponseColor> = {
+  accepted: {
+    label: "참석",
+    badge: "bg-success-light text-success-ink",
+    dot: "bg-success",
+    tone: "positive",
+  },
+  tentative: {
+    label: "미정",
+    badge: "bg-warn-light text-warn-ink",
+    dot: "bg-warn",
+    tone: "warning",
+  },
+  declined: {
+    label: "불참",
+    badge: "bg-danger-light text-danger-ink",
+    dot: "bg-danger",
+    tone: "critical",
+  },
+  pending: {
+    label: "미응답",
+    badge: "bg-subtle text-muted",
+    dot: "bg-line-strong",
+    tone: "neutral",
+  },
+};
+
+/**
+ * 요약에 쓰는 표시 순서 — 참석 → 미정 → 불참 → 미응답.
+ * "확정된 참석"에서 "아직 모른다"로 내려가는 순서라 한 줄로 읽힌다.
+ */
+export const RESPONSE_ORDER: EventResponse[] = [
+  "accepted",
+  "tentative",
+  "declined",
+  "pending",
+];

@@ -186,11 +186,16 @@ export function PostDetailView({
                 {/*
                   조회수는 열람률과 다른 숫자다 — 열람률은 "대상자 중 누가
                   읽었나"(명), 조회는 "몇 번 열렸나"(회). 라벨과 단위로 가른다.
-                  본인 글 조회는 세지 않는다.
+                  같은 사람이 같은 날 여러 번 열어도 1회이고 본인 글은 세지
+                  않으므로, 그 뜻을 한 줄 캡션으로 붙여 오해를 막는다.
                 */}
-                <span className="inline-flex items-center gap-1 text-caption tabular-nums">
+                <span
+                  className="inline-flex items-center gap-1 text-caption tabular-nums"
+                  title="같은 사람이 같은 날 여러 번 열어도 1회로 셉니다. 본인 글 조회는 세지 않습니다."
+                >
                   <Eye className="size-3.5 text-muted" aria-hidden />
                   조회 {post.view_count}회
+                  <span className="text-muted">(하루 1인 1회)</span>
                 </span>
                 {post.attachments.length > 0 ? (
                   <span className="inline-flex items-center gap-1 text-caption tabular-nums">

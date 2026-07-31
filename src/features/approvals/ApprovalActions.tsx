@@ -113,7 +113,7 @@ export function ApprovalActions({
         {canResubmit ? (
           <LinkButton
             size="small"
-            href={`/approvals/new/${documentType}?from=${documentId}`}
+            href={`/approvals/new/${documentType}?source=${documentId}`}
           >
             <RotateCcw className="size-4" />
             수정해서 재상신

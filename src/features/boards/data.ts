@@ -202,7 +202,10 @@ export interface BoardOverview {
   unread: number;
   /** 내가 쓴 글 */
   myPosts: number;
-  /** 총 조회수 합 — 열람률과 다른 지표라 라벨을 "조회"로 구분한다 */
+  /**
+   * 조회수 합 — 열람률과 다른 지표라 라벨을 "조회"로 구분한다.
+   * 한 사람의 같은 날 재방문은 1회로 묶여 들어온다(마이그레이션 16).
+   */
   viewTotal: number;
   latestAt: string | null;
   /** 카테고리별 건수 (필터 칩의 분모) */

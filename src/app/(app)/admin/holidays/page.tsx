@@ -9,6 +9,11 @@ import { HolidayManager } from "@/features/calendar/HolidayManager";
 import { requireSystemAdmin } from "@/lib/auth/session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { todayYmd, WEEKDAY_LABELS, weekdayOf } from "@/features/calendar/date";
+import {
+  parsePeriod,
+  periodHref,
+  type PeriodSearchParams,
+} from "@/lib/period";
 import type { Holiday, HolidayKind } from "@/types/db";
 
 export const metadata: Metadata = { title: "휴일 관리" };
@@ -32,17 +37,29 @@ const MONTHS = Array.from({ length: 12 }, (_, i) => i + 1);
 export default async function HolidaysPage({
   searchParams,
 }: {
-  searchParams: { year?: string };
+  searchParams: PeriodSearchParams;
 }) {
   await requireSystemAdmin();
   const supabase = createServerSupabase();
 
-  const thisYear = Number(todayYmd().slice(0, 4));
-  const parsed = Number(searchParams.year);
-  const year =
-    Number.isInteger(parsed) && parsed >= 2000 && parsed <= 2100
-      ? parsed
-      : thisYear;
+  const today = todayYmd();
+  const thisYear = Number(today.slice(0, 4));
+
+  /*
+   * 기간은 ?period=year & ?cursor=YYYY 로 읽는다 (lib/period 규약).
+   * 연도만은 상·하한을 둔다 — 0000년 같은 값이 그대로 날짜 조건이 되면
+   * 조회가 실패한다. 범위 밖이면 올해로 떨어뜨린다.
+   */
+  const requestedYear = searchParams.cursor ?? searchParams.year;
+  const inBounds =
+    /^\d{4}$/.test(requestedYear ?? "") &&
+    Number(requestedYear) >= 2000 &&
+    Number(requestedYear) <= 2100;
+  const period = parsePeriod(
+    { period: "year", cursor: inBounds ? requestedYear : undefined },
+    { units: ["year"], today },
+  );
+  const year = Number(period.cursor);
 
   const [{ data }, { count: prevCount }] = await Promise.all([
     supabase
@@ -72,6 +89,9 @@ export default async function HolidaysPage({
   const publicCount = countOf("public", "substitute");
   const companyCount = countOf("temporary", "statutory_leave");
 
+  const yearHref = (cursor: string | null) =>
+    periodHref("/admin/holidays", { unit: "year", cursor }, { defaultUnit: "year" });
+
   const byMonth = MONTHS.map((month) => ({
     month,
     items: holidays.filter(
@@ -94,12 +114,12 @@ export default async function HolidaysPage({
         }
         toolbar={
           <PeriodNavigator
-            label={`${year}년`}
-            sublabel={year === thisYear ? "올해" : undefined}
-            prevHref={`/admin/holidays?year=${year - 1}`}
-            nextHref={`/admin/holidays?year=${year + 1}`}
-            todayHref="/admin/holidays"
-            atToday={year === thisYear}
+            label={period.label}
+            sublabel={year === thisYear ? "올해" : period.sublabel}
+            prevHref={yearHref(period.prevCursor)}
+            nextHref={yearHref(period.nextCursor)}
+            todayHref={yearHref(null)}
+            atToday={period.includesToday}
             className="mb-0"
           />
         }

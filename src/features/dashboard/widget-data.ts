@@ -143,6 +143,12 @@ export interface UpcomingEvent {
   startsAt: string;
   allDay: boolean;
   kind: string;
+  /**
+   * 내 참석 응답. 참석자가 아니면 null.
+   * 캘린더에서 '불참'으로 답한 회의가 홈에는 아무 표시 없이 뜨면
+   * 같은 일정이 두 화면에서 다르게 읽힌다.
+   */
+  myResponse: "pending" | "accepted" | "declined" | "tentative" | null;
 }
 
 /**
@@ -153,6 +159,7 @@ export interface UpcomingEvent {
  * 카드 헤더에 그대로 적는다.
  */
 export async function getCalendarUpcoming(
+  employeeId: string,
   fromYmd: string,
   toYmd: string,
   limit = 6,
@@ -172,12 +179,36 @@ export async function getCalendarUpcoming(
     return [];
   }
 
-  return (data ?? []).map((row) => ({
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  /*
+   * 내 참석 응답을 함께 읽는다. 캘린더는 불참한 일정을 흐리게 처리하는데
+   * 홈만 예전 기준이면 같은 회의가 두 화면에서 다르게 보인다.
+   */
+  const { data: responses } = await supabase
+    .from("event_attendees")
+    .select("event_id, response")
+    .eq("employee_id", employeeId)
+    .in(
+      "event_id",
+      rows.map((row) => row.id as string),
+    );
+
+  const byEvent = new Map(
+    (responses ?? []).map((r) => [
+      r.event_id as string,
+      r.response as UpcomingEvent["myResponse"],
+    ]),
+  );
+
+  return rows.map((row) => ({
     id: row.id as string,
     title: row.title as string,
     startsAt: row.start_at as string,
     allDay: row.all_day as boolean,
     kind: row.visibility as string,
+    myResponse: byEvent.get(row.id as string) ?? null,
   }));
 }
 

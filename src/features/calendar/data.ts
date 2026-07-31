@@ -11,6 +11,7 @@ import type {
   CalendarAttendee,
   CalendarEventWithOwner,
   CalendarItem,
+  EventResponse,
   Holiday,
   Resource,
   ResourceBooking,
@@ -18,6 +19,21 @@ import type {
 } from "@/types/db";
 
 export type CalendarScope = "personal" | "team" | "company";
+
+/**
+ * 일정 행에서 읽는 컬럼.
+ *
+ * attendee_ids는 더 이상 읽지 않는다. 참석자는 event_attendees가 진실이고
+ * 배열은 RLS 호환을 위해 쓰기만 유지하는 중이다(expand-contract).
+ */
+const EVENT_COLUMNS = `id, title, description, start_at, end_at, all_day, visibility,
+   location, owner_id, team_id, google_calendar_event_id, created_at, updated_at,
+   owner:employees!owner_id(id, name, profile_image_url)`;
+
+/** 내가 참석자인 일정만 뽑을 때 — 조인 조건만 걸고 값은 쓰지 않는다 */
+const EVENT_COLUMNS_AS_ATTENDEE = `${EVENT_COLUMNS}, event_attendees!inner(employee_id)`;
+
+type EventRow = Omit<CalendarEventWithOwner, "attendee_ids">;
 
 /**
  * 캘린더 항목 조회 (스펙 3.4)
@@ -42,37 +58,63 @@ export async function getCalendarItems({
   const fromIso = from.toISOString();
   const toIso = to.toISOString();
 
-  let eventQuery = supabase
-    .from("calendar_events")
-    .select(
-      `id, title, description, start_at, end_at, all_day, visibility, location,
-       attendee_ids, owner_id, team_id, google_calendar_event_id, created_at,
-       updated_at,
-       owner:employees!owner_id(id, name, profile_image_url)`,
-    )
-    // 기간이 겹치는 항목: 시작이 to 이전이고, 끝이 from 이후
-    .lt("start_at", toIso)
-    .gt("end_at", fromIso)
-    .order("start_at");
+  // 기간이 겹치는 항목: 시작이 to 이전이고, 끝이 from 이후
+  const inRange = (columns: string) =>
+    supabase
+      .from("calendar_events")
+      .select(columns)
+      .lt("start_at", toIso)
+      .gt("end_at", fromIso)
+      .order("start_at");
 
-  if (scope === "personal") {
-    /*
-     * "내 캘린더"는 내가 만든 일정 + 내가 참석자로 지정된 일정이다.
-     * owner_id만 걸면, 팀장이 만든 개인 일정에 나를 참석자로 넣어도
-     * (RLS는 통과하는데) 어느 뷰에도 나타나지 않는다.
-     */
-    eventQuery = eventQuery.or(
-      `owner_id.eq.${employeeId},attendee_ids.cs.{${employeeId}}`,
-    );
-  } else if (scope === "team") {
-    eventQuery = eventQuery.eq("visibility", "team");
-    // 팀 미배정자는 팀 일정이 없다. RLS도 막지만 쿼리에서도 명시적으로 비운다.
-    eventQuery = teamId
-      ? eventQuery.eq("team_id", teamId)
-      : eventQuery.eq("team_id", "00000000-0000-0000-0000-000000000000");
-  } else {
-    eventQuery = eventQuery.eq("visibility", "company");
-  }
+  /**
+   * 뷰에 해당하는 일정 행.
+   *
+   * 개인 뷰는 "내가 만든 일정 + 내가 참석자로 지정된 일정"이다. 참석자가 배열이던
+   * 시절에는 or(owner_id.eq, attendee_ids.cs)로 한 번에 걸렸지만, 참석자가 다른
+   * 테이블로 옮겨간 지금 PostgREST의 or()는 두 테이블을 함께 걸지 못한다.
+   * 참석 일정 id를 먼저 뽑아 in()에 넣는 방법도 있으나, 참석 이력이 쌓이면
+   * id 목록이 URL 길이 제한에 걸린다 — 조인으로 한 번 더 조회해 합친다.
+   */
+  const loadEvents = async (): Promise<EventRow[]> => {
+    if (scope === "personal") {
+      const [owned, invited] = await Promise.all([
+        inRange(EVENT_COLUMNS).eq("owner_id", employeeId),
+        inRange(EVENT_COLUMNS_AS_ATTENDEE).eq(
+          "event_attendees.employee_id",
+          employeeId,
+        ),
+      ]);
+
+      // 실패하면 데이터가 없는 것과 화면이 구분되지 않는다 — 서버 로그에는 남긴다
+      if (owned.error) {
+        console.error("[calendar] 내 일정 조회 실패:", owned.error.message);
+      }
+      if (invited.error) {
+        console.error("[calendar] 참석 일정 조회 실패:", invited.error.message);
+      }
+
+      // 두 결과가 겹칠 수 있다(등록자가 자기 자신을 참석자 행으로 갖는 경우)
+      const merged = new Map<string, EventRow>();
+      [...(owned.data ?? []), ...(invited.data ?? [])].forEach((row) => {
+        const event = row as unknown as EventRow;
+        merged.set(event.id, event);
+      });
+      return Array.from(merged.values());
+    }
+
+    // 팀 미배정자는 팀 일정이 없다. RLS도 막지만 쿼리를 아예 보내지 않는다.
+    if (scope === "team" && !teamId) return [];
+
+    const scoped =
+      scope === "team"
+        ? inRange(EVENT_COLUMNS).eq("visibility", "team").eq("team_id", teamId)
+        : inRange(EVENT_COLUMNS).eq("visibility", "company");
+
+    const { data, error } = await scoped;
+    if (error) console.error("[calendar] 일정 조회 실패:", error.message);
+    return (data ?? []) as unknown as EventRow[];
+  };
 
   // 리소스 예약은 개인 뷰에서 본인 예약만 노출한다(스펙 3.4 개인 뷰 정의)
   let bookingQuery = supabase
@@ -90,24 +132,21 @@ export async function getCalendarItems({
     bookingQuery = bookingQuery.eq("booked_by", employeeId);
   }
 
-  const [
-    { data: events, error: eventError },
-    { data: bookings, error: bookingError },
-  ] = await Promise.all([eventQuery, bookingQuery]);
+  const [eventRows, { data: bookings, error: bookingError }] =
+    await Promise.all([loadEvents(), bookingQuery]);
 
-  // 실패하면 데이터가 없는 것과 화면이 구분되지 않는다 — 최소한 서버 로그에는 남긴다
-  if (eventError) console.error("[calendar] 일정 조회 실패:", eventError.message);
   if (bookingError) {
     console.error("[calendar] 리소스 예약 조회 실패:", bookingError.message);
   }
 
-  const eventRows = (events ?? []) as unknown as CalendarEventWithOwner[];
   const attendeeMap = await getAttendeeMap(
-    eventRows.flatMap((event) => event.attendee_ids ?? []),
+    eventRows.map((event) => event.id),
+    employeeId,
   );
 
   const eventItems: CalendarItem[] = eventRows.map((event) => {
-    const attendeeIds = event.attendee_ids ?? [];
+    const attendees = attendeeMap.get(event.id) ?? [];
+    const me = attendees.find((attendee) => attendee.isMe) ?? null;
     return {
       id: event.id,
       /*
@@ -117,7 +156,7 @@ export async function getCalendarItems({
        * 수정할 수 있는 것처럼 보인다(실제로는 등록자만 수정 가능).
        */
       kind:
-        event.owner_id !== employeeId && attendeeIds.includes(employeeId)
+        event.owner_id !== employeeId && me
           ? ("invited" as const)
           : event.visibility,
       title: event.title,
@@ -128,9 +167,9 @@ export async function getCalendarItems({
       ownerId: event.owner_id,
       ownerName: event.owner?.name ?? null,
       location: event.location ?? null,
-      attendees: attendeeIds
-        .map((id) => attendeeMap.get(id))
-        .filter((value): value is CalendarAttendee => !!value),
+      attendees,
+      // 등록자는 참석자 행이 없다 — 응답할 대상이 아니라 자리를 만든 사람이다
+      myResponse: me?.response ?? null,
       editable: event.owner_id === employeeId,
     };
   });
@@ -151,6 +190,7 @@ export async function getCalendarItems({
     ownerName: booking.booker?.name ?? null,
     location: booking.resource?.location ?? null,
     attendees: [],
+    myResponse: null,
     editable: booking.booked_by === employeeId,
   }));
 
@@ -180,41 +220,71 @@ export async function getCalendarItems({
 }
 
 /**
- * 참석자 id → 표시용 정보.
+ * 일정 id → 참석자(이름 + 응답).
  *
- * attendee_ids는 조인 테이블이 아니라 배열이라 PostgREST 조인이 걸리지 않는다.
- * 화면에 아바타를 띄우려면 이름이 필요하므로 구간 안 참석자를 한 번에 모아 온다.
- * 퇴사자도 이름은 남겨야 하므로 employment_status로 거르지 않는다.
+ * event_attendees가 참석자의 진실이다. 배열이던 시절에는 조인이 걸리지 않아
+ * id를 모아 employees를 따로 읽었지만, 이제 한 번의 조인으로 이름과 응답을
+ * 함께 가져온다. 퇴사자도 명단에는 남아야 하므로 employment_status로 거르지 않는다.
  */
 async function getAttendeeMap(
-  ids: string[],
-): Promise<Map<string, CalendarAttendee>> {
-  const unique = Array.from(new Set(ids.filter(Boolean)));
+  eventIds: string[],
+  employeeId: string,
+): Promise<Map<string, CalendarAttendee[]>> {
+  const unique = Array.from(new Set(eventIds.filter(Boolean)));
   if (unique.length === 0) return new Map();
 
   const supabase = createServerSupabase();
   const { data, error } = await supabase
-    .from("employees")
-    .select("id, name, profile_image_url")
-    .in("id", unique);
+    .from("event_attendees")
+    .select(
+      `event_id, employee_id, response,
+       employee:employees!employee_id(id, name, profile_image_url)`,
+    )
+    .in("event_id", unique);
 
   if (error) {
     console.error("[calendar] 참석자 조회 실패:", error.message);
     return new Map();
   }
 
-  const rows = (data ?? []) as {
-    id: string;
-    name: string;
-    profile_image_url: string | null;
+  const rows = (data ?? []) as unknown as {
+    event_id: string;
+    employee_id: string;
+    response: EventResponse;
+    employee: {
+      id: string;
+      name: string;
+      profile_image_url: string | null;
+    } | null;
   }[];
 
-  return new Map(
-    rows.map((row) => [
-      row.id,
-      { id: row.id, name: row.name, profileImageUrl: row.profile_image_url },
-    ]),
+  const map = new Map<string, CalendarAttendee[]>();
+  rows.forEach((row) => {
+    const list = map.get(row.event_id) ?? [];
+    list.push({
+      id: row.employee_id,
+      // 조인이 비는 건 계정이 지워진 경우다. 자리는 남겨야 인원 수가 맞는다
+      name: row.employee?.name ?? "알 수 없음",
+      profileImageUrl: row.employee?.profile_image_url ?? null,
+      response: row.response,
+      isMe: row.employee_id === employeeId,
+    });
+    map.set(row.event_id, list);
+  });
+
+  /*
+   * 표시 순서를 고정한다. DB는 순서를 보장하지 않아 새로고침마다 명단이
+   * 뒤집혔고, "아까 있던 사람이 사라졌나" 하고 다시 세게 된다.
+   * 나를 맨 앞에 두는 이유는 응답해야 하는 사람이 나이기 때문이다.
+   */
+  map.forEach((list) =>
+    list.sort((a, b) => {
+      if (a.isMe !== b.isMe) return a.isMe ? -1 : 1;
+      return a.name.localeCompare(b.name, "ko");
+    }),
   );
+
+  return map;
 }
 
 /**
@@ -276,6 +346,7 @@ async function getApprovalItems({
         ownerName: r.requester_name,
         location: null,
         attendees: [],
+        myResponse: null,
         editable: false,
       };
     });
@@ -354,6 +425,7 @@ async function getLeaveItems({
       ownerName: r.employee_name,
       location: null,
       attendees: [],
+      myResponse: null,
       // 휴가는 캘린더에서 직접 수정하지 않는다(근태 화면에서 취소)
       editable: false,
     }));

@@ -1,5 +1,11 @@
 import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
-import type { Resource, ResourceType } from "@/types/db";
+import { RESPONSE_COLORS, RESPONSE_ORDER } from "@/features/calendar/colors";
+import type {
+  CalendarAttendee,
+  EventResponse,
+  Resource,
+  ResourceType,
+} from "@/types/db";
 
 /**
  * 리소스 예약을 클라이언트에서 다루기 위한 최소 표현 + 시간 계산.
@@ -30,6 +36,38 @@ export interface AttendeeOption {
   /** '경영지원부 · 인사팀' */
   org: string | null;
   profileImageUrl: string | null;
+}
+
+/** 응답별 인원 + 분모 */
+export type ResponseSummary = Record<EventResponse, number> & { total: number };
+
+export function countResponses(
+  attendees: CalendarAttendee[],
+): ResponseSummary {
+  const summary: ResponseSummary = {
+    accepted: 0,
+    tentative: 0,
+    declined: 0,
+    pending: 0,
+    total: attendees.length,
+  };
+  attendees.forEach((attendee) => {
+    summary[attendee.response] += 1;
+  });
+  return summary;
+}
+
+/**
+ * '참석 3 · 미정 1 · 불참 0 · 미응답 2'
+ *
+ * 0인 칸도 지우지 않는다. "불참 0"이 사라지면 아무도 거절하지 않은 것과
+ * 거절 칸이 없는 것이 같아 보인다 — 회의를 열지 말지 정하는 사람에게는
+ * 그 0이 정보다.
+ */
+export function responseSummaryLine(summary: ResponseSummary): string {
+  return RESPONSE_ORDER.map(
+    (response) => `${RESPONSE_COLORS[response].label} ${summary[response]}`,
+  ).join(" · ");
 }
 
 export function matchesAttendee(option: AttendeeOption, query: string): boolean {

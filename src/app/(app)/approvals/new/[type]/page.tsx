@@ -28,12 +28,17 @@ export default async function NewApprovalFormPage({
   searchParams,
 }: {
   params: { type: string };
-  searchParams: { draft?: string; from?: string };
+  /**
+   * source는 '재상신 원본 문서 id'다. 예전엔 from이었는데
+   * lib/period 규약이 from을 기간 시작일로 예약해, 기간이 실린 링크가
+   * 오면 날짜 문자열로 uuid를 조회하게 된다.
+   */
+  searchParams: { draft?: string; source?: string };
 }) {
   const me = await requireSessionEmployee();
   if (!isDocumentType(params.type)) notFound();
 
-  const sourceId = searchParams.draft ?? searchParams.from ?? null;
+  const sourceId = searchParams.draft ?? searchParams.source ?? null;
   const [line, source] = await Promise.all([
     getLinePreview(me.id, params.type),
     sourceId ? getApprovalDocument(sourceId) : Promise.resolve(null),
@@ -49,7 +54,7 @@ export default async function NewApprovalFormPage({
 
   const isDraft = !!searchParams.draft && usable?.status === "draft";
   const resubmitFrom =
-    !!searchParams.from && usable && usable.status === "rejected"
+    !!searchParams.source && usable && usable.status === "rejected"
       ? usable
       : null;
 

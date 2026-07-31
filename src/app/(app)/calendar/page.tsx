@@ -47,19 +47,17 @@ import {
   SCOPE_LABELS,
   VIEW_LABELS,
   SCHEDULE_VIEWS,
+  calendarCursorOf,
   calendarHref,
+  calendarViewOf,
   countByKind,
   parseScope,
-  parseView,
   type CalendarView,
 } from "@/features/calendar/view";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import type { CalendarItem, Holiday, Resource } from "@/types/db";
 
 export const metadata: Metadata = { title: "캘린더" };
-
-const YM_PATTERN = /^\d{4}-\d{2}$/;
-const YMD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * 캘린더 (스펙 02 · 3.4~3.6)
@@ -75,26 +73,27 @@ export default async function CalendarPage({
 }: {
   searchParams: {
     scope?: string;
+    /** 표시 방식 — 월간·주간·리스트·리소스 */
     view?: string;
+    /** 기간 규약의 기준점 (lib/period와 같은 이름) */
     cursor?: string;
+    /** 다른 화면에서 넘어온 기간 단위. view가 없을 때만 본다 */
+    period?: string;
     /** ?new=1 이면 일정 작성 모달을 열고 시작한다 (홈 빈 상태에서 바로 진입) */
     new?: string;
   };
 }) {
   const me = await requireSessionEmployee();
   const scope = parseScope(searchParams.scope);
-  const view = parseView(searchParams.view);
   const today = todayYmd();
 
-  // 잘못된 cursor가 들어와도 화면이 깨지지 않게 형식을 검증한다
-  const cursor =
-    view === "month"
-      ? YM_PATTERN.test(searchParams.cursor ?? "")
-        ? searchParams.cursor!
-        : today.slice(0, 7)
-      : YMD_PATTERN.test(searchParams.cursor ?? "")
-        ? searchParams.cursor!
-        : today;
+  /*
+   * 표시 방식은 ?view=, 기준점은 ?cursor= 로 읽는다. 기간 규약(lib/period)의
+   * ?period= 를 달고 들어온 링크도 view.ts가 받아 준다 — 잘못된 값이 와도
+   * 화면이 깨지지 않게 형식을 맞춰 떨어뜨린다.
+   */
+  const view = calendarViewOf(searchParams);
+  const cursor = calendarCursorOf(view, searchParams.cursor, today);
 
   const days =
     view === "month"

@@ -18,14 +18,14 @@ import {
   getPosts,
 } from "@/features/boards/data";
 import {
+  BOARD_DEFAULT_RANGE,
   BOARD_RANGES,
   BOARD_RANGE_LABELS,
-  parseRange,
   percent,
   relativeTime,
-  rangeSince,
   type BoardRange,
 } from "@/features/boards/format";
+import { parsePeriod, periodHref } from "@/lib/period";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "게시판" };
@@ -46,6 +46,8 @@ export default async function BoardPage({
   searchParams: {
     category?: string;
     q?: string;
+    /** 기간 규약(lib/period). 예전 이름 range도 파서가 읽는다 */
+    period?: string;
     range?: string;
     page?: string;
   };
@@ -62,7 +64,16 @@ export default async function BoardPage({
   // 카테고리는 공지 타입에만 있다 (스펙 3.2)
   const category = isNotice ? (searchParams.category ?? "") : "";
   const q = (searchParams.q ?? "").trim();
-  const range: BoardRange = parseRange(searchParams.range);
+  /*
+   * 기간은 ?period=week|month|all 로 읽는다 (lib/period 규약).
+   * cursor는 일부러 넘기지 않는다 — 게시판은 지난 주를 되짚는 화면이 아니라
+   * "최근 N" 롤링 윈도우고, 칩 라벨("이번 주")이 그 전제 위에 서 있다.
+   */
+  const period = parsePeriod(
+    { period: searchParams.period, range: searchParams.range },
+    { units: BOARD_RANGES, defaultUnit: BOARD_DEFAULT_RANGE },
+  );
+  const range: BoardRange = period.unit;
   const page = Math.max(1, Number(searchParams.page ?? "1") || 1);
 
   const [overview, { posts, total }] = await Promise.all([
@@ -70,20 +81,18 @@ export default async function BoardPage({
     getPosts(params.boardId, me.id, {
       category,
       q,
-      since: rangeSince(range),
+      since: period.from ?? undefined,
       page,
       pageSize: BOARD_PAGE_SIZE,
     }),
   ]);
 
-  const rangeHref = (next: BoardRange) => {
-    const search = new URLSearchParams();
-    if (category) search.set("category", category);
-    if (q) search.set("q", q);
-    if (next !== "all") search.set("range", next);
-    const query = search.toString();
-    return query ? `/board/${board.id}?${query}` : `/board/${board.id}`;
-  };
+  const rangeHref = (next: BoardRange) =>
+    periodHref(
+      `/board/${board.id}`,
+      { unit: next, cursor: null },
+      { defaultUnit: BOARD_DEFAULT_RANGE, extra: { category, q } },
+    );
 
   const rangeCount: Record<BoardRange, number> = {
     week: overview.thisWeek,
