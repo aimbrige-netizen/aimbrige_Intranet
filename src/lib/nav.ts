@@ -1,4 +1,5 @@
 import {
+  BookOpen,
   Boxes,
   Building2,
   Calendar,
@@ -410,7 +411,7 @@ export const NAV_MODULES: NavModule[] = [
     href: "/files",
     icon: FolderOpen,
     ready: true,
-    prefixes: ["/files", "/admin/files"],
+    prefixes: ["/files", "/wiki", "/admin/files"],
     sections: [
       {
         key: "main",
@@ -432,6 +433,19 @@ export const NAV_MODULES: NavModule[] = [
             label: "사내 규정",
             href: "/files/library",
             icon: Library,
+          },
+          /*
+           * 위키를 파일함 모듈 안에 둔다. 스펙 14 · 5장이 둘의 역할을
+           * "위키는 텍스트 협업 문서, 파일함은 실제 파일"로 나눠 놓았는데,
+           * 찾는 사람 입장에서는 "사내 문서를 찾는다"는 같은 행동이다.
+           * 레일을 한 칸 더 늘려 나눠 세울 만큼 다른 일이 아니다.
+           */
+          {
+            key: "wiki",
+            label: "위키",
+            href: "/wiki",
+            icon: BookOpen,
+            prefixes: ["/wiki"],
           },
         ],
       },

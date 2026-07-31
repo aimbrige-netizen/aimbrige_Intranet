@@ -1,0 +1,174 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { FileText, History, Pencil } from "lucide-react";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { Callout } from "@/components/ui/Callout";
+import { LinkButton } from "@/components/ui/Button";
+import { Markdown } from "@/features/wiki/Markdown";
+import {
+  getWikiPage,
+  getWikiRevisions,
+  getWikiTree,
+} from "@/features/wiki/data";
+import { requireSessionEmployee } from "@/lib/auth/session";
+
+export const metadata: Metadata = { title: "위키 문서" };
+
+/**
+ * 문서 보기 (스펙 14 · 3.2)
+ *
+ * 수정 이력은 별도 화면이 아니라 ?history=1로 같은 화면에서 펼친다.
+ * 라우트를 하나 더 만들면 "본문 → 이력 → 본문"을 오갈 때마다 문서 전체를
+ * 다시 받아야 하는데, 이력을 보는 이유가 대개 지금 본문과 비교하는 것이다.
+ *
+ * 복원 기능은 없다(스펙 6장에서 미룬 항목). 과거 버전을 보고 손으로
+ * 복사하는 방식이라, 이력 카드에 본문 전문을 그대로 펼쳐 둔다 —
+ * 접혀 있으면 복사할 수가 없다.
+ */
+export default async function WikiPageView({
+  params,
+  searchParams,
+}: {
+  params: { pageId: string };
+  searchParams: { history?: string };
+}) {
+  await requireSessionEmployee();
+
+  const showHistory = searchParams.history === "1";
+
+  const [{ data: page, error }, { data: nodes }] = await Promise.all([
+    getWikiPage(params.pageId),
+    getWikiTree(),
+  ]);
+
+  if (error) {
+    return (
+      <>
+        <PageHeader title="위키 문서" backHref="/wiki" />
+        <Callout tone="danger" title="문서를 불러오지 못했습니다">
+          {error}
+        </Callout>
+      </>
+    );
+  }
+  if (!page) notFound();
+
+  const parent = page.parent_id
+    ? (nodes.find((n) => n.id === page.parent_id) ?? null)
+    : null;
+  const children = nodes.filter((n) => n.parent_id === page.id);
+
+  const { data: revisions } = showHistory
+    ? await getWikiRevisions(page.id)
+    : { data: [] };
+
+  return (
+    <>
+      <PageHeader
+        title={page.title}
+        meta={
+          <>
+            {parent ? (
+              <Link href={`/wiki/${parent.id}`} className="hover:underline">
+                {parent.title}
+              </Link>
+            ) : (
+              <span>최상위 문서</span>
+            )}
+            <span>
+              {page.updated_at.slice(0, 10)} 수정
+              {page.updated_by_name ? ` · ${page.updated_by_name}` : null}
+            </span>
+          </>
+        }
+        actions={
+          <>
+            <LinkButton
+              href={showHistory ? `/wiki/${page.id}` : `/wiki/${page.id}?history=1`}
+              size="small"
+              variant="secondary"
+            >
+              <History className="size-4" />
+              {showHistory ? "본문 보기" : "수정 이력"}
+            </LinkButton>
+            <LinkButton href={`/wiki/${page.id}/edit`} size="small">
+              <Pencil className="size-4" />
+              편집
+            </LinkButton>
+          </>
+        }
+        backHref="/wiki"
+      />
+
+      {showHistory ? (
+        <div className="space-y-3">
+          {revisions.length === 0 ? (
+            <Callout tone="neutral" title="수정 이력이 없습니다">
+              문서를 만든 뒤 아직 수정된 적이 없습니다. 저장할 때마다 직전 내용이
+              여기에 쌓입니다.
+            </Callout>
+          ) : (
+            revisions.map((revision) => (
+              <Card key={revision.id}>
+                <CardHeader
+                  title={revision.title}
+                  description={`${revision.edited_at.slice(0, 16).replace("T", " ")} · ${revision.editor_name}가 저장하기 직전 내용`}
+                  density="compact"
+                />
+                <CardBody density="compact">
+                  {/*
+                    이력은 원문 그대로 보여준다. 마크다운으로 렌더하면 지금 본문과
+                    나란히 놓고 비교하기 좋지만, 복원이 손 복사인 이상 원문이 필요하다.
+                  */}
+                  <pre className="max-h-80 overflow-auto whitespace-pre-wrap rounded-card border border-line bg-subtle p-3 text-micro text-ink">
+                    {revision.content || "(내용 없음)"}
+                  </pre>
+                </CardBody>
+              </Card>
+            ))
+          )}
+        </div>
+      ) : (
+        <>
+          <Card>
+            <CardBody>
+              <Markdown text={page.content} />
+            </CardBody>
+          </Card>
+
+          {children.length > 0 ? (
+            <Card className="mt-4">
+              <CardHeader
+                title="하위 문서"
+                description={`${children.length}건`}
+                density="compact"
+              />
+              <CardBody density="compact">
+                <ul className="divide-y divide-line">
+                  {children.map((child) => (
+                    <li key={child.id}>
+                      <Link
+                        href={`/wiki/${child.id}`}
+                        className="flex items-center gap-2 rounded-sm px-1 py-2 transition-colors duration-fast ease-standard hover:bg-canvas"
+                      >
+                        <FileText className="size-4 shrink-0 text-muted" aria-hidden />
+                        <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
+                          {child.title}
+                        </span>
+                        <span className="shrink-0 text-nano tabular-nums text-muted">
+                          {child.updated_at.slice(0, 10)}
+                        </span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </CardBody>
+            </Card>
+          ) : null}
+        </>
+      )}
+    </>
+  );
+}
