@@ -51,6 +51,26 @@ const config: Config = {
           resource: "#D97C3C",
           "resource-ink": "#B25F26",
         },
+        /*
+         * 지표 카드용 파스텔 톤.
+         * 숫자를 나열만 하면 무엇이 중요한지 안 보인다. 항목 성격별로
+         * 옅은 배경 + 진한 글자 한 쌍을 묶어 두고 StatCard에서 골라 쓴다.
+         * 배경은 아주 옅게(가독성), 글자는 충분히 진하게(대비) 잡았다.
+         */
+        tint: {
+          sky: "#EAF1FB",
+          "sky-ink": "#1D4E8F",
+          mint: "#E6F6EF",
+          "mint-ink": "#1F8A5B",
+          peach: "#FDF0E6",
+          "peach-ink": "#C26A28",
+          lavender: "#F1ECFB",
+          "lavender-ink": "#5F44A0",
+          rose: "#FDECEC",
+          "rose-ink": "#C13B3B",
+          slate: "#F1F3F7",
+          "slate-ink": "#5B6270",
+        },
       },
       fontFamily: {
         sans: [

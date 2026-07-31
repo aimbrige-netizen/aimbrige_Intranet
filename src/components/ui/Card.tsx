@@ -27,7 +27,9 @@ export function CardHeader({
       )}
     >
       <div className="min-w-0">
-        <h2 className="text-h2 text-ink">{title}</h2>
+        <h2 className="text-[15px] font-semibold leading-tight text-ink">
+          {title}
+        </h2>
         {description ? (
           <p className="mt-0.5 text-caption">{description}</p>
         ) : null}

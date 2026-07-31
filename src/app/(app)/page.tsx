@@ -1,5 +1,13 @@
-import { ShieldAlert } from "lucide-react";
+import {
+  CalendarCheck,
+  Clock3,
+  FileCheck,
+  Megaphone,
+  ShieldAlert,
+} from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatCard } from "@/components/ui/StatCard";
+import { toSeoulTime } from "@/features/calendar/date";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import {
   DashboardGrid,
@@ -92,6 +100,65 @@ export default async function DashboardPage({
           시스템 관리자만 접근할 수 있는 화면입니다.
         </div>
       ) : null}
+
+      {/* 오늘 한눈에 — 위젯 안에 흩어진 수치를 상단에 모아 먼저 보이게 한다 */}
+      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard
+          label="잔여 연차"
+          value={attendance.connected ? attendance.data.remainingLeave : 0}
+          unit="일"
+          tone="sky"
+          icon={CalendarCheck}
+          emphasis
+        />
+        <StatCard
+          label="오늘 출근"
+          value={
+            attendance.connected && attendance.data.record?.check_in_at
+              ? toSeoulTime(attendance.data.record.check_in_at)
+              : "--:--"
+          }
+          tone={
+            attendance.connected && attendance.data.record?.check_in_at
+              ? "mint"
+              : "slate"
+          }
+          icon={Clock3}
+          sub={
+            attendance.connected && attendance.data.record?.check_out_at
+              ? `퇴근 ${toSeoulTime(attendance.data.record.check_out_at)}`
+              : attendance.connected && attendance.data.record?.check_in_at
+                ? "근무 중"
+                : "미체크"
+          }
+        />
+        <StatCard
+          label="결재 대기"
+          value={approval.connected ? approval.data.length : 0}
+          unit="건"
+          tone={
+            approval.connected && approval.data.length > 0 ? "peach" : "slate"
+          }
+          icon={FileCheck}
+          sub={
+            approval.connected && approval.data.length > 0
+              ? "내 차례인 문서"
+              : "처리할 문서 없음"
+          }
+        />
+        <StatCard
+          label="미열람 공지"
+          value={notices.connected ? notices.data.length : 0}
+          unit="건"
+          tone={notices.connected && notices.data.length > 0 ? "rose" : "slate"}
+          icon={Megaphone}
+          sub={
+            notices.connected && notices.data.length > 0
+              ? "확인이 필요합니다"
+              : "모두 확인함"
+          }
+        />
+      </div>
 
       <DashboardGrid slots={slots} initialVisibility={visibility} />
     </>

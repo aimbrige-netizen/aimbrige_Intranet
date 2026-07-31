@@ -2,10 +2,19 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Download, Pencil, Settings2, SlidersHorizontal } from "lucide-react";
+import {
+  AlarmClock,
+  AlertTriangle,
+  Download,
+  Pencil,
+  Settings2,
+  SlidersHorizontal,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { StatCard } from "@/components/ui/StatCard";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -75,6 +84,7 @@ export function AdminAttendance({
 
   const overLimit = rows.filter((r) => r.weeklyHours >= 48).length;
   const lateTotal = rows.reduce((s, r) => s + r.lateCount, 0);
+  const earlyTotal = rows.reduce((s, r) => s + r.earlyLeaveCount, 0);
 
   const openEdit = (record: AdminRecordRow) => {
     setEditing(record);
@@ -176,22 +186,39 @@ export function AdminAttendance({
     <>
       {/* 전사 통계 요약 (스펙 3.7) */}
       <div className="mb-5 grid grid-cols-2 gap-4 md:grid-cols-4">
-        {[
-          { label: "임직원", value: `${rows.length}명` },
-          { label: "지각 합계", value: `${lateTotal}건` },
-          {
-            label: `주 ${WEEKLY_LIMIT_HOURS}시간 근접자`,
-            value: `${overLimit}명`,
-          },
-          { label: "보상휴가 가산율", value: `${compensatoryRate}배` },
-        ].map((stat) => (
-          <Card key={stat.label}>
-            <CardBody className="py-4">
-              <p className="text-caption">{stat.label}</p>
-              <p className="mt-1 text-h2 text-ink">{stat.value}</p>
-            </CardBody>
-          </Card>
-        ))}
+        <StatCard
+          label="재직 임직원"
+          value={rows.length}
+          unit="명"
+          tone="sky"
+          icon={Users}
+          emphasis
+          sub={`${monthLabel} 기준`}
+        />
+        <StatCard
+          label="지각 합계"
+          value={lateTotal}
+          unit="건"
+          tone={lateTotal > 0 ? "peach" : "mint"}
+          icon={AlarmClock}
+          sub={`조퇴 ${earlyTotal}건`}
+        />
+        <StatCard
+          label={`주 ${WEEKLY_LIMIT_HOURS}시간 근접·초과`}
+          value={overLimit}
+          unit="명"
+          tone={overLimit > 0 ? "rose" : "mint"}
+          icon={AlertTriangle}
+          sub={overLimit > 0 ? "확인이 필요합니다" : "이상 없음"}
+        />
+        <StatCard
+          label="보상휴가 가산율"
+          value={compensatoryRate}
+          unit="배"
+          tone="lavender"
+          icon={Settings2}
+          sub="8시간 = 1일 환산"
+        />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">

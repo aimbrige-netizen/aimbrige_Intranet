@@ -96,11 +96,12 @@
   }
 
   .ab-table thead th {
-    @apply whitespace-nowrap border-b border-line bg-canvas px-4 py-3 text-left text-label font-semibold text-muted;
+    @apply whitespace-nowrap border-b border-line bg-canvas px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-muted;
   }
 
+  /* 행을 조금 더 높여 숨통을 틔운다 — 촘촘한 표는 스캔이 어렵다 */
   .ab-table tbody td {
-    @apply border-b border-line px-4 py-3 align-middle;
+    @apply border-b border-line px-4 py-3.5 align-middle;
   }
 
   .ab-table tbody tr:last-child td {

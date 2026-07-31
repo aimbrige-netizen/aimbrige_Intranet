@@ -187,11 +187,15 @@ export async function getAttendanceWithAbsences(
   employeeId: string,
   fromYmd: string,
   toYmd: string,
+  hireDate?: string | null,
 ): Promise<AttendanceRow[]> {
   const supabase = createServerSupabase();
   const today = todayYmd();
   // 오늘은 아직 퇴근 전일 수 있어 결근 판정에서 제외한다
   const lastJudgedDay = toYmd < today ? toYmd : addDaysYmd(today, -1);
+  // 입사 전 날짜를 결근으로 찍으면 안 된다.
+  // (입사 당일 조회 시 그 달 앞부분이 전부 결근으로 보이던 문제)
+  const judgeFrom = hireDate && hireDate > fromYmd ? hireDate : fromYmd;
 
   const [records, { data: holidays }, { data: leaves }] = await Promise.all([
     getAttendanceRange(employeeId, fromYmd, toYmd),
@@ -223,7 +227,7 @@ export async function getAttendanceWithAbsences(
   });
 
   const absences: AbsentDay[] = [];
-  let cursor = fromYmd;
+  let cursor = judgeFrom;
   for (let guard = 0; guard < 400 && cursor <= lastJudgedDay; guard += 1) {
     const weekday = weekdayOf(cursor);
     const isWeekend = weekday === 0 || weekday === 6;
