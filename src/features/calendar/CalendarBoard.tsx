@@ -9,7 +9,11 @@ import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { Meter, type MeterSegment, type MeterTone } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { FilterChip, TableToolbar } from "@/components/ui/TableToolbar";
-import { EVENT_COLORS, RESPONSE_COLORS } from "@/features/calendar/colors";
+import {
+  EVENT_COLORS,
+  RESPONSE_COLORS,
+  milestoneMark,
+} from "@/features/calendar/colors";
 import {
   WEEKDAY_LABELS,
   occursOn,
@@ -75,6 +79,7 @@ const KIND_METER_TONE: Record<CalendarItemKind, MeterTone> = {
   company: "informative",
   leave: "warning",
   approval: "neutral",
+  milestone: "informative",
   resource_booking: "neutral",
 };
 
@@ -570,6 +575,8 @@ function EventChip({
     : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`;
   const place = placeLine(item);
   const declined = item.myResponse === "declined";
+  // 마일스톤은 색이 아니라 형태(깃발/체크)로 달성 여부를 말한다
+  const mark = item.kind === "milestone" ? milestoneMark(item.completed) : null;
 
   return (
     <button
@@ -578,6 +585,7 @@ function EventChip({
       title={[
         `${color.label} · ${time} · ${item.title}`,
         place,
+        mark ? mark.label : null,
         // 흐린 칩이 "지난 일정"이 아니라 "내가 거절한 일정"임을 말해준다
         declined ? "내 응답: 불참" : null,
       ]
@@ -586,9 +594,11 @@ function EventChip({
       className={cn(
         "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-nano transition-opacity duration-fast ease-standard hover:opacity-80",
         color.chip,
+        mark?.className,
         declinedClass(item),
       )}
     >
+      {mark ? <mark.icon className="size-2.5 shrink-0" aria-hidden /> : null}
       {!item.allDay ? (
         <span className="shrink-0 tabular-nums opacity-80">
           {toSeoulTime(item.startAt)}
@@ -882,6 +892,10 @@ function ItemTable({
               const color = EVENT_COLORS[item.kind];
               const weekday = weekdayOf(date);
               const holiday = holidays[date];
+              const mark =
+                item.kind === "milestone"
+                  ? milestoneMark(item.completed)
+                  : null;
 
               return (
                 <tr key={`${date}-${item.id}`}>
@@ -917,6 +931,7 @@ function ItemTable({
                       onClick={() => onPick(item)}
                       className={cn(
                         "block w-full text-left transition-colors duration-fast ease-standard hover:text-primary",
+                        mark?.className,
                         declinedClass(item),
                       )}
                     >
@@ -938,6 +953,18 @@ function ItemTable({
                             )}
                           >
                             {RESPONSE_COLORS[item.myResponse].label}
+                          </span>
+                        ) : null}
+                        {/* 마일스톤은 같은 자리에서 달성 여부가 끝나야 한다 */}
+                        {mark ? (
+                          <span
+                            className={cn(
+                              "inline-flex shrink-0 items-center gap-0.5 rounded-sm px-1.5 text-nano",
+                              mark.badge,
+                            )}
+                          >
+                            <mark.icon className="size-2.5" aria-hidden />
+                            {mark.label}
                           </span>
                         ) : null}
                       </span>

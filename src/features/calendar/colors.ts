@@ -1,3 +1,4 @@
+import { Check, Flag, type LucideIcon } from "lucide-react";
 import type { MeterTone } from "@/components/ui/Progress";
 import type { CalendarItemKind, EventResponse } from "@/types/db";
 
@@ -68,6 +69,29 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
     chip: "bg-subtle text-ink",
     dot: "bg-ink",
   },
+  /*
+   * 스펙 10 연동 — 프로젝트 마일스톤의 목표일.
+   *
+   * 새 hue를 만들지 않는다. 위 6종이 오렌지·초록·파랑·앰버·먹·회색을 이미
+   * 다 쓰고 있어서 7번째 색상축은 남아 있지 않고, 억지로 하나 더 만들면
+   * 범례가 다시 "구분되지 않는 색 목록"이 된다.
+   *
+   * 마일스톤은 "아직 달성하지 못한 목표점"이다. 디자인 규칙상 진행중·미완료는
+   * informative(파랑)이나 중립이므로 파랑 축에 얹되, 전사 일정이 파랑 '면'을
+   * 쓰고 있으므로 마일스톤은 같은 축의 '테두리'를 쓴다 —
+   * personal(면) ↔ invited(테두리)가 오렌지 축을 나눈 방법 그대로다.
+   * 테두리는 "아직 채워지지 않았다"는 뜻까지 같이 준다.
+   *
+   * 달성/미달성은 색이 아니라 형태로 가른다(MILESTONE_MARK). 색을 하나 더
+   * 쓰면 종류 축과 상태 축이 섞이고, 취소선은 이미 '내가 불참으로 답한 일정'이
+   * 가져갔다.
+   */
+  milestone: {
+    label: "마일스톤",
+    hex: "#009ceb", // info
+    chip: "border border-info bg-surface text-info-ink",
+    dot: "border border-info bg-surface",
+  },
   resource_booking: {
     label: "리소스 예약",
     hex: "#868b94", // muted
@@ -75,6 +99,45 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
     dot: "bg-event-resource",
   },
 };
+
+/**
+ * 마일스톤의 달성 여부 — 색이 아니라 형태로 가른다.
+ *
+ * 미달성은 깃발(세워둔 목표점), 달성은 체크다. 달성한 목표는 더 챙길 대상이
+ * 아니므로 무게를 한 단계 내린다(opacity). 취소선을 쓰지 않는 이유는 그 형태가
+ * 이미 '내가 불참으로 답한 일정'을 뜻하고 있어서, 같은 격자 위에서 한 표시가
+ * 두 가지를 말하게 되기 때문이다.
+ *
+ * badge는 종류 축(EVENT_COLORS)이 아니라 상태 축이다 — 참석 응답 배지
+ * (RESPONSE_COLORS)와 같은 자리에 같은 문법으로 붙는다.
+ */
+export interface MilestoneMark {
+  icon: LucideIcon;
+  label: string;
+  /** 칩·행 전체에 얹는 무게 조절 */
+  className: string;
+  /** 제목 옆 작은 상태 배지 */
+  badge: string;
+}
+
+export const MILESTONE_MARKS: Record<"open" | "done", MilestoneMark> = {
+  open: {
+    icon: Flag,
+    label: "진행 중",
+    className: "",
+    badge: "bg-info-light text-info-ink",
+  },
+  done: {
+    icon: Check,
+    label: "달성",
+    className: "opacity-60",
+    badge: "bg-success-light text-success-ink",
+  },
+};
+
+export function milestoneMark(completed: boolean | undefined): MilestoneMark {
+  return completed ? MILESTONE_MARKS.done : MILESTONE_MARKS.open;
+}
 
 /**
  * 참석 응답 색.

@@ -194,20 +194,36 @@ export async function getCalendarItems({
     editable: booking.booked_by === employeeId,
   }));
 
+  /*
+   * 날짜 RPC들은 [p_from, p_to] 를 포함 구간으로 본다. rangeOf()의 to는 마지막
+   * 날 '다음' 자정(배타)이라 그대로 넘기면 격자에 없는 하루가 더 딸려 온다 —
+   * 그 항목은 어느 셀에도 그려지지 않으면서 요약 밴드와 종류 칩의 건수만
+   * 늘린다. 마일스톤처럼 하루짜리 항목이면 통째로 유령이 된다.
+   */
+  const fromYmd = toSeoulYmdLocal(from);
+  const toYmd = addDaysYmd(toSeoulYmdLocal(to), -1);
+
   // 승인된 연차·휴가 (스펙 03 · 6장 연동)
   // 개인 뷰에서는 본인 것만, 팀·전사 뷰에서는 RLS가 허용하는 범위 전체를 보여준다.
   const leaveItems = await getLeaveItems({
-    fromYmd: toSeoulYmdLocal(from),
-    toYmd: toSeoulYmdLocal(to),
+    fromYmd,
+    toYmd,
     employeeId,
     onlyMine: scope === "personal",
   });
 
   // 승인된 출장·재택근무 (스펙 04 · 7장 연동)
   const approvalItems = await getApprovalItems({
-    fromYmd: toSeoulYmdLocal(from),
-    toYmd: toSeoulYmdLocal(to),
+    fromYmd,
+    toYmd,
     employeeId,
+    onlyMine: scope === "personal",
+  });
+
+  // 프로젝트 마일스톤 목표일 (스펙 10 · 5장 연동)
+  const milestoneItems = await getMilestoneItems({
+    fromYmd,
+    toYmd,
     onlyMine: scope === "personal",
   });
 
@@ -216,6 +232,7 @@ export async function getCalendarItems({
     ...bookingItems,
     ...leaveItems,
     ...approvalItems,
+    ...milestoneItems,
   ].sort((a, b) => a.startAt.localeCompare(b.startAt));
 }
 
@@ -350,6 +367,78 @@ async function getApprovalItems({
         editable: false,
       };
     });
+}
+
+/**
+ * 프로젝트 마일스톤을 캘린더 항목으로 변환 (스펙 10 · 5장)
+ *
+ * project_milestones를 직접 읽지 않고 list_calendar_milestones() RPC를 쓴다.
+ * 휴가·결재와 같은 이유는 아니다 — 마일스톤의 RLS는 전체 SELECT라 조회 자체는
+ * 된다. RPC를 쓰는 건 (1) 프로젝트명 조인과 '취소된 프로젝트 제외' 규칙이
+ * 화면마다 복제되지 않게 하고, (2) 담당자가 나인지(is_mine) 판정을 DB 한 곳에
+ * 두기 위해서다.
+ *
+ * 마일스톤은 목표'일' 하나뿐이라 종일 항목으로 만든다. 목표일이 없는
+ * 마일스톤은 RPC가 애초에 돌려주지 않는다 — 날짜가 없으면 캘린더에 놓일
+ * 자리가 없다.
+ */
+async function getMilestoneItems({
+  fromYmd,
+  toYmd,
+  onlyMine,
+}: {
+  fromYmd: string;
+  toYmd: string;
+  onlyMine: boolean;
+}): Promise<CalendarItem[]> {
+  const supabase = createServerSupabase();
+
+  const { data, error } = await supabase.rpc("list_calendar_milestones", {
+    p_from: fromYmd,
+    p_to: toYmd,
+  });
+
+  if (error) {
+    // 스펙 10 마이그레이션 전이면 함수가 없다 — 캘린더는 계속 떠야 한다
+    console.error("[calendar] 마일스톤 조회 실패:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as {
+    id: string;
+    project_id: string;
+    project_name: string;
+    title: string;
+    due_date: string;
+    is_completed: boolean;
+    is_mine: boolean;
+  }[];
+
+  return rows
+    .filter((r) => (onlyMine ? r.is_mine : true))
+    .map((r) => ({
+      id: `milestone-${r.id}`,
+      kind: "milestone" as const,
+      // 마일스톤 제목만으로는 어느 프로젝트인지 알 수 없다("1차 오픈"이 여럿이다)
+      title: `${r.project_name} · ${r.title}`,
+      description: null,
+      // 종일 항목. occursOn이 종료 경계를 배타적으로 보므로 다음 날 자정을 끝으로 둔다
+      startAt: new Date(`${r.due_date}T00:00:00+09:00`).toISOString(),
+      endAt: new Date(
+        `${addDaysYmd(r.due_date, 1)}T00:00:00+09:00`,
+      ).toISOString(),
+      allDay: true,
+      // 마일스톤의 주체는 사람이 아니라 프로젝트다
+      ownerId: null,
+      ownerName: r.project_name,
+      location: null,
+      attendees: [],
+      myResponse: null,
+      // 달성 체크는 프로젝트 상세에서 한다 — 캘린더는 표시만 한다
+      editable: false,
+      completed: r.is_completed,
+      sourceHref: `/projects/${r.project_id}`,
+    }));
 }
 
 function toSeoulYmdLocal(date: Date): string {

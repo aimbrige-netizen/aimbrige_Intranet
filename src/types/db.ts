@@ -359,7 +359,9 @@ export type CalendarItemKind =
   | "invited"
   | "resource_booking"
   | "leave"
-  | "approval";
+  | "approval"
+  /** 스펙 10 연동 — 프로젝트 마일스톤의 목표일 */
+  | "milestone";
 
 /** 일정 참석자 표시에 필요한 최소 정보 */
 export interface CalendarAttendee {
@@ -394,4 +396,16 @@ export interface CalendarItem {
   myResponse: EventResponse | null;
   /** 본인이 수정·삭제할 수 있는 항목인지 */
   editable: boolean;
+  /**
+   * 달성 여부. 지금은 프로젝트 마일스톤만 쓴다.
+   * 목표점은 "날짜가 지났는가"가 아니라 "달성했는가"로 읽어야 해서 날짜만으로는
+   * 상태를 알 수 없다. 달성이라는 개념이 없는 종류(일정·휴가·예약)는 undefined —
+   * false로 두면 "아직 못 했다"는 뜻이 생겨 버린다.
+   */
+  completed?: boolean;
+  /**
+   * 이 항목의 원본 화면. 캘린더는 표시만 하고 편집은 원본 모듈에서 한다 —
+   * 마일스톤처럼 고칠 곳이 따로 있는 항목은 상세에서 그 자리로 보낸다.
+   */
+  sourceHref?: string | null;
 }

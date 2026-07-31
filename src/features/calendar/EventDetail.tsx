@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MapPin, Pencil, Trash2, Users } from "lucide-react";
+import { ExternalLink, MapPin, Pencil, Trash2, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
-import { Button } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { Meter } from "@/components/ui/Progress";
 import {
@@ -16,6 +16,7 @@ import {
   EVENT_COLORS,
   RESPONSE_COLORS,
   RESPONSE_ORDER,
+  milestoneMark,
 } from "@/features/calendar/colors";
 import {
   countResponses,
@@ -48,6 +49,7 @@ const SOURCE_LABELS: Record<CalendarItemKind, string> = {
   invited: "참석 요청",
   leave: "승인된 휴가",
   approval: "승인된 결재 문서",
+  milestone: "프로젝트 마일스톤",
   resource_booking: "리소스 예약",
 };
 
@@ -57,6 +59,14 @@ const LOCK_NOTES: Partial<Record<CalendarItemKind, string>> = {
   approval: "승인된 출장·재택은 결재 문서를 따라 표시됩니다.",
   invited:
     "참석자로 지정돼 내 캘린더에 표시됩니다. 시간·장소 변경은 등록자가 합니다.",
+  milestone:
+    "마일스톤의 목표일과 달성 체크는 프로젝트 상세에서 바꿉니다.",
+};
+
+/** 이 항목의 주체를 뭐라고 부르는가 — 마일스톤의 주체는 사람이 아니라 프로젝트다 */
+const OWNER_LABELS: Partial<Record<CalendarItemKind, string>> = {
+  resource_booking: "예약자",
+  milestone: "프로젝트",
 };
 
 /**
@@ -106,12 +116,17 @@ export function EventDetail({
 
   const color = EVENT_COLORS[item.kind];
   const isBooking = item.kind === "resource_booking";
+  const isMilestone = item.kind === "milestone";
+  const mark = isMilestone ? milestoneMark(item.completed) : null;
   /*
-   * 장소·참석자는 일정과 리소스 예약에만 있는 개념이다. 휴가·출장은 결재 문서가
-   * 원본이라 여기에 빈 칸을 세우면 "적을 수 있는데 안 적었다"로 잘못 읽힌다.
+   * 장소·참석자는 일정과 리소스 예약에만 있는 개념이다. 휴가·출장·마일스톤은
+   * 다른 모듈이 원본이라 여기에 빈 칸을 세우면 "적을 수 있는데 안 적었다"로
+   * 잘못 읽힌다.
    */
   const showPlace =
-    item.kind !== "leave" && item.kind !== "approval";
+    item.kind !== "leave" &&
+    item.kind !== "approval" &&
+    item.kind !== "milestone";
 
   const remove = () => {
     if (!window.confirm(`"${item.title}"을(를) 삭제하시겠습니까?`)) return;
@@ -211,9 +226,22 @@ export function EventDetail({
             ) : null}
           </>
         ) : (
-          <Button variant="secondary" onClick={onClose}>
-            닫기
-          </Button>
+          <>
+            <Button variant="secondary" onClick={onClose}>
+              닫기
+            </Button>
+            {/*
+              캘린더는 표시만 한다. 고칠 수 있는 자리가 따로 있는 항목은
+              그 화면으로 보낸다 — 안내 문구만 남기면 사용자가 모듈 패널에서
+              프로젝트를 다시 찾아 들어가야 한다.
+            */}
+            {item.sourceHref ? (
+              <LinkButton href={item.sourceHref} variant="secondary">
+                <ExternalLink className="size-3.5" />
+                프로젝트 열기
+              </LinkButton>
+            ) : null}
+          </>
         )
       }
     >
@@ -228,13 +256,35 @@ export function EventDetail({
               {color.label}
             </span>
           </Row>
-          <Row label="일시">
-            <span className="tabular-nums">{period}</span>
-          </Row>
-          <Row label="소요">
-            <span className="tabular-nums">{duration(item)}</span>
-          </Row>
-          <Row label={isBooking ? "예약자" : "등록자"}>
+          {/* 마일스톤은 구간이 아니라 목표'일' 하나다 — '1일 종일'은 셀 것이 없다 */}
+          {isMilestone ? (
+            <Row label="목표일">
+              <span className="tabular-nums">{withWeekday(startYmd)}</span>
+            </Row>
+          ) : (
+            <>
+              <Row label="일시">
+                <span className="tabular-nums">{period}</span>
+              </Row>
+              <Row label="소요">
+                <span className="tabular-nums">{duration(item)}</span>
+              </Row>
+            </>
+          )}
+          {mark ? (
+            <Row label="달성">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-sm px-1.5 text-label",
+                  mark.badge,
+                )}
+              >
+                <mark.icon className="size-3" aria-hidden />
+                {mark.label}
+              </span>
+            </Row>
+          ) : null}
+          <Row label={OWNER_LABELS[item.kind] ?? "등록자"}>
             {item.ownerName ?? "-"}
           </Row>
           {/* 장소가 비어 있어도 줄은 남긴다 — "안 적혔다"와 "칸이 없다"는 다르다 */}
@@ -250,7 +300,7 @@ export function EventDetail({
               )}
             </Row>
           ) : null}
-          <Row label={isBooking ? "구분" : "공개범위"}>
+          <Row label={isBooking || isMilestone ? "구분" : "공개범위"}>
             {SOURCE_LABELS[item.kind]}
           </Row>
         </dl>

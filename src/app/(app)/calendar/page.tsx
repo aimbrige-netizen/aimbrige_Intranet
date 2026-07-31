@@ -3,6 +3,7 @@ import {
   Boxes,
   CalendarDays,
   CalendarRange,
+  Flag,
   Gauge,
   Plane,
   UserRound,
@@ -210,6 +211,8 @@ export default async function CalendarPage({
         ? counts.company
         : counts.personal;
   const away = counts.leave + counts.approval;
+  /* 일정도 부재도 아닌 것 — 프로젝트 마감과 자원 예약 */
+  const others = counts.milestone + counts.resource_booking;
   const total = items.length;
   const daysWithItems = days.filter((day) =>
     items.some((item) => occursOn(item, day)),
@@ -282,17 +285,22 @@ export default async function CalendarPage({
           meterValue={away}
           sub={`연차·휴가 ${counts.leave}건 · 출장·재택 ${counts.approval}건`}
         />
+        {/*
+          네 칸이 전체를 남김없이 나눈다: 내 일정 + 휴가·출장 + (마일스톤·예약).
+          마일스톤이 병합되면서 어느 칸에도 안 잡히는 나머지가 생기면,
+          "이 기간 24건"과 아래 세 칸의 합이 어긋나 보인다.
+        */}
         <StatCard
-          label="리소스 예약"
-          value={counts.resource_booking}
+          label="마일스톤·예약"
+          value={others}
           unit="건"
           denominator={total}
           denominatorUnit="건"
           tone="neutral"
-          icon={Boxes}
+          icon={Flag}
           max={total || 1}
-          meterValue={counts.resource_booking}
-          sub={`예약 가능 리소스 ${resources.length}종`}
+          meterValue={others}
+          sub={`프로젝트 마일스톤 ${counts.milestone}건 · 리소스 예약 ${counts.resource_booking}건`}
         />
       </div>
 
