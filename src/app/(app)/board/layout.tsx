@@ -1,8 +1,5 @@
-import {
-  PanelPortal,
-  PanelLinkList,
-  PANEL_EXTRA_SLOT,
-} from "@/components/layout/ModulePanel";
+import { PanelPortal, PanelLinkList } from "@/components/layout/ModulePanel";
+import { PANEL_EXTRA_SLOT } from "@/components/layout/panel-slots";
 import { getBoards } from "@/features/boards/data";
 import { requireSessionEmployee } from "@/lib/auth/session";
 

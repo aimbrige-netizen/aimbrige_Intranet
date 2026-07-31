@@ -12,6 +12,11 @@ import {
   visibleChildSections,
   type NavChild,
 } from "@/lib/nav";
+import {
+  PANEL_EXTRA_SLOT,
+  PANEL_WIDGET_SLOT,
+  type PanelSlot,
+} from "@/components/layout/panel-slots";
 import type { RoleName } from "@/types/db";
 
 /**
@@ -27,11 +32,6 @@ import type { RoleName } from "@/types/db";
  *
  * 데스크톱 전용. 768px 미만에서는 레일 드로어가 하위 항목까지 함께 펼친다.
  */
-/** 세그먼트 layout이 동적 항목을 꽂는 자리 */
-export const PANEL_EXTRA_SLOT = "module-panel-extra";
-/** 세그먼트 layout이 상주 위젯을 꽂는 자리 */
-export const PANEL_WIDGET_SLOT = "module-panel-widget";
-
 export function ModulePanel({ role }: { role: RoleName }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -101,20 +101,41 @@ export function ModulePanel({ role }: { role: RoleName }) {
 
 /**
  * 세그먼트 layout에서 패널 안에 서버 데이터를 꽂을 때 쓴다.
- * 패널은 상위 layout이 그리므로 DOM이 이미 있고, 마운트 후 포털로 붙인다.
+ *
+ * 대상 DOM은 상위 layout(AppShell → ModulePanel)이 그린다. 보통은 자식 이펙트가
+ * 돌 때 이미 붙어 있지만, 스트리밍 SSR에서는 자식 서브트리가 셸보다 먼저
+ * 하이드레이트될 수 있어 첫 이펙트에서 null이 나온다. 그래서 잡힐 때까지
+ * 프레임 단위로 재시도한다(실패해도 조용히 포기 — 패널 없는 모듈이 있다).
+ *
+ * pathname이 바뀌면 패널이 다시 그려지므로 대상도 다시 찾는다.
  */
 export function PanelPortal({
   slot,
   children,
 }: {
-  slot: typeof PANEL_EXTRA_SLOT | typeof PANEL_WIDGET_SLOT;
+  slot: PanelSlot;
   children: React.ReactNode;
 }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
+  const pathname = usePathname();
 
   useEffect(() => {
-    setTarget(document.getElementById(slot));
-  }, [slot]);
+    let frame = 0;
+    let tries = 0;
+    const find = () => {
+      const el = document.getElementById(slot);
+      if (el) {
+        setTarget(el);
+        return;
+      }
+      if (tries < 60) {
+        tries += 1;
+        frame = requestAnimationFrame(find);
+      }
+    };
+    find();
+    return () => cancelAnimationFrame(frame);
+  }, [slot, pathname]);
 
   return target ? createPortal(children, target) : null;
 }

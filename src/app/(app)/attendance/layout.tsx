@@ -1,4 +1,5 @@
-import { PanelPortal, PANEL_WIDGET_SLOT } from "@/components/layout/ModulePanel";
+import { PanelPortal } from "@/components/layout/ModulePanel";
+import { PANEL_WIDGET_SLOT } from "@/components/layout/panel-slots";
 import { AttendancePanelWidget } from "@/features/attendance/AttendancePanelWidget";
 import {
   getThisWeekHours,
