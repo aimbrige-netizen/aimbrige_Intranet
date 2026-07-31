@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
+import { History } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmploymentStatusBadge, RoleBadge } from "@/components/ui/Badge";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { EmployeeEditForm } from "@/features/employees/EmployeeEditForm";
+import { tenureLabel, tenureMonths } from "@/features/directory/org";
 import { getEmergencyContact, requireSystemAdmin } from "@/lib/auth/session";
 import { createServerSupabase } from "@/lib/supabase/server";
-import { formatDate, formatDateTime } from "@/lib/utils";
+import { formatDate, formatDateTime, todayInSeoul } from "@/lib/utils";
 import type { AuditLog, EmployeeWithRelations } from "@/types/db";
 
 export const metadata: Metadata = { title: "임직원 상세" };
@@ -61,20 +62,29 @@ export default async function EmployeeDetailPage({
     ]);
 
   const isSystemAdminTarget = employee.role?.name === "system_admin";
+  const today = todayInSeoul();
+  const tenure = tenureLabel(tenureMonths(employee.hire_date, today));
 
   return (
     <>
-      <Link
-        href="/admin/employees"
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        임직원 목록
-      </Link>
-
       <PageHeader
+        backHref="/admin/employees"
+        backLabel="임직원 목록"
         title={employee.name}
         description={employee.email}
+        meta={
+          <>
+            <span>
+              {[employee.department?.name, employee.team?.name]
+                .filter(Boolean)
+                .join(" › ") || "소속 미지정"}
+            </span>
+            <span>·</span>
+            <span>{employee.position ?? "직급 미지정"}</span>
+            <span>·</span>
+            <span>근속 {tenure}</span>
+          </>
+        }
         action={
           <div className="flex items-center gap-2">
             <RoleBadge role={employee.role?.name} />
@@ -160,6 +170,7 @@ export default async function EmployeeDetailPage({
               </div>
               <dl className="w-full space-y-2 border-t border-line pt-3 text-left">
                 <Row label="입사일" value={formatDate(employee.hire_date)} />
+                <Row label="근속" value={tenure} />
                 <Row label="등록일" value={formatDate(employee.created_at)} />
                 <Row
                   label="최근 수정"
@@ -170,12 +181,18 @@ export default async function EmployeeDetailPage({
           </Card>
 
           <Card>
-            <CardHeader title="최근 변경 이력" />
+            <CardHeader
+              title="최근 변경 이력"
+              description="이 계정에 대한 감사 로그 최근 10건입니다."
+            />
             <CardBody>
               {!logs || logs.length === 0 ? (
-                <p className="py-4 text-center text-caption">
-                  기록된 변경 이력이 없습니다.
-                </p>
+                <EmptyState
+                  icon={History}
+                  title="기록된 변경 이력이 없습니다"
+                  description="역할·재직상태·기본정보를 수정하면 여기에 시간순으로 쌓입니다."
+                  compact
+                />
               ) : (
                 <ul className="space-y-3">
                   {(logs as AuditLog[]).map((log) => (

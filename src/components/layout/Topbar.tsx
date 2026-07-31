@@ -90,7 +90,7 @@ export function Topbar({
         <input
           type="search"
           disabled
-          placeholder="통합검색 (준비중)"
+          placeholder="통합검색"
           className="h-9 w-full rounded-pill border border-transparent bg-subtle pl-10 pr-4 text-body-sm placeholder:text-muted disabled:cursor-not-allowed"
         />
       </div>
@@ -100,7 +100,6 @@ export function Topbar({
           type="button"
           className="relative rounded-sm p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle"
           aria-label={`알림 ${notificationCount}건`}
-          title="알림 상세는 준비중입니다"
         >
           <Bell className="size-[18px]" />
           {notificationCount > 0 ? (

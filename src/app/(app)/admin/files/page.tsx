@@ -75,7 +75,15 @@ export default async function AdminFilesPage() {
     <>
       <PageHeader
         title="파일함 관리"
-        description="팀 공유폴더와 사내 규정 문서를 Drive와 연결합니다. 파일 자체는 Drive에 있고 여기서는 연결만 관리합니다."
+        meta={
+          <>
+            <span>팀 {teamList.length}개</span>
+            <span>·</span>
+            <span>부서 {departmentList.length}개</span>
+            <span>·</span>
+            <span>파일은 Drive에 있고 여기서는 연결만 관리합니다</span>
+          </>
+        }
       />
 
       <FileAdmin

@@ -1,95 +1,153 @@
-"use client";
-
-import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import { Select } from "@/components/ui/Field";
+import {
+  FilterChip,
+  TableToolbar,
+  ToolbarSearch,
+} from "@/components/ui/TableToolbar";
 import type { OrgOption } from "@/features/employees/EmployeeFields";
+import type { EmploymentStatus, RoleName } from "@/types/db";
 
-/** 목록 상단 검색 + 부서/역할/재직상태 필터 (스펙 3.4) */
+/**
+ * 임직원 관리 목록의 검색·필터 (스펙 3.4)
+ *
+ * 예전에는 드롭다운 3개라서 닫혀 있는 동안 선택지도, 각 선택지의 규모도 보이지
+ * 않았다. 조직도 목록 뷰와 같은 칩 스트립으로 맞추고, 전부 URL 파라미터로 둬서
+ * 두 화면의 공유·뒤로가기 동작을 통일한다.
+ *
+ * 훅이 없어 서버 컴포넌트에서 그대로 렌더된다.
+ */
+export interface EmployeeFilterParams {
+  q?: string;
+  department?: string;
+  role?: string;
+  status?: string;
+}
+
+const STATUS_OPTIONS: { value: EmploymentStatus; label: string }[] = [
+  { value: "active", label: "재직중" },
+  { value: "leave", label: "휴직" },
+  { value: "terminated", label: "퇴사" },
+];
+
+const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
+  { value: "system_admin", label: "시스템 관리자" },
+  { value: "manager", label: "팀장·매니저" },
+  { value: "employee", label: "일반직원" },
+];
+
 export function EmployeeFilters({
   departments,
+  params,
+  statusCounts,
+  departmentCounts,
+  total,
+  shown,
+  actions,
 }: {
   departments: OrgOption[];
+  params: EmployeeFilterParams;
+  statusCounts: Record<EmploymentStatus, number>;
+  departmentCounts: Map<string, number>;
+  total: number;
+  shown: number;
+  actions?: React.ReactNode;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [query, setQuery] = useState(searchParams.get("q") ?? "");
-
-  useEffect(() => {
-    setQuery(searchParams.get("q") ?? "");
-  }, [searchParams]);
-
-  const apply = (patch: Record<string, string>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(patch).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-      else params.delete(key);
+  const href = (patch: EmployeeFilterParams) => {
+    const search = new URLSearchParams();
+    const merged: Record<string, string | undefined> = {
+      q: params.q,
+      department: params.department,
+      role: params.role,
+      status: params.status,
+      ...patch,
+    };
+    Object.entries(merged).forEach(([key, value]) => {
+      if (value) search.set(key, value);
     });
-    params.delete("page");
-    const search = params.toString();
-    router.push(search ? `/admin/employees?${search}` : "/admin/employees");
+    const query = search.toString();
+    return query ? `/admin/employees?${query}` : "/admin/employees";
   };
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2">
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          apply({ q: query.trim() });
-        }}
-        className="relative min-w-56 flex-1 md:max-w-xs"
-      >
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-          aria-hidden
-        />
-        <input
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-          placeholder="이름 또는 이메일 검색"
-          className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body placeholder:text-muted focus:border-primary"
-          aria-label="이름 또는 이메일 검색"
-        />
-      </form>
+    <>
+      <TableToolbar
+        search={
+          <form action="/admin/employees" className="contents">
+            {params.department ? (
+              <input
+                type="hidden"
+                name="department"
+                value={params.department}
+              />
+            ) : null}
+            {params.role ? (
+              <input type="hidden" name="role" value={params.role} />
+            ) : null}
+            {params.status ? (
+              <input type="hidden" name="status" value={params.status} />
+            ) : null}
+            <ToolbarSearch
+              name="q"
+              defaultValue={params.q}
+              placeholder="이름 또는 이메일 검색"
+              ariaLabel="이름 또는 이메일 검색"
+            />
+          </form>
+        }
+        filters={
+          <>
+            <FilterChip
+              href={href({ status: undefined })}
+              active={!params.status}
+              count={total}
+            >
+              전체
+            </FilterChip>
+            {STATUS_OPTIONS.map((option) => (
+              <FilterChip
+                key={option.value}
+                href={href({ status: option.value })}
+                active={params.status === option.value}
+                count={statusCounts[option.value]}
+              >
+                {option.label}
+              </FilterChip>
+            ))}
+          </>
+        }
+        count={`${shown}명 표시 / 전체 ${total}명`}
+        actions={actions}
+      />
 
-      <Select
-        aria-label="부서 필터"
-        value={searchParams.get("department") ?? ""}
-        onChange={(event) => apply({ department: event.target.value })}
-        className="h-9 w-auto min-w-32 py-0"
-      >
-        <option value="">전체 부서</option>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-nano text-muted">부서</span>
+        <FilterChip href={href({ department: undefined })} active={!params.department}>
+          전체
+        </FilterChip>
         {departments.map((department) => (
-          <option key={department.id} value={department.id}>
+          <FilterChip
+            key={department.id}
+            href={href({ department: department.id })}
+            active={params.department === department.id}
+            count={departmentCounts.get(department.id) ?? 0}
+          >
             {department.name}
-          </option>
+          </FilterChip>
         ))}
-      </Select>
 
-      <Select
-        aria-label="역할 필터"
-        value={searchParams.get("role") ?? ""}
-        onChange={(event) => apply({ role: event.target.value })}
-        className="h-9 w-auto min-w-32 py-0"
-      >
-        <option value="">전체 역할</option>
-        <option value="system_admin">시스템 관리자</option>
-        <option value="manager">팀장/매니저</option>
-        <option value="employee">일반직원</option>
-      </Select>
-
-      <Select
-        aria-label="재직상태 필터"
-        value={searchParams.get("status") ?? ""}
-        onChange={(event) => apply({ status: event.target.value })}
-        className="h-9 w-auto min-w-32 py-0"
-      >
-        <option value="">전체 상태</option>
-        <option value="active">재직중</option>
-        <option value="leave">휴직</option>
-        <option value="terminated">퇴사</option>
-      </Select>
-    </div>
+        <span className="ml-4 text-nano text-muted">역할</span>
+        <FilterChip href={href({ role: undefined })} active={!params.role}>
+          전체
+        </FilterChip>
+        {ROLE_OPTIONS.map((option) => (
+          <FilterChip
+            key={option.value}
+            href={href({ role: option.value })}
+            active={params.role === option.value}
+          >
+            {option.label}
+          </FilterChip>
+        ))}
+      </div>
+    </>
   );
 }

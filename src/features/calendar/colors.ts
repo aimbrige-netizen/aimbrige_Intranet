@@ -4,13 +4,25 @@ import type { CalendarItemKind } from "@/types/db";
  * 이벤트 색상 구분 (스펙 02 · 3.4)
  *
  * hex는 Tailwind가 아니라 외부(ICS export·프린트)로 나가는 값이라 리터럴로 둔다.
- * 디자인시스템 v2.0(SEED) 토큰과 같은 값을 쓰되, 액센트인 오렌지는
- * "개인 일정"에만 배정한다 — 한 화면에서 오렌지가 여러 의미를 갖지 않도록.
+ *
+ * 예전 매핑은 팀 일정과 연차·휴가가 같은 초록, 전사 일정과 출장·재택이 같은
+ * 파랑이었다. 범례에는 6줄이 있는데 화면에서 구분되는 색은 4가지뿐이라
+ * "초록 칩"이 팀 회의인지 동료 휴가인지 알 수 없었다. 6종을 전부 다른
+ * 색상축에 배정한다 — 오렌지는 개인 일정 하나에만 남긴다.
+ *
+ * 면은 알파(/10)가 아니라 solid 틴트를 쓴다. 알파는 얹히는 면(흰 카드 / 선택된
+ * 셀 / 회색 바닥)마다 합성 결과가 달라져 같은 종류가 다른 색으로 보인다.
  */
-export const EVENT_COLORS: Record<
-  CalendarItemKind,
-  { label: string; hex: string; chip: string; dot: string }
-> = {
+export interface EventColor {
+  label: string;
+  hex: string;
+  /** 칩 배경 + 글자 */
+  chip: string;
+  /** 범례·표에서 쓰는 점 */
+  dot: string;
+}
+
+export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
   personal: {
     label: "개인 일정",
     hex: "#ff6f0f", // primary
@@ -20,41 +32,33 @@ export const EVENT_COLORS: Record<
   team: {
     label: "팀 일정",
     hex: "#1aa174", // success
-    chip: "bg-success/10 text-success",
+    chip: "bg-success-light text-success-ink",
     dot: "bg-success",
   },
   company: {
     label: "전사 일정",
-    hex: "#009ceb", // event.company = info
-    chip: "bg-event-company/10 text-event-company-ink",
-    dot: "bg-event-company",
+    hex: "#009ceb", // info
+    chip: "bg-info-light text-info-ink",
+    dot: "bg-info",
+  },
+  // 스펙 03 연동 — 승인된 연차·휴가. "그날 자리에 없다"는 조율 신호라 앰버.
+  leave: {
+    label: "연차·휴가",
+    hex: "#f59f0a", // warn
+    chip: "bg-warn-light text-warn-ink",
+    dot: "bg-warn",
+  },
+  // 스펙 04 연동 — 승인된 출장·재택근무. 근무는 하되 장소가 다르다.
+  approval: {
+    label: "출장·재택",
+    hex: "#212124", // ink
+    chip: "bg-subtle text-ink",
+    dot: "bg-ink",
   },
   resource_booking: {
     label: "리소스 예약",
-    hex: "#868b94", // event.resource = muted
-    chip: "bg-event-resource/10 text-event-resource-ink",
+    hex: "#868b94", // muted
+    chip: "bg-subtle text-event-resource-ink",
     dot: "bg-event-resource",
   },
-  // 스펙 03 연동 — 승인된 연차·휴가
-  leave: {
-    label: "연차·휴가",
-    hex: "#1aa174",
-    chip: "bg-success/10 text-success",
-    dot: "bg-success",
-  },
-  // 스펙 04 연동 — 승인된 출장·재택근무
-  approval: {
-    label: "출장·재택",
-    hex: "#009ceb",
-    chip: "bg-event-company/10 text-event-company-ink",
-    dot: "bg-event-company",
-  },
 };
-
-/**
- * 아직 연동되지 않은 항목들 — 자리만 확보하고 회색으로 표시한다.
- * (연차·반차는 스펙 03, 출장·재택은 스펙 04에서 연동 완료)
- */
-export const PENDING_SOURCES = [
-  { label: "프로젝트 마일스톤", spec: "스펙 10 프로젝트 관리" },
-];

@@ -1,28 +1,16 @@
 import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { DirectoryEmployee } from "@/features/directory/org";
 import type {
   Department,
   Employee,
-  EmployeeWithRelations,
   ExternalContactWithCreator,
+  Role,
   Team,
 } from "@/types/db";
 
-/** 조직도·목록 뷰에서 쓰는 임직원 요약 */
-export type DirectoryEmployee = Pick<
-  Employee,
-  | "id"
-  | "name"
-  | "email"
-  | "position"
-  | "phone"
-  | "profile_image_url"
-  | "employment_status"
-  | "department_id"
-  | "team_id"
-  | "hire_date"
->;
+export type { DirectoryEmployee };
 
 const DIRECTORY_SELECT =
   "id, name, email, position, phone, profile_image_url, employment_status, department_id, team_id, hire_date";
@@ -65,26 +53,169 @@ export async function getDirectory(options?: {
   };
 }
 
-/** 임직원 프로필 상세 (동료 조회용, 스펙 3.2) */
-export async function getDirectoryEmployee(
+/**
+ * 임직원 프로필 상세 (동료 조회용, 스펙 3.2)
+ *
+ * departments.manager_id / teams.manager_id는 스키마에도 있고 조직 편집에서
+ * 지정까지 하는데, 예전 select는 (id, name)만 가져와 리포팅 라인을 화면에
+ * 올릴 방법이 없었다. 매니저와 같은 팀 동료를 함께 조회한다.
+ */
+export interface DirectoryProfileEmployee extends Employee {
+  role: Pick<Role, "id" | "name" | "label"> | null;
+  department: Pick<Department, "id" | "name" | "manager_id"> | null;
+  team: Pick<Team, "id" | "name" | "manager_id"> | null;
+}
+
+export interface DirectoryProfile {
+  employee: DirectoryProfileEmployee;
+  departmentManager: DirectoryEmployee | null;
+  teamManager: DirectoryEmployee | null;
+  /** 같은 팀 재직 동료 (본인 제외) */
+  teammates: DirectoryEmployee[];
+  /** 같은 부서 재직 인원 (본인 포함) */
+  departmentSize: number;
+}
+
+export async function getDirectoryProfile(
   id: string,
-): Promise<EmployeeWithRelations | null> {
+): Promise<DirectoryProfile | null> {
   const supabase = createServerSupabase();
 
-  const { data } = await supabase
+  const { data: employee } = await supabase
     .from("employees")
     .select(
       `id, auth_user_id, email, name, department_id, team_id, position, role_id,
        employment_status, hire_date, phone, responsibilities, profile_image_url,
        created_at, updated_at,
        role:roles(id, name, label),
-       department:departments!department_id(id, name),
-       team:teams!team_id(id, name)`,
+       department:departments!department_id(id, name, manager_id),
+       team:teams!team_id(id, name, manager_id)`,
     )
     .eq("id", id)
-    .maybeSingle<EmployeeWithRelations>();
+    .maybeSingle<DirectoryProfileEmployee>();
 
-  return data ?? null;
+  if (!employee) return null;
+
+  const managerIds = [
+    employee.department?.manager_id,
+    employee.team?.manager_id,
+  ].filter((value): value is string => !!value);
+
+  const [managerResult, teammateResult, departmentCount] = await Promise.all([
+    managerIds.length > 0
+      ? supabase.from("employees").select(DIRECTORY_SELECT).in("id", managerIds)
+      : Promise.resolve({ data: [] as DirectoryEmployee[] }),
+    employee.team_id
+      ? supabase
+          .from("employees")
+          .select(DIRECTORY_SELECT)
+          .eq("team_id", employee.team_id)
+          .eq("employment_status", "active")
+          .neq("id", employee.id)
+          .order("name")
+      : Promise.resolve({ data: [] as DirectoryEmployee[] }),
+    employee.department_id
+      ? supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("department_id", employee.department_id)
+          .eq("employment_status", "active")
+      : Promise.resolve({ count: 0 }),
+  ]);
+
+  const managers = (managerResult.data ?? []) as DirectoryEmployee[];
+  const findManager = (managerId: string | null | undefined) =>
+    managerId ? (managers.find((m) => m.id === managerId) ?? null) : null;
+
+  return {
+    employee,
+    departmentManager: findManager(employee.department?.manager_id),
+    teamManager: findManager(employee.team?.manager_id),
+    teammates: (teammateResult.data ?? []) as DirectoryEmployee[],
+    departmentSize: ("count" in departmentCount ? departmentCount.count : 0) ?? 0,
+  };
+}
+
+/** 모듈 패널의 '내 소속' 위젯용 컨텍스트 */
+export interface MyOrgContext {
+  departmentName: string | null;
+  teamName: string | null;
+  manager: DirectoryEmployee | null;
+  managerRole: "부서장" | "팀장" | null;
+  teamId: string | null;
+  teamSize: number;
+  departmentSize: number;
+}
+
+export async function getMyOrgContext(me: {
+  id: string;
+  department_id: string | null;
+  team_id: string | null;
+}): Promise<MyOrgContext> {
+  const supabase = createServerSupabase();
+
+  const [departmentResult, teamResult] = await Promise.all([
+    me.department_id
+      ? supabase
+          .from("departments")
+          .select("id, name, manager_id")
+          .eq("id", me.department_id)
+          .maybeSingle<Pick<Department, "id" | "name" | "manager_id">>()
+      : Promise.resolve({ data: null }),
+    me.team_id
+      ? supabase
+          .from("teams")
+          .select("id, name, manager_id")
+          .eq("id", me.team_id)
+          .maybeSingle<Pick<Team, "id" | "name" | "manager_id">>()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const department = departmentResult.data;
+  const team = teamResult.data;
+
+  // 팀장이 있으면 팀장, 없으면 부서장이 나의 리포팅 라인이다
+  const managerId = team?.manager_id ?? department?.manager_id ?? null;
+  const managerRole = team?.manager_id
+    ? ("팀장" as const)
+    : department?.manager_id
+      ? ("부서장" as const)
+      : null;
+
+  const [managerResult, teamCount, departmentCount] = await Promise.all([
+    managerId
+      ? supabase
+          .from("employees")
+          .select(DIRECTORY_SELECT)
+          .eq("id", managerId)
+          .maybeSingle<DirectoryEmployee>()
+      : Promise.resolve({ data: null }),
+    me.team_id
+      ? supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("team_id", me.team_id)
+          .eq("employment_status", "active")
+      : Promise.resolve({ count: 0 }),
+    me.department_id
+      ? supabase
+          .from("employees")
+          .select("id", { count: "exact", head: true })
+          .eq("department_id", me.department_id)
+          .eq("employment_status", "active")
+      : Promise.resolve({ count: 0 }),
+  ]);
+
+  return {
+    departmentName: department?.name ?? null,
+    teamName: team?.name ?? null,
+    manager: managerResult.data ?? null,
+    managerRole,
+    teamId: team?.id ?? null,
+    teamSize: ("count" in teamCount ? teamCount.count : 0) ?? 0,
+    departmentSize:
+      ("count" in departmentCount ? departmentCount.count : 0) ?? 0,
+  };
 }
 
 export interface OrgHistoryRow {

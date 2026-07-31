@@ -2,12 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { Callout } from "@/components/ui/Callout";
 import { FormRow, Input, Textarea } from "@/components/ui/Field";
 import { submitApprovalDocument } from "@/server/actions/approvals";
 import { todayYmd } from "@/features/calendar/date";
+import { ApprovalStepStrip, type StripStep } from "./ApprovalStepStrip";
 import { DOCUMENT_TYPE_META, type DocumentType } from "./types";
 import type { ExpenseItem } from "./types";
 
@@ -121,23 +123,38 @@ export function ApprovalForm({
 
   const meta = DOCUMENT_TYPE_META[documentType];
 
+  /** 목록·상세와 같은 결재 진행 표기를 기안 화면에서도 쓴다 */
+  const lineSteps: StripStep[] = [
+    { label: "기안", name: "본인", state: "current" },
+    ...(line.step1
+      ? [
+          {
+            label: "1차 검토",
+            name: `${line.step1.name}${line.step1.position ? ` ${line.step1.position}` : ""}`,
+            state: "todo" as const,
+          },
+        ]
+      : []),
+    {
+      label: "최종 승인",
+      name: line.step2
+        ? `${line.step2.name}${line.step2.position ? ` ${line.step2.position}` : ""}`
+        : null,
+      state: "todo",
+    },
+  ];
+
   return (
     <div className="space-y-5">
       {line.blocked ? (
-        <div className="flex gap-2.5 rounded-card border border-danger/30 bg-danger-light px-4 py-3">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
-          <div className="text-body text-ink">
-            <p className="font-bold text-danger">최종 승인자 미지정</p>
-            <p className="mt-0.5 text-label">
-              이 문서유형의 최종 승인자가 지정되지 않아 기안할 수 없습니다. 시스템
-              관리자가 결재라인 설정에서 지정해야 합니다.
-            </p>
-          </div>
-        </div>
+        <Callout tone="danger" title="최종 승인자 미지정">
+          이 문서유형의 최종 승인자가 지정되지 않아 기안할 수 없습니다. 시스템
+          관리자가 결재라인 설정에서 지정해야 합니다.
+        </Callout>
       ) : null}
 
       <Card>
-        <CardHeader title={meta.label} description={meta.description} />
+        <CardHeader title="신청 내용" description={`${meta.label} 양식`} />
         <CardBody>
           <div className="ab-form-grid">
             {documentType === "special_request" ? (
@@ -408,35 +425,13 @@ export function ApprovalForm({
 
       {/* 결재라인 미리보기 (스펙 3.3 공통) */}
       <Card>
-        <CardHeader title="결재라인" description="제출 시 아래 순서로 진행됩니다." />
-        <CardBody>
-          <ol className="flex flex-wrap items-center gap-2 text-body">
-            <li className="rounded-card bg-canvas px-3 py-2">
-              <span className="text-caption">기안</span>
-              <span className="ml-2 text-ink">본인</span>
-            </li>
-            {line.step1 ? (
-              <>
-                <li className="text-muted">→</li>
-                <li className="rounded-card bg-canvas px-3 py-2">
-                  <span className="text-caption">1차 검토</span>
-                  <span className="ml-2 text-ink">
-                    {line.step1.name}
-                    {line.step1.position ? ` ${line.step1.position}` : ""}
-                  </span>
-                </li>
-              </>
-            ) : null}
-            <li className="text-muted">→</li>
-            <li className="rounded-card bg-primary-light px-3 py-2">
-              <span className="text-caption">최종 승인</span>
-              <span className="ml-2 font-bold text-primary">
-                {line.step2
-                  ? `${line.step2.name}${line.step2.position ? ` ${line.step2.position}` : ""}`
-                  : "미지정"}
-              </span>
-            </li>
-          </ol>
+        <CardHeader
+          title="결재라인"
+          description={`제출하면 ${lineSteps.length - 1}단계로 진행됩니다.`}
+          density="compact"
+        />
+        <CardBody density="compact">
+          <ApprovalStepStrip steps={lineSteps} />
           {!line.step1 ? (
             <p className="mt-3 text-caption">
               소속 팀의 팀장이 지정되지 않았거나 본인이 팀장이라 1차 검토를 건너뛰고
@@ -450,13 +445,6 @@ export function ApprovalForm({
         {message ? (
           <p className="mr-auto text-label text-danger">{message}</p>
         ) : null}
-        <Button
-          variant="secondary"
-          onClick={() => router.push("/approvals/new")}
-          disabled={pending}
-        >
-          유형 다시 선택
-        </Button>
         <Button onClick={submit} disabled={pending || line.blocked}>
           {pending ? "제출 중…" : "제출"}
         </Button>

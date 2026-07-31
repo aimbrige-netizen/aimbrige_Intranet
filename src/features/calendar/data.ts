@@ -2,11 +2,13 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { addDaysYmd } from "@/features/calendar/date";
+import type { ResourceBookingBrief } from "@/features/calendar/data-client";
 import type {
   CalendarEventWithOwner,
   CalendarItem,
   Holiday,
   Resource,
+  ResourceBooking,
   ResourceBookingWithRelations,
 } from "@/types/db";
 
@@ -301,6 +303,49 @@ export async function getHolidayMap(
     map[(row as Holiday).date] = row as Holiday;
   });
   return map;
+}
+
+/**
+ * 구간 안의 리소스 예약 전체 (스펙 3.6)
+ *
+ * getCalendarItems는 개인 뷰에서 "본인 예약만" 돌려주기 때문에, 그 결과로는
+ * 회의실이 비었는지 알 수 없다. 예약 화면과 예약 모달은 남의 예약까지 봐야
+ * 한다 — 그래야 저장 버튼을 누르기 전에 충돌을 알 수 있다.
+ * (목적·예약자 이름 외의 정보는 가져오지 않는다)
+ */
+export async function getResourceBookingsInRange(
+  from: Date,
+  to: Date,
+): Promise<ResourceBookingBrief[]> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("resource_bookings")
+    .select(
+      `id, resource_id, booked_by, start_at, end_at, purpose,
+       booker:employees!booked_by(id, name)`,
+    )
+    .lt("start_at", to.toISOString())
+    .gt("end_at", from.toISOString())
+    .order("start_at");
+
+  if (error) {
+    console.error("[calendar] 리소스 예약 조회 실패:", error.message);
+    return [];
+  }
+
+  const rows = (data ?? []) as unknown as (ResourceBooking & {
+    booker: { id: string; name: string } | null;
+  })[];
+
+  return rows.map((booking) => ({
+    id: booking.id,
+    resourceId: booking.resource_id,
+    startAt: booking.start_at,
+    endAt: booking.end_at,
+    purpose: booking.purpose,
+    bookerId: booking.booked_by,
+    bookerName: booking.booker?.name ?? null,
+  }));
 }
 
 /** 예약 가능한 활성 리소스 (스펙 3.6) */

@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PostEditor } from "@/features/boards/PostEditor";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -25,15 +23,18 @@ export default async function NewPostPage({
 
   return (
     <>
-      <Link
-        href={`/board/${board.id}`}
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        {board.name}
-      </Link>
-
-      <PageHeader title="새 글 작성" description={board.name} />
+      <PageHeader
+        title="새 글 작성"
+        meta={
+          <>
+            <span>{board.name}</span>
+            <span>·</span>
+            <span>
+              {board.board_type === "notice" ? "공지 게시판" : "자유게시판"}
+            </span>
+          </>
+        }
+      />
 
       <PostEditor board={board} />
     </>

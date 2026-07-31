@@ -116,7 +116,7 @@ export function EmployeeFields({
         error={errors.team_id}
         hint={
           teamOptions.length === 0
-            ? "선택 가능한 팀이 없습니다. 조직 구조는 스펙 02에서 관리 화면이 추가됩니다."
+            ? "선택한 부서에 등록된 팀이 없습니다. 조직도 화면의 조직 구조 편집에서 팀을 추가할 수 있습니다."
             : undefined
         }
       >

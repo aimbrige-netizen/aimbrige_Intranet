@@ -7,7 +7,8 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Select } from "@/components/ui/Field";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
+import { TableToolbar } from "@/components/ui/TableToolbar";
 import { createBoard, deleteBoard } from "@/server/actions/boards";
 import {
   BOARD_TYPE_LABELS,
@@ -49,6 +50,15 @@ export function BoardManager({
     });
   };
 
+  const openCreate = () => {
+    setName("");
+    setBoardType("notice");
+    setDepartmentId("");
+    setErrors({});
+    setMessage(null);
+    setOpen(true);
+  };
+
   const remove = (board: BoardWithDepartment) => {
     if (!window.confirm(`"${board.name}" 게시판을 삭제하시겠습니까?`)) return;
     startTransition(async () => {
@@ -63,44 +73,46 @@ export function BoardManager({
 
   return (
     <>
-      <div className="mb-4 flex items-center justify-between gap-2">
-        <p className="text-caption">게시판 {boards.length}개</p>
-        <Button
-          size="small"
-          onClick={() => {
-            setName("");
-            setBoardType("notice");
-            setDepartmentId("");
-            setErrors({});
-            setMessage(null);
-            setOpen(true);
-          }}
-        >
-          <Plus className="size-3.5" />
-          게시판 추가
-        </Button>
-      </div>
+      <TableToolbar
+        count={`${boards.length}개`}
+        actions={
+          <Button size="small" onClick={openCreate}>
+            <Plus className="size-3.5" />
+            게시판 추가
+          </Button>
+        }
+      />
 
-      {boards.length === 0 ? (
-        <EmptyState icon={Megaphone} title="게시판이 없습니다" />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="ab-table min-w-[560px]">
-            <thead>
-              <tr>
-                <th>이름</th>
-                <th>타입</th>
-                <th>소속 부서</th>
-                <th className="w-20">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {boards.map((board) => (
+      <div className="overflow-x-auto">
+        <table className="ab-table ab-table--compact min-w-[560px]">
+          <thead>
+            <tr>
+              <th>이름</th>
+              <th className="w-28">타입</th>
+              <th className="w-40">소속 부서</th>
+              <th className="w-20">관리</th>
+            </tr>
+          </thead>
+          <tbody>
+            {boards.length === 0 ? (
+              <TableEmptyRow
+                colSpan={4}
+                icon={Megaphone}
+                title="개설된 게시판이 없습니다"
+                description="전사 공지나 팀별 게시판을 먼저 만들어 주세요."
+                action={
+                  <Button size="small" variant="secondary" onClick={openCreate}>
+                    게시판 만들기
+                  </Button>
+                }
+              />
+            ) : (
+              boards.map((board) => (
                 <tr key={board.id}>
                   <td className="font-bold text-ink">{board.name}</td>
                   <td>
                     <Badge
-                      tone={board.board_type === "notice" ? "primary" : "neutral"}
+                      tone={board.board_type === "notice" ? "info" : "neutral"}
                     >
                       {BOARD_TYPE_LABELS[board.board_type]}
                     </Badge>
@@ -118,11 +130,11 @@ export function BoardManager({
                     </button>
                   </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       <Modal
         open={open}

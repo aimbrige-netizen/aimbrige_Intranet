@@ -4,7 +4,8 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody } from "@/components/ui/Card";
-import { FormRow, Input, Select, Textarea } from "@/components/ui/Field";
+import { FormRow, Input, Textarea } from "@/components/ui/Field";
+import { FilterChip } from "@/components/ui/TableToolbar";
 import { createPost, updatePost } from "@/server/actions/boards";
 import { POST_CATEGORIES, type Board, type Post } from "./types";
 
@@ -80,21 +81,25 @@ export function PostEditor({
             {/* 카테고리·상단고정은 공지 타입만 (스펙 3.2) */}
             {isNotice ? (
               <>
-                <FormRow label="카테고리" htmlFor="p-category">
-                  <Select
-                    id="p-category"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    disabled={pending}
-                    className="md:max-w-52"
-                  >
-                    <option value="">선택 안 함</option>
+                {/* 목록의 필터 칩과 같은 조작으로 맞춘다 — 5개뿐이라 접을 이유가 없다 */}
+                <FormRow label="카테고리">
+                  <div className="flex flex-wrap gap-2">
+                    <FilterChip
+                      active={!category}
+                      onClick={() => setCategory("")}
+                    >
+                      선택 안 함
+                    </FilterChip>
                     {POST_CATEGORIES.map((c) => (
-                      <option key={c} value={c}>
+                      <FilterChip
+                        key={c}
+                        active={category === c}
+                        onClick={() => setCategory(c)}
+                      >
                         {c}
-                      </option>
+                      </FilterChip>
                     ))}
-                  </Select>
+                  </div>
                 </FormRow>
 
                 <FormRow label="상단 고정">

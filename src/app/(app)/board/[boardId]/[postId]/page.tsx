@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { PostDetailView } from "@/features/boards/PostDetailView";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { getBoard, getPostDetail, getReadStatus } from "@/features/boards/data";
@@ -32,22 +30,13 @@ export default async function PostPage({
       ? await getReadStatus(params.postId)
       : [];
 
+  // 목록으로 돌아가는 링크는 두지 않는다 — 모듈 패널의 활성 항목이 위치를 말한다
   return (
-    <>
-      <Link
-        href={`/board/${board.id}`}
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        {board.name}
-      </Link>
-
-      <PostDetailView
-        post={post}
-        currentEmployeeId={me.id}
-        isSystemAdmin={me.isSystemAdmin}
-        readStatus={readStatus}
-      />
-    </>
+    <PostDetailView
+      post={post}
+      currentEmployeeId={me.id}
+      isSystemAdmin={me.isSystemAdmin}
+      readStatus={readStatus}
+    />
   );
 }

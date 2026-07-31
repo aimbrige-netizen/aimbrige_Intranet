@@ -3,10 +3,20 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Eye, MessageSquare, Pencil, Send, Trash2, Users } from "lucide-react";
+import {
+  Eye,
+  MessageSquare,
+  Paperclip,
+  Pencil,
+  Pin,
+  Send,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { Callout } from "@/components/ui/Callout";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { Meter } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Field";
 import { AvatarWithName, Avatar } from "@/components/ui/Avatar";
@@ -19,6 +29,7 @@ import {
 } from "@/server/actions/boards";
 import { formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
+import { formatFileSize, percent } from "./format";
 import type { PostDetail, ReadStatusRow } from "./types";
 
 /** 게시글 상세 (스펙 3.3) */
@@ -104,9 +115,15 @@ export function PostDetailView({
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 {post.category ? (
-                  <Badge tone="primary">{post.category}</Badge>
+                  <Badge tone="neutral">{post.category}</Badge>
                 ) : null}
-                {post.is_pinned ? <Badge tone="danger">고정</Badge> : null}
+                {/* 고정은 위반이 아니다 — 빨강은 실제 위반·파괴적 동작에만 */}
+                {post.is_pinned ? (
+                  <Badge tone="neutral">
+                    <Pin className="mr-1 size-3 text-primary" aria-hidden />
+                    고정
+                  </Badge>
+                ) : null}
               </div>
               <h1 className="text-h1 text-ink">{post.title}</h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -126,23 +143,6 @@ export function PostDetailView({
             </div>
 
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              {isNotice && post.readCount !== null ? (
-                canSeeReads ? (
-                  <Button
-                    size="small"
-                    variant="secondary"
-                    onClick={() => setReadOpen(true)}
-                  >
-                    <Eye className="size-3.5" />
-                    읽음 {post.readCount}/{post.targetCount}
-                  </Button>
-                ) : (
-                  <Badge tone="neutral">
-                    읽음 {post.readCount}/{post.targetCount}
-                  </Badge>
-                )
-              ) : null}
-
               {canEdit ? (
                 <>
                   <Link href={`/board/${post.board_id}/${post.id}/edit`}>
@@ -166,6 +166,44 @@ export function PostDetailView({
             </div>
           </div>
 
+          {/*
+            열람률은 배지 하나로는 12/30과 28/30이 구분되지 않는다.
+            막대가 먼저 읽히고 숫자가 확인해 준다.
+          */}
+          {isNotice && post.readCount !== null && post.targetCount !== null ? (
+            <div className="mt-4 rounded-card border border-line bg-canvas px-4 py-3">
+              <Meter
+                value={post.readCount}
+                max={post.targetCount || 1}
+                tone={
+                  post.targetCount > 0 && post.readCount >= post.targetCount
+                    ? "positive"
+                    : "informative"
+                }
+                label={`이 공지를 ${percent(post.readCount, post.targetCount)}% 읽었습니다`}
+                valueLabel={`${post.readCount} / ${post.targetCount}명`}
+              />
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-label text-muted">
+                <span>열람 {post.readCount}명</span>
+                <span>·</span>
+                <span>미열람 {post.targetCount - post.readCount}명</span>
+                <span>·</span>
+                <span>대상 {post.targetCount}명</span>
+                {canSeeReads ? (
+                  <Button
+                    size="xsmall"
+                    variant="secondary"
+                    className="ml-auto"
+                    onClick={() => setReadOpen(true)}
+                  >
+                    <Eye className="size-3.5" />
+                    읽음 현황
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
           <div className="mt-5 whitespace-pre-wrap border-t border-line pt-5 text-body leading-relaxed text-ink">
             {post.content}
           </div>
@@ -173,8 +211,23 @@ export function PostDetailView({
           {post.attachments.length > 0 ? (
             <ul className="mt-5 divide-y divide-line border-t border-line pt-3">
               {post.attachments.map((file) => (
-                <li key={file.id} className="py-2 text-body text-ink">
-                  {file.file_name ?? file.file_url}
+                <li key={file.id}>
+                  <a
+                    href={file.file_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex items-center gap-2 py-2 text-body text-ink hover:underline"
+                  >
+                    <Paperclip className="size-3.5 shrink-0 text-muted" aria-hidden />
+                    <span className="min-w-0 truncate">
+                      {file.file_name ?? file.file_url}
+                    </span>
+                    {formatFileSize(file.file_size) ? (
+                      <span className="shrink-0 text-caption">
+                        {formatFileSize(file.file_size)}
+                      </span>
+                    ) : null}
+                  </a>
                 </li>
               ))}
             </ul>
@@ -299,21 +352,29 @@ export function PostDetailView({
         }
       >
         <div className="space-y-4">
+          <Meter
+            value={post.readCount ?? 0}
+            max={readStatus.length || 1}
+            tone={unread.length === 0 ? "positive" : "informative"}
+            label="열람 진행"
+            valueLabel={`${post.readCount ?? 0} / ${readStatus.length}명`}
+          />
+
+          {/* 미열람은 위반이 아니라 아직 오지 않은 상태다 — 파랑 */}
           {unread.length > 0 ? (
-            <div className="rounded-card border border-warn/40 bg-warn-light px-4 py-3 text-body text-ink">
-              <p className="flex items-center gap-2 font-bold">
-                <Users className="size-4 text-warn-ink" aria-hidden />
-                미열람 {unread.length}명
-              </p>
-              <p className="mt-1 text-label">
-                리마인드 이메일 발송은 메일 서비스(Resend) 연동 후 활성화됩니다.
-                현재는 미열람자 목록 확인만 가능합니다.
-              </p>
-            </div>
-          ) : null}
+            <Callout tone="info" title={`미열람 ${unread.length}명`}>
+              {unread
+                .slice(0, 8)
+                .map((row) => row.employee_name)
+                .join(", ")}
+              {unread.length > 8 ? ` 외 ${unread.length - 8}명` : ""}
+            </Callout>
+          ) : (
+            <Callout tone="success" title="대상자 전원이 열람했습니다" />
+          )}
 
           <div className="overflow-x-auto">
-            <table className="ab-table">
+            <table className="ab-table ab-table--compact">
               <thead>
                 <tr>
                   <th>이름</th>
@@ -332,7 +393,7 @@ export function PostDetailView({
                           {formatDateTime(row.read_at)}
                         </span>
                       ) : (
-                        <Badge tone="warn">미열람</Badge>
+                        <Badge tone="info">미열람</Badge>
                       )}
                     </td>
                   </tr>

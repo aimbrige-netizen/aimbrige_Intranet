@@ -62,8 +62,8 @@ export function CreateEmployeeButton({
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
-        <Plus className="size-4" />
+      <Button size="small" onClick={() => setOpen(true)}>
+        <Plus className="size-3.5" />
         임직원 추가
       </Button>
 

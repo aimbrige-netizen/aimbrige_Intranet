@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Building2, UserRound, UsersRound } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Field, Input, Select, Textarea } from "@/components/ui/Field";
+import { Field, Input, Textarea } from "@/components/ui/Field";
+import { OptionCardGrid } from "@/components/ui/OptionCardGrid";
 import {
   createCalendarEvent,
   updateCalendarEvent,
@@ -190,32 +192,42 @@ export function EventModal({
           </Field>
         </div>
 
-        <Field
-          label="공개범위"
-          required
-          htmlFor="e-visibility"
-          error={errors.visibility}
-          hint={
-            !canCreateTeamEvent
-              ? "소속 팀이 지정돼 있지 않아 팀 일정은 만들 수 없습니다."
-              : undefined
-          }
-        >
-          <Select
-            id="e-visibility"
+        {/*
+          공개범위는 "누가 보게 되는가"라 결과가 카드에 적혀 있어야 한다.
+          2줄짜리 select는 고를 수 있는 값만 알려주고 결과를 감춘다.
+        */}
+        <Field label="공개범위" required error={errors.visibility}>
+          <OptionCardGrid
+            columns={3}
             value={values.visibility}
-            onChange={(e) =>
-              patch({ visibility: e.target.value as FormValues["visibility"] })
-            }
-            disabled={pending}
-            className="md:max-w-52"
-          >
-            <option value="personal">개인</option>
-            <option value="team" disabled={!canCreateTeamEvent}>
-              팀
-            </option>
-            <option value="company">전사</option>
-          </Select>
+            onChange={(visibility) => patch({ visibility })}
+            className={pending ? "pointer-events-none opacity-60" : undefined}
+            options={[
+              {
+                value: "personal",
+                title: "개인",
+                description: "나만 볼 수 있습니다",
+                icon: UserRound,
+                meta: ["내 캘린더에만 표시"],
+              },
+              {
+                value: "team",
+                title: "팀",
+                description: "같은 팀 구성원이 함께 봅니다",
+                icon: UsersRound,
+                meta: ["팀 캘린더에 표시"],
+                disabled: !canCreateTeamEvent,
+                disabledLabel: "소속 팀 없음",
+              },
+              {
+                value: "company",
+                title: "전사",
+                description: "전 임직원이 볼 수 있습니다",
+                icon: Building2,
+                meta: ["전사 캘린더에 표시"],
+              },
+            ]}
+          />
         </Field>
 
         <Field label="설명" htmlFor="e-description">

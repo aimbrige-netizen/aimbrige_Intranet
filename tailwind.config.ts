@@ -75,9 +75,11 @@ const config: Config = {
          * SEED는 브랜드 색을 하나만 두므로, 이벤트 구분은 브랜드가 아니라
          * 유틸리티(semantic) 색으로 처리한다.
          */
+        /*
+         * 캘린더 리소스 예약 전용 톤. 다른 이벤트 종류는 전부 시맨틱 색
+         * (primary/success/info/warn/ink)으로 재배정돼서 여기 남은 건 이것뿐이다.
+         */
         event: {
-          company: "#009ceb", // info
-          "company-ink": "#0077b0",
           resource: "#868b94", // muted
           "resource-ink": "#5c6068",
         },

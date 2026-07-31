@@ -14,6 +14,10 @@ import {
 /**
  * 문서 상세의 결재 처리 버튼 (스펙 3.4)
  * 현재 단계 담당자에게만 승인/반려가, 관리자에게만 시행완료가 보인다.
+ *
+ * 상단 고정 액션 바 안에 들어가므로 버튼은 small 규격이다.
+ * 예전에는 본문 세 번째 카드 안에 medium 버튼으로 들어 있어서,
+ * 문서 내용과 첨부를 지나 스크롤해야 처리 버튼에 닿았다.
  */
 export function ApprovalActions({
   documentId,
@@ -77,11 +81,12 @@ export function ApprovalActions({
       <div className="flex flex-wrap gap-2">
         {canProcess ? (
           <>
-            <Button onClick={approve} disabled={pending}>
+            <Button size="small" onClick={approve} disabled={pending}>
               <Check className="size-4" />
               {pending ? "처리 중…" : "승인"}
             </Button>
             <Button
+              size="small"
               variant="secondary"
               onClick={() => {
                 setRejectOpen(true);
@@ -97,7 +102,12 @@ export function ApprovalActions({
         ) : null}
 
         {canComplete ? (
-          <Button variant="secondary" onClick={complete} disabled={pending}>
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={complete}
+            disabled={pending}
+          >
             <CircleCheckBig className="size-4" />
             시행완료 처리
           </Button>

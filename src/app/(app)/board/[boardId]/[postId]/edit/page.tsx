@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PostEditor } from "@/features/boards/PostEditor";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -29,15 +27,16 @@ export default async function EditPostPage({
 
   return (
     <>
-      <Link
-        href={`/board/${board.id}/${post.id}`}
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        게시글로 돌아가기
-      </Link>
-
-      <PageHeader title="게시글 수정" description={board.name} />
+      <PageHeader
+        title="게시글 수정"
+        meta={
+          <>
+            <span>{board.name}</span>
+            <span>·</span>
+            <span className="truncate">{post.title}</span>
+          </>
+        }
+      />
 
       <PostEditor board={board} post={post} />
     </>

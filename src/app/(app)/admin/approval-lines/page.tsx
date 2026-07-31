@@ -1,8 +1,13 @@
 import type { Metadata } from "next";
-import { TriangleAlert } from "lucide-react";
+import { GitBranch, ShieldAlert, UserCheck } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody } from "@/components/ui/Card";
-import { ApprovalLineEditor } from "@/features/approvals/ApprovalLineEditor";
+import { StatCard } from "@/components/ui/StatCard";
+import { Callout } from "@/components/ui/Callout";
+import {
+  ApprovalLineBoard,
+  type ApprovalLineRow,
+  type ApproverOption,
+} from "./ApprovalLineBoard";
 import { requireSystemAdmin } from "@/lib/auth/session";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { getApprovalLineConfigs } from "@/features/approvals/data";
@@ -22,43 +27,103 @@ export default async function ApprovalLinesPage() {
       .order("name"),
   ]);
 
-  const unset = configs.filter((c) => !c.step2_approver_id).length;
+  const rows: ApprovalLineRow[] = configs.map((config) => ({
+    documentType: config.document_type,
+    approverId: config.step2_approver_id,
+    approverName: config.approver?.name ?? null,
+    approverPosition: config.approver?.position ?? null,
+  }));
+
+  const total = rows.length;
+  const set = rows.filter((row) => row.approverId).length;
+  const unset = total - set;
+  const approvers = new Set(
+    rows.filter((row) => row.approverId).map((row) => row.approverId),
+  );
+
+  // 한 사람에게 몰려 있으면 그 사람이 자리를 비울 때 전사 결재가 멈춘다
+  const busiest = rows
+    .filter((row) => row.approverId)
+    .reduce<Record<string, number>>((acc, row) => {
+      const key = row.approverName ?? "-";
+      acc[key] = (acc[key] ?? 0) + 1;
+      return acc;
+    }, {});
+  const [topName, topCount] = Object.entries(busiest).sort(
+    (a, b) => b[1] - a[1],
+  )[0] ?? ["-", 0];
 
   return (
     <>
       <PageHeader
         title="결재라인 설정"
-        description="문서유형별 최종 승인자를 지정합니다. 1차 검토는 기안자 팀의 팀장으로 규칙 고정입니다."
+        meta={
+          <>
+            <span>문서유형 {total}종</span>
+            <span>·</span>
+            <span>2단계 결재 (팀장 → 최종 승인자)</span>
+          </>
+        }
       />
 
       {unset > 0 ? (
-        <div className="mb-4 flex gap-2.5 rounded-card border border-danger/30 bg-danger-light px-4 py-3">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
-          <p className="text-body text-ink">
-            최종 승인자가 지정되지 않은 유형이 <strong>{unset}개</strong> 있습니다.
-            해당 유형은 임직원이 기안 자체를 할 수 없으니 먼저 지정해 주세요.
-          </p>
-        </div>
+        <Callout
+          tone="danger"
+          title={`최종 승인자가 지정되지 않은 유형이 ${unset}개 있습니다`}
+          className="mb-5"
+        >
+          해당 유형은 임직원이 기안 자체를 할 수 없습니다. 아래에서 최종 승인자를
+          지정하면 즉시 기안이 열립니다.
+        </Callout>
       ) : null}
 
-      <Card>
-        <CardBody>
-          <ApprovalLineEditor
-            rows={configs.map((c) => ({
-              documentType: c.document_type,
-              approverId: c.step2_approver_id,
-              approverName: c.approver?.name ?? null,
-            }))}
-            employees={
-              (employees ?? []) as {
-                id: string;
-                name: string;
-                position: string | null;
-              }[]
-            }
-          />
-        </CardBody>
-      </Card>
+      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard
+          label="결재선 지정 완료"
+          value={set}
+          unit="건"
+          denominator={total}
+          denominatorUnit="건"
+          tone="brand"
+          icon={GitBranch}
+          emphasis
+          max={total || 1}
+          meterValue={set}
+          sub={unset > 0 ? `미지정 ${unset}건` : "모든 유형에서 기안 가능"}
+        />
+        <StatCard
+          label="기안 불가 유형"
+          value={unset}
+          unit="건"
+          denominator={total}
+          denominatorUnit="건"
+          tone={unset > 0 ? "critical" : "positive"}
+          icon={ShieldAlert}
+          sub={unset > 0 ? "최종 승인자 미지정" : "이상 없음"}
+        />
+        <StatCard
+          label="최종 승인자"
+          value={approvers.size}
+          unit="명"
+          denominator={total}
+          denominatorUnit="건"
+          tone="neutral"
+          icon={UserCheck}
+          state={approvers.size === 0 ? "empty" : "ok"}
+          sub={
+            approvers.size === 0
+              ? "아직 지정된 승인자가 없습니다"
+              : `최다 ${topName} ${topCount}건`
+          }
+        />
+      </div>
+
+      <ApprovalLineBoard
+        rows={rows}
+        employees={
+          (employees ?? []) as ApproverOption[]
+        }
+      />
     </>
   );
 }

@@ -38,6 +38,7 @@ export default async function AdminOverviewPage() {
     { count: unlinkedCount },
     { data: lines },
     { count: departmentCount },
+    { count: auditCount },
   ] = await Promise.all([
     supabase.from("employees").select("id", { count: "exact", head: true }),
     supabase
@@ -51,6 +52,14 @@ export default async function AdminOverviewPage() {
       .is("auth_user_id", null),
     supabase.from("approval_line_configs").select("document_type, step2_approver_id"),
     supabase.from("departments").select("id", { count: "exact", head: true }),
+    // 최근 7일 감사 로그 — "확인"이라는 맨텍스트 대신 실제 변경량을 보여준다
+    supabase
+      .from("audit_logs")
+      .select("id", { count: "exact", head: true })
+      .gte(
+        "created_at",
+        new Date(Date.now() - 7 * 86_400_000).toISOString(),
+      ),
   ]);
 
   const unsetLines = (lines ?? []).filter((l) => !l.step2_approver_id).length;
@@ -95,13 +104,21 @@ export default async function AdminOverviewPage() {
           sub={`부서 ${departmentCount ?? 0}개`}
         />
         <StatCard
-          label="계정 미연결"
-          value={unlinkedCount ?? 0}
+          label="계정 연결"
+          value={(employeeCount ?? 0) - (unlinkedCount ?? 0)}
           unit="명"
-          tone={unlinkedCount ? "warning" : "neutral"}
+          denominator={employeeCount ?? 0}
+          denominatorUnit="명"
+          tone={unlinkedCount ? "warning" : "positive"}
           icon={Shield}
           href="/admin/employees"
-          sub={unlinkedCount ? "로그인 불가 상태" : "전원 연결됨"}
+          max={employeeCount || 1}
+          meterValue={(employeeCount ?? 0) - (unlinkedCount ?? 0)}
+          sub={
+            unlinkedCount
+              ? `미연결 ${unlinkedCount}명 — 로그인 불가`
+              : "전원 로그인 가능"
+          }
         />
         <StatCard
           label="결재라인 설정"
@@ -115,9 +132,10 @@ export default async function AdminOverviewPage() {
           href="/admin/approval-lines"
         />
         <StatCard
-          label="감사 로그"
-          value="확인"
-          tone="neutral"
+          label="최근 7일 변경"
+          value={auditCount ?? 0}
+          unit="건"
+          tone="informative"
           icon={ScrollText}
           href="/admin/audit-logs"
           sub="권한·인사정보 변경 이력"

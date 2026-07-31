@@ -1,3 +1,11 @@
+import {
+  FileText,
+  House,
+  Package,
+  Plane,
+  Receipt,
+  type LucideIcon,
+} from "lucide-react";
 import type { Employee } from "@/types/db";
 
 /**
@@ -20,32 +28,50 @@ export type StepStatus = "pending" | "approved" | "rejected";
 
 export const DOCUMENT_TYPE_META: Record<
   DocumentType,
-  { label: string; description: string; hasDateRange: boolean }
+  {
+    label: string;
+    /** 목록 컬럼처럼 폭이 좁은 자리용 (3~4자) */
+    short: string;
+    description: string;
+    hasDateRange: boolean;
+    /** 유형 선택 카드·목록에서 글자 대신 먼저 읽히는 그래픽 */
+    icon: LucideIcon;
+  }
 > = {
   special_request: {
     label: "특별처리신청서",
+    short: "특별처리",
     description: "정해진 양식으로 담기 어려운 예외 처리를 요청합니다.",
     hasDateRange: false,
+    icon: FileText,
   },
   business_trip: {
     label: "출장신청서",
+    short: "출장",
     description: "출장지·기간·목적과 예상경비를 신청합니다.",
     hasDateRange: true,
+    icon: Plane,
   },
   expense: {
     label: "경비청구서",
+    short: "경비",
     description: "지출한 경비를 항목별로 청구합니다.",
     hasDateRange: false,
+    icon: Receipt,
   },
   purchase_request: {
     label: "비품구매요청서",
+    short: "비품구매",
     description: "업무에 필요한 비품 구매를 요청합니다.",
     hasDateRange: false,
+    icon: Package,
   },
   remote_work: {
     label: "재택근무신청서",
+    short: "재택",
     description: "재택근무 기간과 사유를 신청합니다.",
     hasDateRange: true,
+    icon: House,
   },
 };
 
@@ -56,15 +82,28 @@ export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
   completed: "시행완료",
 };
 
+/**
+ * 진행중은 "위반"이 아니라 정상 흐름이다.
+ * 예전엔 pending이 warn(노랑)이라 같은 목록에서 반려(빨강)와 나란히 놓였을 때
+ * 대기 문서가 전부 문제 있는 문서처럼 읽혔다. 대기·진행은 informative(파랑).
+ */
 export const DOCUMENT_STATUS_TONES: Record<
   DocumentStatus,
-  "warn" | "danger" | "success" | "primary"
+  "info" | "danger" | "success" | "primary"
 > = {
-  pending: "warn",
+  pending: "info",
   rejected: "danger",
   approved: "success",
   completed: "primary",
 };
+
+/** 목록 필터·요약 밴드의 고정 순서 */
+export const DOCUMENT_STATUS_ORDER: DocumentStatus[] = [
+  "pending",
+  "approved",
+  "completed",
+  "rejected",
+];
 
 /** 경비청구서 항목 */
 export interface ExpenseItem {
@@ -148,7 +187,12 @@ export interface ApprovalAttachment {
 }
 
 export interface ApprovalDocumentWithRelations extends ApprovalDocument {
-  requester: Pick<Employee, "id" | "name" | "position"> | null;
+  requester:
+    | (Pick<Employee, "id" | "name" | "position"> & {
+        department: { id: string; name: string } | null;
+        team: { id: string; name: string } | null;
+      })
+    | null;
   steps: ApprovalStepWithApprover[];
   attachments: ApprovalAttachment[];
 }

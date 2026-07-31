@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ApprovalForm } from "@/features/approvals/ApprovalForm";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -22,20 +20,26 @@ export default async function NewApprovalFormPage({
   if (!isDocumentType(params.type)) notFound();
 
   const line = await getLinePreview(me.id, params.type);
+  const meta = DOCUMENT_TYPE_META[params.type];
 
   return (
     <>
-      <Link
-        href="/approvals/new"
-        className="mb-3 inline-flex items-center gap-1 text-label text-primary hover:underline"
-      >
-        <ChevronLeft className="size-3.5" />
-        유형 선택
-      </Link>
-
       <PageHeader
-        title={DOCUMENT_TYPE_META[params.type].label}
-        description={`기안자 ${me.name}${me.position ? ` · ${me.position}` : ""}`}
+        title={meta.label}
+        description={meta.description}
+        meta={
+          <>
+            <span>기안자 {me.name}</span>
+            <span>·</span>
+            <span>{me.department?.name ?? "부서 미지정"}</span>
+            {me.position ? (
+              <>
+                <span>·</span>
+                <span>{me.position}</span>
+              </>
+            ) : null}
+          </>
+        }
       />
 
       <ApprovalForm documentType={params.type} line={line} />

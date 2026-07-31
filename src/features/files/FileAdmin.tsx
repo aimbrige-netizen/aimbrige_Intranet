@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Library, Plus, Trash2, Users } from "lucide-react";
+import {
+  ExternalLink,
+  Library,
+  Link2,
+  Plus,
+  Trash2,
+  Unlink,
+  Users,
+} from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { StatCard } from "@/components/ui/StatCard";
+import { TableEmptyRow } from "@/components/ui/EmptyState";
 import {
   addLibraryDocument,
   deleteFolderLink,
@@ -64,6 +73,29 @@ export function FileAdmin({
 
   const scopeOptions = scopeType === "team" ? teams : departments;
 
+  /**
+   * 연결 현황. "3건 등록됨"만으로는 많은지 적은지 알 수 없다 —
+   * 분모는 폴더를 가질 수 있는 조직 수(팀 + 부서)다.
+   */
+  const coverage = useMemo(() => {
+    const linked = new Set(folderLinks.map((row) => `${row.scopeType}:${row.scopeId}`));
+    const missing = [
+      ...teams.map((t) => ({ type: "team" as const, ...t })),
+      ...departments.map((d) => ({ type: "department" as const, ...d })),
+    ].filter((org) => !linked.has(`${org.type}:${org.id}`));
+
+    return {
+      total: teams.length + departments.length,
+      linked: folderLinks.length,
+      missing,
+    };
+  }, [folderLinks, teams, departments]);
+
+  const categories = useMemo(
+    () => new Set(libraryDocs.map((doc) => doc.category ?? "기타")).size,
+    [libraryDocs],
+  );
+
   const submitFolder = () => {
     setErrors({});
     setMessage(null);
@@ -106,6 +138,18 @@ export function FileAdmin({
     });
   };
 
+  const openFolderModal = () => {
+    setErrors({});
+    setMessage(null);
+    setFolderOpen(true);
+  };
+
+  const openLibModal = () => {
+    setErrors({});
+    setMessage(null);
+    setLibOpen(true);
+  };
+
   const removeFolder = (row: FolderLinkRow) => {
     if (!window.confirm(`${row.scopeName} 공유폴더 연결을 해제하시겠습니까?`)) return;
     startTransition(async () => {
@@ -138,6 +182,48 @@ export function FileAdmin({
 
   return (
     <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+        <StatCard
+          label="공유폴더 연결"
+          value={coverage.linked}
+          unit="개"
+          denominator={coverage.total}
+          denominatorUnit="개 조직"
+          tone="brand"
+          icon={Link2}
+          max={coverage.total || 1}
+          meterValue={coverage.linked}
+          sub={`팀 ${teams.length}개 · 부서 ${departments.length}개`}
+        />
+        <StatCard
+          label="연결 대기 조직"
+          value={coverage.missing.length}
+          unit="개"
+          denominator={coverage.total}
+          denominatorUnit="개"
+          tone="neutral"
+          icon={Unlink}
+          state={coverage.total === 0 ? "empty" : "ok"}
+          sub={
+            coverage.missing.length === 0
+              ? "모든 조직에 폴더가 연결되었습니다"
+              : coverage.missing
+                  .slice(0, 3)
+                  .map((org) => org.name)
+                  .join(" · ")
+          }
+        />
+        <StatCard
+          label="라이브러리 문서"
+          value={libraryDocs.length}
+          unit="건"
+          tone="neutral"
+          icon={Library}
+          state={libraryDocs.length === 0 ? "empty" : "ok"}
+          sub={`카테고리 ${categories}개`}
+        />
+      </div>
+
       <Card>
         <CardHeader
           title={
@@ -146,47 +232,64 @@ export function FileAdmin({
             </span>
           }
           description="Drive 폴더 주소를 붙여넣으면 폴더 ID를 자동으로 추출합니다."
+          density="compact"
           action={
-            <Button
-              size="small"
-              onClick={() => {
-                setErrors({});
-                setMessage(null);
-                setFolderOpen(true);
-              }}
-            >
+            <Button size="small" onClick={openFolderModal}>
               <Plus className="size-3.5" />
               폴더 등록
             </Button>
           }
         />
-        <CardBody className="p-0">
-          {folderLinks.length === 0 ? (
-            <EmptyState icon={Users} title="등록된 공유폴더가 없습니다" compact />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="ab-table min-w-[600px]">
-                <thead>
-                  <tr>
-                    <th>대상</th>
-                    <th>구분</th>
-                    <th>폴더 ID</th>
-                    <th className="w-20">관리</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {folderLinks.map((row) => (
+        <CardBody density="compact" className="!p-0">
+          <div className="overflow-x-auto">
+            <table className="ab-table ab-table--compact min-w-[600px]">
+              <thead>
+                <tr>
+                  <th>대상</th>
+                  <th className="w-20">구분</th>
+                  <th>Drive 폴더</th>
+                  <th className="w-16">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {folderLinks.length === 0 ? (
+                  <TableEmptyRow
+                    colSpan={4}
+                    icon={Users}
+                    title="등록된 공유폴더가 없습니다"
+                    description={`팀 ${teams.length}개 · 부서 ${departments.length}개가 연결을 기다리고 있습니다.`}
+                    action={
+                      <Button size="small" onClick={openFolderModal}>
+                        폴더 등록
+                      </Button>
+                    }
+                  />
+                ) : (
+                  folderLinks.map((row) => (
                     <tr key={row.id}>
                       <td className="font-bold text-ink">
                         {row.label ?? row.scopeName}
+                        {row.label ? (
+                          <span className="ml-1.5 text-caption">
+                            {row.scopeName}
+                          </span>
+                        ) : null}
                       </td>
                       <td>
                         <Badge tone="neutral">
                           {row.scopeType === "team" ? "팀" : "부서"}
                         </Badge>
                       </td>
-                      <td className="max-w-56 truncate text-caption">
-                        {row.driveFolderId}
+                      <td>
+                        <a
+                          href={`https://drive.google.com/drive/folders/${row.driveFolderId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary"
+                        >
+                          <span className="truncate">{row.driveFolderId}</span>
+                          <ExternalLink className="size-3 shrink-0" aria-hidden />
+                        </a>
                       </td>
                       <td>
                         <button
@@ -200,11 +303,11 @@ export function FileAdmin({
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardBody>
       </Card>
 
@@ -217,41 +320,59 @@ export function FileAdmin({
             </span>
           }
           description="삭제하면 목록에서만 빠지고 Drive의 실제 파일은 그대로 남습니다."
+          density="compact"
           action={
-            <Button
-              size="small"
-              onClick={() => {
-                setErrors({});
-                setMessage(null);
-                setLibOpen(true);
-              }}
-            >
+            <Button size="small" variant="secondary" onClick={openLibModal}>
               <Plus className="size-3.5" />
               문서 등록
             </Button>
           }
         />
-        <CardBody className="p-0">
-          {libraryDocs.length === 0 ? (
-            <EmptyState icon={Library} title="등록된 문서가 없습니다" compact />
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="ab-table min-w-[600px]">
-                <thead>
-                  <tr>
-                    <th>표시이름</th>
-                    <th>카테고리</th>
-                    <th>파일 ID</th>
-                    <th className="w-20">관리</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {libraryDocs.map((row) => (
+        <CardBody density="compact" className="!p-0">
+          <div className="overflow-x-auto">
+            <table className="ab-table ab-table--compact min-w-[600px]">
+              <thead>
+                <tr>
+                  <th>표시이름</th>
+                  <th className="w-32">카테고리</th>
+                  <th>Drive 파일</th>
+                  <th className="w-16">관리</th>
+                </tr>
+              </thead>
+              <tbody>
+                {libraryDocs.length === 0 ? (
+                  <TableEmptyRow
+                    colSpan={4}
+                    icon={Library}
+                    title="등록된 문서가 없습니다"
+                    description="여기에 등록한 문서가 사내 규정 화면의 카드로 노출됩니다."
+                    action={
+                      <Button
+                        size="small"
+                        variant="secondary"
+                        onClick={openLibModal}
+                      >
+                        문서 등록
+                      </Button>
+                    }
+                  />
+                ) : (
+                  libraryDocs.map((row) => (
                     <tr key={row.id}>
                       <td className="font-bold text-ink">{row.displayName}</td>
-                      <td>{row.category ?? "기타"}</td>
-                      <td className="max-w-56 truncate text-caption">
-                        {row.driveFileId}
+                      <td>
+                        <Badge tone="neutral">{row.category ?? "기타"}</Badge>
+                      </td>
+                      <td>
+                        <a
+                          href={`https://drive.google.com/file/d/${row.driveFileId}/view`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary"
+                        >
+                          <span className="truncate">{row.driveFileId}</span>
+                          <ExternalLink className="size-3 shrink-0" aria-hidden />
+                        </a>
                       </td>
                       <td>
                         <button
@@ -265,11 +386,11 @@ export function FileAdmin({
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardBody>
       </Card>
 

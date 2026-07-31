@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
+import { Callout } from "@/components/ui/Callout";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import {
   createCorrectionRequest,
@@ -142,10 +143,9 @@ function LeaveModal({
             <span className="text-h2 text-primary">{remainingDays}일</span>
           </div>
         ) : (
-          <p className="rounded-card bg-canvas px-4 py-3 text-label text-muted">
-            법정휴가는 연차 잔여에서 차감되지 않고 별도로 기록됩니다. 부여 일수·조건은
-            노무사 확인 후 확정될 예정입니다.
-          </p>
+          <Callout tone="info">
+            법정휴가는 연차 잔여에서 차감되지 않고 별도로 기록됩니다.
+          </Callout>
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

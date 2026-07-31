@@ -1,280 +1,395 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { ChevronLeft, ChevronRight, Plus, CalendarClock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarClock, CalendarPlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
-import { EmptyState } from "@/components/ui/EmptyState";
-import { EVENT_COLORS, PENDING_SOURCES } from "@/features/calendar/colors";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
+import { Meter, type MeterSegment, type MeterTone } from "@/components/ui/Progress";
+import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { FilterChip, TableToolbar } from "@/components/ui/TableToolbar";
+import { EVENT_COLORS } from "@/features/calendar/colors";
 import {
   WEEKDAY_LABELS,
-  addMonthsYm,
-  addDaysYmd,
-  monthGrid,
-  monthLabel,
   occursOn,
-  todayYmd,
   toSeoulTime,
-  toSeoulYmd,
-  weekGrid,
   weekdayOf,
 } from "@/features/calendar/date";
+import type { ResourceBookingBrief } from "@/features/calendar/data-client";
+import {
+  SCOPE_LABELS,
+  calendarHref,
+  kindsForScope,
+  type CalendarScope,
+  type CalendarView,
+} from "@/features/calendar/view";
 import { EventModal } from "@/features/calendar/EventModal";
 import { BookingModal } from "@/features/calendar/BookingModal";
 import { EventDetail } from "@/features/calendar/EventDetail";
-import type { CalendarItem, Holiday, Resource } from "@/types/db";
+import type {
+  CalendarItem,
+  CalendarItemKind,
+  Holiday,
+  Resource,
+} from "@/types/db";
 
 /**
- * 날짜 숫자 색상 — 일요일·공휴일은 빨강, 토요일은 파랑.
- * 국내 캘린더의 기본 관습이라 별도 옵션 없이 항상 적용한다.
+ * 캘린더 본문 (스펙 02 · 3.4)
+ *
+ * 기간 이동·뷰 전환은 서버(page.tsx)가 링크로 처리하고, 여기서는
+ * 종류 필터 · 날짜 선택 · 모달만 담당한다.
+ *
+ * 예전 구조와의 차이:
+ *  - 컨트롤 5그룹이 한 줄에 뒤엉켜 있었다 → 기간/뷰는 헤더 툴바로,
+ *    스코프·종류 필터·주요 액션은 목록 툴바로 나눴다.
+ *  - 범례는 색 이름만 읽어주는 죽은 줄이었다 → 건수 달린 필터 칩.
+ *  - '+N건 더'가 <p>라 4번째 일정부터는 열 방법이 없었다 → 버튼으로 바꾸고
+ *    그 날의 전체 목록을 아래 상세 표로 편다.
  */
+
+/** 날짜 숫자 색 — 일요일·공휴일 빨강, 토요일 파랑 (국내 캘린더 관습) */
 function dayToneClass(
   weekday: number,
   isHoliday: boolean,
-  inRange: boolean,
+  inRange = true,
 ): string {
   const tone =
     isHoliday || weekday === 0
       ? "text-danger"
       : weekday === 6
-        ? "text-primary"
+        ? "text-info"
         : "text-ink";
-  // 이번 달이 아닌 날은 같은 색조를 유지하면서 흐리게
   return inRange ? tone : `${tone} opacity-40`;
 }
 
-export type CalendarView = "month" | "week" | "list";
-export type CalendarScope = "personal" | "team" | "company";
-
-const SCOPE_LABELS: Record<CalendarScope, string> = {
-  personal: "개인",
-  team: "팀",
-  company: "전사",
+/** 요일별 분포 막대에서 쓸 종류별 톤 */
+const KIND_METER_TONE: Record<CalendarItemKind, MeterTone> = {
+  personal: "brand",
+  team: "positive",
+  company: "informative",
+  leave: "warning",
+  approval: "neutral",
+  resource_booking: "neutral",
 };
 
-const VIEW_LABELS: Record<CalendarView, string> = {
-  month: "월간",
-  week: "주간",
-  list: "리스트",
-};
+const MONTH_CHIP_LIMIT = 4;
 
-/**
- * 캘린더 메인 (스펙 02 · 3.4)
- * 데이터 조회는 서버가 하고, 여기서는 격자 배치·모달·네비게이션만 담당한다.
- * 뷰/기준일/스코프는 URL 쿼리로 유지해 새로고침·뒤로가기가 자연스럽게 동작한다.
- */
+interface DayRow {
+  date: string;
+  item: CalendarItem;
+}
+
 export function CalendarBoard({
   items,
   resources,
+  bookings,
+  bookingRange,
   holidays,
+  days,
   scope,
   view,
-  cursor,
+  cursorMonth,
+  today,
+  focusDate,
   canCreateTeamEvent,
+  openCreateOnMount,
 }: {
   items: CalendarItem[];
   resources: Resource[];
+  bookings: ResourceBookingBrief[];
+  /** 예약 가용성을 확인할 수 있는 구간 (yyyy-MM-dd) */
+  bookingRange: { from: string; to: string };
   /** 'yyyy-MM-dd' → 공휴일 */
   holidays: Record<string, Holiday>;
+  /** 표시 기간의 날짜 배열 — 서버가 만든 격자를 그대로 쓴다 */
+  days: string[];
   scope: CalendarScope;
   view: CalendarView;
-  /** 월간은 'yyyy-MM', 주간·리스트는 'yyyy-MM-dd' 기준 */
-  cursor: string;
+  /** 월간 격자에서 "이번 달"로 볼 'yyyy-MM' */
+  cursorMonth: string;
+  today: string;
+  /** 상세 패널이 처음 여는 날짜 */
+  focusDate: string;
   canCreateTeamEvent: boolean;
+  /** ?new=1로 들어오면 마운트 직후 작성 모달을 연다 */
+  openCreateOnMount?: boolean;
 }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [hidden, setHidden] = useState<Set<CalendarItemKind>>(new Set());
+  const [selectedDate, setSelectedDate] = useState(focusDate);
+  const [eventModalOpen, setEventModalOpen] = useState(!!openCreateOnMount);
   const [bookingModalOpen, setBookingModalOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarItem | null>(null);
-  const [selected, setSelected] = useState<CalendarItem | null>(null);
+  const [detail, setDetail] = useState<CalendarItem | null>(null);
   const [presetDate, setPresetDate] = useState<string | null>(null);
 
-  const setParam = (patch: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams.toString());
-    Object.entries(patch).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-      else params.delete(key);
+  const kinds = useMemo(() => kindsForScope(scope), [scope]);
+
+  /*
+   * 기간을 옮기면 서버가 새 days를 주지만 컴포넌트는 그대로 살아 있어서
+   * 지난 달에 고른 날짜가 그대로 남는다. 표시 기간 밖이면 기준일로 되돌린다.
+   */
+  const activeDate = days.includes(selectedDate) ? selectedDate : focusDate;
+
+  const counts = useMemo(() => {
+    const map = new Map<CalendarItemKind, number>();
+    kinds.forEach((kind) => map.set(kind, 0));
+    items.forEach((item) =>
+      map.set(item.kind, (map.get(item.kind) ?? 0) + 1),
+    );
+    return map;
+  }, [items, kinds]);
+
+  const visible = useMemo(
+    () => items.filter((item) => !hidden.has(item.kind)),
+    [items, hidden],
+  );
+
+  /** 날짜 → 그 날 걸치는 항목 */
+  const byDay = useMemo(() => {
+    const map = new Map<string, CalendarItem[]>();
+    days.forEach((day) => {
+      map.set(
+        day,
+        visible.filter((item) => occursOn(item, day)),
+      );
     });
-    const search = params.toString();
-    router.push(search ? `/calendar?${search}` : "/calendar");
-  };
+    return map;
+  }, [days, visible]);
 
-  const today = todayYmd();
-  const days =
-    view === "month"
-      ? monthGrid(cursor)
-      : view === "week"
-        ? weekGrid(cursor)
-        : [];
-
-  const shift = (direction: 1 | -1) => {
-    if (view === "month") {
-      setParam({ cursor: addMonthsYm(cursor, direction) });
-    } else if (view === "week") {
-      setParam({ cursor: addDaysYmd(cursor, direction * 7) });
-    } else {
-      setParam({ cursor: addDaysYmd(cursor, direction * 30) });
-    }
-  };
-
-  const goToday = () =>
-    setParam({ cursor: view === "month" ? today.slice(0, 7) : today });
-
-  const headingLabel =
-    view === "month"
-      ? monthLabel(cursor)
-      : view === "week"
-        ? `${days[0]} ~ ${days[6]}`
-        : `${cursor} 이후 30일`;
+  const toggle = (kind: CalendarItemKind) =>
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
 
   const openCreate = (date?: string) => {
+    setDetail(null);
     setEditing(null);
-    setPresetDate(date ?? today);
+    setPresetDate(date ?? activeDate);
     setEventModalOpen(true);
   };
 
   const openEdit = (item: CalendarItem) => {
-    setSelected(null);
+    setDetail(null);
     setEditing(item);
     setPresetDate(null);
     setEventModalOpen(true);
   };
 
+  // 빈 상태는 세 뷰가 같은 문구·같은 다음 행동을 쓴다
+  const filtered = items.length > 0 && visible.length === 0;
+  const empty = visible.length === 0;
+  const emptyTitle = filtered
+    ? "선택한 종류의 일정이 없습니다"
+    : "이 기간에 표시할 일정이 없습니다";
+  const emptyDescription = filtered
+    ? `이 기간에 ${items.length}건이 있지만 지금 켜둔 종류에는 없습니다.`
+    : "일정 추가로 개인·팀·전사 일정을 만들거나, 리소스 예약으로 회의실·차량을 잡을 수 있습니다.";
+  const emptyAction = filtered ? (
+    <Button size="small" variant="secondary" onClick={() => setHidden(new Set())}>
+      필터 초기화
+    </Button>
+  ) : (
+    <Button size="small" variant="secondary" onClick={() => openCreate()}>
+      <CalendarPlus className="size-3.5" />
+      일정 추가
+    </Button>
+  );
+
+  const selectedItems = byDay.get(activeDate) ?? [];
+
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        {/* 뷰 탭: 개인/팀/전사 */}
-        <div
-          role="tablist"
-          className="inline-flex rounded-card border border-line bg-subtle p-1"
-        >
-          {(Object.keys(SCOPE_LABELS) as CalendarScope[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={scope === key}
-              onClick={() => setParam({ scope: key === "personal" ? null : key })}
-              className={cn(
-                "rounded-sm px-3 py-1.5 text-body-sm transition-colors",
-                scope === key
-                  ? "bg-surface font-bold text-ink"
-                  : "text-muted hover:text-ink",
+      <TableToolbar
+        filters={
+          <>
+            <SegmentedControl
+              size="small"
+              ariaLabel="캘린더 범위"
+              value={scope}
+              options={(Object.keys(SCOPE_LABELS) as CalendarScope[]).map(
+                (key) => ({
+                  value: key,
+                  label: SCOPE_LABELS[key],
+                  href: calendarHref({ scope: key, view }),
+                }),
               )}
+            />
+            <span className="mx-1 hidden h-5 w-px bg-line md:block" aria-hidden />
+            <FilterChip
+              active={hidden.size === 0}
+              count={items.length}
+              onClick={() => setHidden(new Set())}
             >
-              {SCOPE_LABELS[key]}
-            </button>
-          ))}
-        </div>
-
-        {/* 월간/주간/리스트 */}
-        <div className="inline-flex rounded-card border border-line bg-subtle p-1">
-          {(Object.keys(VIEW_LABELS) as CalendarView[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={view === key}
-              onClick={() =>
-                setParam({
-                  view: key === "month" ? null : key,
-                  // 뷰가 바뀌면 기준 단위도 달라지므로 커서를 오늘로 리셋
-                  cursor: key === "month" ? today.slice(0, 7) : today,
-                })
-              }
-              className={cn(
-                "rounded-sm px-3 py-1.5 text-body-sm transition-colors",
-                view === key
-                  ? "bg-surface font-bold text-ink"
-                  : "text-muted hover:text-ink",
-              )}
+              전체
+            </FilterChip>
+            {kinds.map((kind) => {
+              const color = EVENT_COLORS[kind];
+              return (
+                <FilterChip
+                  key={kind}
+                  active={!hidden.has(kind)}
+                  count={counts.get(kind) ?? 0}
+                  onClick={() => toggle(kind)}
+                >
+                  <span
+                    className={cn("size-2 rounded-full", color.dot)}
+                    aria-hidden
+                  />
+                  {color.label}
+                </FilterChip>
+              );
+            })}
+          </>
+        }
+        count={`${visible.length}건 표시`}
+        actions={
+          <>
+            <Button size="small" onClick={() => openCreate()}>
+              <Plus className="size-3.5" />
+              일정 추가
+            </Button>
+            <Button
+              size="small"
+              variant="secondary"
+              onClick={() => setBookingModalOpen(true)}
             >
-              {VIEW_LABELS[key]}
-            </button>
-          ))}
+              <CalendarClock className="size-3.5" />
+              리소스 예약
+            </Button>
+          </>
+        }
+      />
+
+      {/* 월간에서만 — 격자는 "언제"를 보여주지만 "어디에 몰려 있는지"는 못 보여준다 */}
+      {view === "month" ? (
+        <WeekdayDistribution days={days} byDay={byDay} total={visible.length} />
+      ) : null}
+
+      {/* 빈 상태는 격자를 지우지 않는다. 구조가 사라지면 무엇을 담는 화면인지 알 수 없다 */}
+      {empty && view !== "list" ? (
+        <div className="mb-5 rounded-card border border-dashed border-line-strong bg-subtle">
+          <EmptyState
+            icon={CalendarPlus}
+            title={emptyTitle}
+            description={emptyDescription}
+            action={emptyAction}
+            compact
+          />
         </div>
-
-        <div className="flex items-center gap-1">
-          <Button size="small" variant="secondary" onClick={() => shift(-1)}>
-            <ChevronLeft className="size-3.5" />
-            <span className="sr-only">이전</span>
-          </Button>
-          <Button size="small" variant="secondary" onClick={goToday}>
-            오늘
-          </Button>
-          <Button size="small" variant="secondary" onClick={() => shift(1)}>
-            <ChevronRight className="size-3.5" />
-            <span className="sr-only">다음</span>
-          </Button>
-        </div>
-
-        <span className="text-h2 text-ink">{headingLabel}</span>
-
-        <div className="ml-auto flex gap-2">
-          <Button size="small" onClick={() => openCreate()}>
-            <Plus className="size-3.5" />
-            일정 추가
-          </Button>
-          <Button
-            size="small"
-            variant="secondary"
-            onClick={() => setBookingModalOpen(true)}
-          >
-            <CalendarClock className="size-3.5" />
-            리소스 예약
-          </Button>
-        </div>
-      </div>
-
-      {/* 범례 */}
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        {Object.entries(EVENT_COLORS).map(([key, color]) => (
-          <span key={key} className="flex items-center gap-1.5 text-label text-muted">
-            <span className={cn("size-2 rounded-full", color.dot)} aria-hidden />
-            {color.label}
-          </span>
-        ))}
-        {PENDING_SOURCES.map((source) => (
-          <span
-            key={source.label}
-            className="flex items-center gap-1.5 text-label text-muted/60"
-            title={`${source.spec} 작업 때 연동 예정`}
-          >
-            <span className="size-2 rounded-full bg-muted/40" aria-hidden />
-            {source.label}
-            <span className="text-[10px]">곧 연동 예정</span>
-          </span>
-        ))}
-      </div>
+      ) : null}
 
       <Card>
-        <CardBody className={view === "list" ? undefined : "p-2 md:p-3"}>
+        <CardBody
+          density="compact"
+          className={view === "list" ? "!p-0" : "!p-2 md:!p-3"}
+        >
           {view === "month" ? (
             <MonthGrid
               days={days}
-              cursor={cursor}
-              items={items}
+              byDay={byDay}
               holidays={holidays}
               today={today}
-              onPick={setSelected}
+              cursorMonth={cursorMonth}
+              activeDate={activeDate}
+              onSelectDay={setSelectedDate}
+              onPick={setDetail}
               onAdd={openCreate}
             />
           ) : view === "week" ? (
             <WeekGrid
               days={days}
-              items={items}
+              byDay={byDay}
               holidays={holidays}
               today={today}
-              onPick={setSelected}
+              activeDate={activeDate}
+              onSelectDay={setSelectedDate}
+              onPick={setDetail}
               onAdd={openCreate}
             />
           ) : (
-            <ListView items={items} holidays={holidays} onPick={setSelected} />
+            <ItemTable
+              rows={days.flatMap((day) =>
+                (byDay.get(day) ?? []).map((item) => ({ date: day, item })),
+              )}
+              holidays={holidays}
+              showDate
+              onPick={setDetail}
+              emptyTitle={emptyTitle}
+              emptyDescription={emptyDescription}
+              emptyAction={emptyAction}
+            />
           )}
         </CardBody>
       </Card>
+
+      {/* 선택한 날 상세 — 월간 셀에 다 못 들어간 항목이 여기로 온다 */}
+      {view !== "list" ? (
+        <Card className="mt-5">
+          <CardHeader
+            density="compact"
+            title={
+              <span className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    dayToneClass(
+                      weekdayOf(activeDate),
+                      !!holidays[activeDate],
+                    ),
+                  )}
+                >
+                  {activeDate} ({WEEKDAY_LABELS[weekdayOf(activeDate)]})
+                </span>
+                {holidays[activeDate] ? (
+                  <span className="text-label text-danger">
+                    {holidays[activeDate].name}
+                  </span>
+                ) : null}
+                {activeDate === today ? (
+                  <span className="text-label text-muted">오늘</span>
+                ) : null}
+              </span>
+            }
+            description={`${selectedItems.length}건 · 날짜 숫자를 누르면 다른 날로 바뀝니다`}
+            action={
+              <Button
+                size="small"
+                variant="secondary"
+                onClick={() => openCreate(activeDate)}
+              >
+                <Plus className="size-3.5" />
+                일정 추가
+              </Button>
+            }
+          />
+          <CardBody density="compact" className="!p-0">
+            <ItemTable
+              rows={selectedItems.map((item) => ({
+                date: activeDate,
+                item,
+              }))}
+              holidays={holidays}
+              onPick={setDetail}
+              emptyTitle="이 날에는 일정이 없습니다"
+              emptyDescription="비어 있는 날도 골격은 남깁니다. 위 '일정 추가'로 이 날짜에 바로 등록할 수 있습니다."
+              emptyAction={
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => openCreate(activeDate)}
+                >
+                  <CalendarPlus className="size-3.5" />
+                  일정 추가
+                </Button>
+              }
+            />
+          </CardBody>
+        </Card>
+      ) : null}
 
       <EventModal
         open={eventModalOpen}
@@ -288,38 +403,132 @@ export function CalendarBoard({
         open={bookingModalOpen}
         onClose={() => setBookingModalOpen(false)}
         resources={resources}
+        bookings={bookings}
+        rangeFrom={bookingRange.from}
+        rangeTo={bookingRange.to}
+        defaultDate={
+          activeDate >= bookingRange.from && activeDate <= bookingRange.to
+            ? activeDate
+            : today
+        }
       />
 
       <EventDetail
-        item={selected}
-        onClose={() => setSelected(null)}
+        item={detail}
+        onClose={() => setDetail(null)}
         onEdit={openEdit}
       />
     </>
   );
 }
 
+/**
+ * 요일별 분포.
+ * "이번 달 24건"만으로는 회의가 화·목에 몰렸다는 걸 알 수 없다.
+ * 종류별로 쌓아 막대 하나에 구성비까지 담는다.
+ */
+function WeekdayDistribution({
+  days,
+  byDay,
+  total,
+}: {
+  days: string[];
+  byDay: Map<string, CalendarItem[]>;
+  total: number;
+}) {
+  const columns = useMemo(() => {
+    return Array.from({ length: 7 }, (_, weekday) => {
+      const counts = new Map<CalendarItemKind, number>();
+      let sum = 0;
+      days
+        .filter((day) => weekdayOf(day) === weekday)
+        .forEach((day) => {
+          (byDay.get(day) ?? []).forEach((item) => {
+            counts.set(item.kind, (counts.get(item.kind) ?? 0) + 1);
+            sum += 1;
+          });
+        });
+      const segments: MeterSegment[] = Array.from(counts.entries()).map(
+        ([kind, value]) => ({
+          value,
+          tone: KIND_METER_TONE[kind],
+          label: `${EVENT_COLORS[kind].label} ${value}건`,
+        }),
+      );
+      return { weekday, sum, segments };
+    });
+  }, [days, byDay]);
+
+  const max = Math.max(1, ...columns.map((column) => column.sum));
+  const peak = columns.reduce((a, b) => (b.sum > a.sum ? b : a));
+
+  return (
+    <Card className="mb-5">
+      <CardHeader
+        density="compact"
+        title="요일별 일정 분포"
+        description={
+          total === 0
+            ? "이 기간에 표시할 일정이 없습니다"
+            : `${total}건 · 가장 많은 요일 ${WEEKDAY_LABELS[peak.weekday]}요일 ${peak.sum}건`
+        }
+      />
+      <CardBody density="compact">
+        <div className="grid grid-cols-7 gap-2">
+          {columns.map((column) => (
+            <div key={column.weekday}>
+              <p
+                className={cn(
+                  "mb-1.5 text-nano font-bold",
+                  column.weekday === 0
+                    ? "text-danger"
+                    : column.weekday === 6
+                      ? "text-info"
+                      : "text-muted",
+                )}
+              >
+                {WEEKDAY_LABELS[column.weekday]}
+              </p>
+              <Meter
+                max={max}
+                segments={column.segments}
+                size="md"
+                aria-label={`${WEEKDAY_LABELS[column.weekday]}요일 ${column.sum}건 (최대 ${max}건)`}
+              />
+              <p className="mt-1 text-nano tabular-nums text-muted">
+                {column.sum}건 /{max}
+              </p>
+            </div>
+          ))}
+        </div>
+      </CardBody>
+    </Card>
+  );
+}
+
 function EventChip({
   item,
   onPick,
-  showTime = true,
 }: {
   item: CalendarItem;
   onPick: (item: CalendarItem) => void;
-  showTime?: boolean;
 }) {
   const color = EVENT_COLORS[item.kind];
+  const time = item.allDay
+    ? "종일"
+    : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`;
+
   return (
     <button
       type="button"
       onClick={() => onPick(item)}
-      title={item.title}
+      title={`${color.label} · ${time} · ${item.title}`}
       className={cn(
-        "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-[11px] transition-opacity hover:opacity-80",
+        "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-nano transition-opacity duration-fast ease-standard hover:opacity-80",
         color.chip,
       )}
     >
-      {showTime && !item.allDay ? (
+      {!item.allDay ? (
         <span className="shrink-0 tabular-nums opacity-80">
           {toSeoulTime(item.startAt)}
         </span>
@@ -331,18 +540,22 @@ function EventChip({
 
 function MonthGrid({
   days,
-  cursor,
-  items,
+  byDay,
   holidays,
   today,
+  cursorMonth,
+  activeDate,
+  onSelectDay,
   onPick,
   onAdd,
 }: {
   days: string[];
-  cursor: string;
-  items: CalendarItem[];
+  byDay: Map<string, CalendarItem[]>;
   holidays: Record<string, Holiday>;
   today: string;
+  cursorMonth: string;
+  activeDate: string;
+  onSelectDay: (date: string) => void;
   onPick: (item: CalendarItem) => void;
   onAdd: (date: string) => void;
 }) {
@@ -357,7 +570,7 @@ function MonthGrid({
               index === 0
                 ? "text-danger"
                 : index === 6
-                  ? "text-primary"
+                  ? "text-info"
                   : "text-muted",
             )}
           >
@@ -368,39 +581,46 @@ function MonthGrid({
 
       <div className="grid grid-cols-7">
         {days.map((day, index) => {
-          const dayItems = items.filter((item) => occursOn(item, day));
-          const inMonth = day.startsWith(cursor);
+          const dayItems = byDay.get(day) ?? [];
+          const inMonth = day.startsWith(cursorMonth);
           const isToday = day === today;
-          const dayNumber = Number(day.slice(8, 10));
+          const isSelected = day === activeDate;
           const holiday = holidays[day];
           const weekday = index % 7;
+          const rest = dayItems.length - MONTH_CHIP_LIMIT;
 
           return (
             <div
               key={day}
               className={cn(
-                "min-h-24 border-b border-r border-line p-1 last:border-r-0",
+                "group relative min-h-32 border-b border-r border-line p-1 last:border-r-0",
                 !inMonth && "bg-canvas/60",
+                isSelected && "ring-1 ring-inset ring-primary",
               )}
             >
               <div className="mb-1 flex items-center gap-1">
                 <button
                   type="button"
-                  onClick={() => onAdd(day)}
-                  title={`${day} 일정 추가`}
+                  onClick={() => onSelectDay(day)}
+                  aria-pressed={isSelected}
+                  title={`${day} 일정 보기`}
                   className={cn(
-                    "grid size-6 place-items-center rounded-full text-label transition-colors hover:bg-primary-light",
+                    "grid size-6 shrink-0 place-items-center rounded-full text-label tabular-nums transition-colors duration-fast ease-standard",
                     isToday
-                      ? "bg-primary font-bold text-white hover:bg-primary"
-                      : dayToneClass(weekday, !!holiday, inMonth),
+                      ? "bg-primary font-bold text-white"
+                      : cn(
+                          dayToneClass(weekday, !!holiday, inMonth),
+                          "hover:bg-subtle",
+                        ),
                   )}
                 >
-                  {dayNumber}
+                  {Number(day.slice(8, 10))}
                 </button>
+
                 {holiday ? (
                   <span
                     className={cn(
-                      "truncate text-[10px] text-danger",
+                      "truncate text-nano text-danger",
                       !inMonth && "opacity-40",
                     )}
                     title={holiday.name}
@@ -408,16 +628,30 @@ function MonthGrid({
                     {holiday.name}
                   </span>
                 ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => onAdd(day)}
+                  aria-label={`${day} 일정 추가`}
+                  title={`${day} 일정 추가`}
+                  className="ml-auto grid size-5 shrink-0 place-items-center rounded-sm text-muted opacity-0 transition-opacity duration-fast ease-standard hover:bg-subtle hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
+                >
+                  <Plus className="size-3.5" aria-hidden />
+                </button>
               </div>
 
               <div className="space-y-0.5">
-                {dayItems.slice(0, 3).map((item) => (
+                {dayItems.slice(0, MONTH_CHIP_LIMIT).map((item) => (
                   <EventChip key={item.id} item={item} onPick={onPick} />
                 ))}
-                {dayItems.length > 3 ? (
-                  <p className="px-1.5 text-[10px] text-muted">
-                    +{dayItems.length - 3}건 더
-                  </p>
+                {rest > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => onSelectDay(day)}
+                    className="w-full rounded-sm px-1.5 py-0.5 text-left text-nano text-muted transition-colors duration-fast ease-standard hover:bg-subtle hover:text-ink"
+                  >
+                    +{rest}건 더 보기
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -430,48 +664,54 @@ function MonthGrid({
 
 function WeekGrid({
   days,
-  items,
+  byDay,
   holidays,
   today,
+  activeDate,
+  onSelectDay,
   onPick,
   onAdd,
 }: {
   days: string[];
-  items: CalendarItem[];
+  byDay: Map<string, CalendarItem[]>;
   holidays: Record<string, Holiday>;
   today: string;
+  activeDate: string;
+  onSelectDay: (date: string) => void;
   onPick: (item: CalendarItem) => void;
   onAdd: (date: string) => void;
 }) {
   return (
     <div className="grid grid-cols-1 gap-2 md:grid-cols-7">
       {days.map((day, index) => {
-        const dayItems = items.filter((item) => occursOn(item, day));
+        const dayItems = byDay.get(day) ?? [];
         const isToday = day === today;
+        const isSelected = day === activeDate;
         const holiday = holidays[day];
 
         return (
           <div
             key={day}
             className={cn(
-              "rounded-card border border-line p-2",
-              isToday && "border-primary bg-primary-light/40",
+              "group flex min-h-40 flex-col rounded-card border border-line p-2",
+              isSelected && "border-primary bg-surface shadow-raised",
             )}
           >
             <button
               type="button"
-              onClick={() => onAdd(day)}
-              className="mb-2 w-full text-left"
-              title={`${day} 일정 추가`}
+              onClick={() => onSelectDay(day)}
+              aria-pressed={isSelected}
+              title={`${day} 일정 보기`}
+              className="mb-2 w-full rounded-sm text-left transition-colors duration-fast ease-standard hover:bg-subtle"
             >
-              <span className="flex items-baseline gap-1.5">
+              <span className="flex items-baseline gap-1.5 px-1 py-0.5">
                 <span
                   className={cn(
                     "text-label font-bold",
                     index === 0
                       ? "text-danger"
                       : index === 6
-                        ? "text-primary"
+                        ? "text-info"
                         : "text-muted",
                   )}
                 >
@@ -479,30 +719,42 @@ function WeekGrid({
                 </span>
                 <span
                   className={cn(
-                    "text-body",
+                    "text-body tabular-nums",
                     isToday
                       ? "font-bold text-primary"
-                      : dayToneClass(index, !!holiday, true),
+                      : dayToneClass(index, !!holiday),
                   )}
                 >
                   {Number(day.slice(8, 10))}
                 </span>
+                <span className="ml-auto text-nano tabular-nums text-muted">
+                  {dayItems.length}건
+                </span>
               </span>
               {holiday ? (
-                <span className="mt-0.5 block truncate text-[10px] text-danger">
+                <span className="block truncate px-1 text-nano text-danger">
                   {holiday.name}
                 </span>
               ) : null}
             </button>
 
-            <div className="space-y-1">
-              {dayItems.length === 0 ? (
-                <p className="py-2 text-center text-[11px] text-muted/60">-</p>
-              ) : (
-                dayItems.map((item) => (
-                  <EventChip key={item.id} item={item} onPick={onPick} />
-                ))
-              )}
+            <div className="flex flex-1 flex-col gap-1">
+              {dayItems.map((item) => (
+                <EventChip key={item.id} item={item} onPick={onPick} />
+              ))}
+              {/* 하이픈 한 글자는 "없음"을 알려줄 뿐 다음 행동을 주지 않는다 */}
+              <button
+                type="button"
+                onClick={() => onAdd(day)}
+                className={cn(
+                  "w-full rounded-sm border border-dashed border-line-strong px-1.5 py-1 text-nano text-muted transition-colors duration-fast ease-standard hover:border-primary hover:text-primary",
+                  dayItems.length > 0 &&
+                    "opacity-0 focus-visible:opacity-100 group-hover:opacity-100",
+                )}
+                title={`${day} 일정 추가`}
+              >
+                + 일정
+              </button>
             </div>
           </div>
         );
@@ -511,88 +763,108 @@ function WeekGrid({
   );
 }
 
-function ListView({
-  items,
+/**
+ * 리스트 뷰와 '선택한 날' 패널이 공유하는 조밀 표.
+ * 예전 리스트 뷰는 ul + 커스텀 행이라 다른 화면의 표와 스캔 방식이 달랐고,
+ * 비면 thead 없이 통째로 사라졌다.
+ */
+function ItemTable({
+  rows,
   holidays,
+  showDate = false,
   onPick,
+  emptyTitle,
+  emptyDescription,
+  emptyAction,
 }: {
-  items: CalendarItem[];
+  rows: DayRow[];
   holidays: Record<string, Holiday>;
+  showDate?: boolean;
   onPick: (item: CalendarItem) => void;
+  emptyTitle: string;
+  emptyDescription?: string;
+  emptyAction?: React.ReactNode;
 }) {
-  if (items.length === 0) {
-    return (
-      <EmptyState
-        icon={CalendarClock}
-        title="표시할 일정이 없습니다"
-        description="상단 '일정 추가'로 새 일정을 만들어 보세요."
-      />
-    );
-  }
-
-  // 날짜별로 묶어 보여준다
-  const groups = new Map<string, CalendarItem[]>();
-  items.forEach((item) => {
-    const key = toSeoulYmd(item.startAt);
-    groups.set(key, [...(groups.get(key) ?? []), item]);
-  });
+  const colSpan = showDate ? 5 : 4;
 
   return (
-    <ul className="divide-y divide-line">
-      {Array.from(groups.entries()).map(([date, group]: [string, CalendarItem[]]) => (
-        <li key={date} className="px-4 py-3">
-          <p className="mb-2 flex items-center gap-2 text-label font-bold text-muted">
-            <span
-              className={cn(
-                weekdayOf(date) === 0
-                  ? "text-danger"
-                  : weekdayOf(date) === 6
-                    ? "text-primary"
-                    : undefined,
-              )}
-            >
-              {date} ({WEEKDAY_LABELS[weekdayOf(date)]})
-            </span>
-            {holidays[date] ? (
-              <span className="font-normal text-danger">
-                {holidays[date].name}
-              </span>
-            ) : null}
-          </p>
-          <ul className="space-y-1.5">
-            {group.map((item) => {
+    <div className="overflow-x-auto">
+      <table
+        className={cn(
+          "ab-table ab-table--compact",
+          showDate ? "min-w-[720px]" : "min-w-[560px]",
+        )}
+      >
+        <thead>
+          <tr>
+            {showDate ? <th className="w-40">날짜</th> : null}
+            <th className="w-28">시간</th>
+            <th className="w-28">종류</th>
+            <th>제목</th>
+            <th className="w-32">관련자</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.length === 0 ? (
+            <TableEmptyRow
+              colSpan={colSpan}
+              icon={CalendarClock}
+              title={emptyTitle}
+              description={emptyDescription}
+              action={emptyAction}
+            />
+          ) : (
+            rows.map(({ date, item }) => {
               const color = EVENT_COLORS[item.kind];
+              const weekday = weekdayOf(date);
+              const holiday = holidays[date];
+
               return (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => onPick(item)}
-                    className="flex w-full items-center gap-2 rounded-card px-2 py-1.5 text-left transition-colors hover:bg-canvas"
-                  >
-                    <span
-                      className={cn("size-2 shrink-0 rounded-full", color.dot)}
-                      aria-hidden
-                    />
-                    <span className="w-24 shrink-0 text-label tabular-nums text-muted">
-                      {item.allDay
-                        ? "종일"
-                        : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`}
-                    </span>
-                    <span className="truncate text-body text-ink">
-                      {item.title}
-                    </span>
-                    {item.ownerName ? (
-                      <span className="ml-auto shrink-0 text-caption">
-                        {item.ownerName}
+                <tr key={`${date}-${item.id}`}>
+                  {showDate ? (
+                    <td className="whitespace-nowrap tabular-nums">
+                      <span className={dayToneClass(weekday, !!holiday)}>
+                        {date.slice(5)} ({WEEKDAY_LABELS[weekday]})
                       </span>
-                    ) : null}
-                  </button>
-                </li>
+                      {holiday ? (
+                        <span className="ml-1.5 text-nano text-danger">
+                          {holiday.name}
+                        </span>
+                      ) : null}
+                    </td>
+                  ) : null}
+                  <td className="whitespace-nowrap tabular-nums text-muted">
+                    {item.allDay
+                      ? "종일"
+                      : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`}
+                  </td>
+                  <td>
+                    <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-label text-muted">
+                      <span
+                        className={cn("size-2 rounded-full", color.dot)}
+                        aria-hidden
+                      />
+                      {color.label}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      onClick={() => onPick(item)}
+                      className="block w-full truncate text-left text-body-sm text-ink transition-colors duration-fast ease-standard hover:text-primary"
+                    >
+                      {item.title}
+                    </button>
+                  </td>
+                  <td className="truncate text-caption">
+                    {item.ownerName ?? "-"}
+                  </td>
+                </tr>
               );
-            })}
-          </ul>
-        </li>
-      ))}
-    </ul>
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
   );
 }

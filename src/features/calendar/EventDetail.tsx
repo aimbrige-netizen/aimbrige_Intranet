@@ -2,21 +2,47 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Clock, Pencil, Trash2, UserRound } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { Badge } from "@/components/ui/Badge";
+import { Callout } from "@/components/ui/Callout";
 import { EVENT_COLORS } from "@/features/calendar/colors";
-import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
+import {
+  WEEKDAY_LABELS,
+  addDaysYmd,
+  toSeoulTime,
+  toSeoulYmd,
+  weekdayOf,
+} from "@/features/calendar/date";
 import {
   deleteCalendarEvent,
   deleteResourceBooking,
 } from "@/server/actions/calendar";
-import type { CalendarItem } from "@/types/db";
+import { cn } from "@/lib/utils";
+import type { CalendarItem, CalendarItemKind } from "@/types/db";
+
+/** 이 항목이 어디에서 왔고 누가 보는지 */
+const SOURCE_LABELS: Record<CalendarItemKind, string> = {
+  personal: "나만 보기",
+  team: "팀 공개",
+  company: "전사 공개",
+  leave: "승인된 휴가",
+  approval: "승인된 결재 문서",
+  resource_booking: "리소스 예약",
+};
+
+/** 수정할 수 없는 항목은 왜 못 고치는지까지 말해준다 */
+const LOCK_NOTES: Partial<Record<CalendarItemKind, string>> = {
+  leave: "승인된 휴가는 근태 신청 내역에서 취소할 수 있습니다.",
+  approval: "승인된 출장·재택은 결재 문서를 따라 표시됩니다.",
+};
 
 /**
  * 일정 상세 (스펙 02 · 3.4)
- * 본인 항목이면 수정/삭제 버튼을 노출한다.
+ *
+ * 예전에는 배지 하나 + 문장 세 줄이라 "언제부터 언제까지 몇 시간짜리인지",
+ * "이게 어디에서 온 항목인지"를 읽는 사람이 조합해야 했다.
+ * 값은 라벨-값 격자로 세우고, 수정 불가 사유는 별도 블록으로 분리한다.
  */
 export function EventDetail({
   item,
@@ -50,9 +76,19 @@ export function EventDetail({
     });
   };
 
+  const startYmd = toSeoulYmd(item.startAt);
+  // 종일 항목은 종료가 다음 날 자정으로 저장돼 있어 하루 되돌려 보여준다
+  const endYmd = item.allDay
+    ? addDaysYmd(toSeoulYmd(item.endAt), -1)
+    : toSeoulYmd(item.endAt);
+
   const period = item.allDay
-    ? `${toSeoulYmd(item.startAt)} (종일)`
-    : `${toSeoulYmd(item.startAt)} ${toSeoulTime(item.startAt)} – ${toSeoulTime(item.endAt)}`;
+    ? startYmd === endYmd
+      ? `${withWeekday(startYmd)} 종일`
+      : `${withWeekday(startYmd)} ~ ${withWeekday(endYmd)}`
+    : `${withWeekday(startYmd)} ${toSeoulTime(item.startAt)} – ${toSeoulTime(item.endAt)}`;
+
+  const lockNote = LOCK_NOTES[item.kind];
 
   return (
     <Modal
@@ -89,30 +125,82 @@ export function EventDetail({
         )
       }
     >
-      <div className="space-y-3">
-        <Badge tone="neutral">
-          <span className={`mr-1.5 inline-block size-2 rounded-full ${color.dot}`} />
-          {color.label}
-        </Badge>
-
-        <p className="flex items-center gap-2 text-body text-ink">
-          <Clock className="size-4 shrink-0 text-muted" aria-hidden />
-          {period}
-        </p>
-
-        {item.ownerName ? (
-          <p className="flex items-center gap-2 text-body text-ink">
-            <UserRound className="size-4 shrink-0 text-muted" aria-hidden />
-            {item.ownerName}
-          </p>
-        ) : null}
+      <div className="space-y-4">
+        <dl className="grid grid-cols-[72px_1fr] gap-x-3 gap-y-2.5">
+          <Row label="종류">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                className={cn("size-2 rounded-full", color.dot)}
+                aria-hidden
+              />
+              {color.label}
+            </span>
+          </Row>
+          <Row label="일시">
+            <span className="tabular-nums">{period}</span>
+          </Row>
+          <Row label="소요">
+            <span className="tabular-nums">{duration(item)}</span>
+          </Row>
+          <Row label={isBooking ? "예약자" : "등록자"}>
+            {item.ownerName ?? "-"}
+          </Row>
+          <Row label={isBooking ? "구분" : "공개범위"}>
+            {SOURCE_LABELS[item.kind]}
+          </Row>
+        </dl>
 
         {item.description ? (
-          <p className="whitespace-pre-wrap rounded-card bg-canvas px-3 py-2 text-body text-ink">
-            {item.description}
-          </p>
+          <div>
+            <p className="mb-1 text-label font-bold text-ink">
+              {isBooking ? "예약 목적" : "설명"}
+            </p>
+            <p className="whitespace-pre-wrap rounded-card bg-canvas px-3 py-2 text-body-sm text-ink">
+              {item.description}
+            </p>
+          </div>
+        ) : null}
+
+        {!item.editable ? (
+          <Callout tone="neutral">
+            {lockNote ?? "다른 직원이 등록한 항목이라 열람만 할 수 있습니다."}
+          </Callout>
         ) : null}
       </div>
     </Modal>
   );
+}
+
+function Row({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      <dt className="pt-0.5 text-label text-muted">{label}</dt>
+      <dd className="text-body-sm text-ink">{children}</dd>
+    </>
+  );
+}
+
+/** '2026-07-31 (금)' */
+function withWeekday(ymd: string): string {
+  return `${ymd} (${WEEKDAY_LABELS[weekdayOf(ymd)]})`;
+}
+
+function duration(item: CalendarItem): string {
+  const ms = new Date(item.endAt).getTime() - new Date(item.startAt).getTime();
+  if (ms <= 0) return "-";
+  if (item.allDay) {
+    const days = Math.round(ms / 86_400_000);
+    return `${days}일`;
+  }
+  const minutes = Math.round(ms / 60_000);
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${rest}분`;
+  return rest === 0 ? `${hours}시간` : `${hours}시간 ${rest}분`;
 }
