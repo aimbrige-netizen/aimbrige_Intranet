@@ -386,10 +386,312 @@ async function main() {
   // ── 9) 결재 문서 ──────────────────────────────────────────────────
   await seedApprovals(empIds);
 
+  // ── 10) 프로젝트 · 마일스톤 (스펙 10) ──────────────────────────────
+  const projectIds = await seedProjects(empIds, teamIds);
+
+  // ── 11) 업무일지 · 할일 · 목표 (스펙 09) ──────────────────────────
+  await seedWorkItems(empIds, projectIds);
+
   console.log(
     `\n✔ 데모 시딩 완료 (임직원 ${allIds.length}명).` +
       `\n  되돌리려면: npm run seed:demo -- --clean\n`,
   );
+}
+
+/**
+ * 프로젝트와 마일스톤.
+ *
+ * 진행률은 저장하지 않고 "완료 마일스톤 / 전체"로 계산하므로, 프로젝트마다
+ * 완료 비율이 달라야 진행률 바가 의미를 갖는다. 전부 0%거나 전부 100%면
+ * 그 UI가 제대로 도는지 알 수 없다.
+ */
+async function seedProjects(
+  empIds: Map<string, string>,
+  teamIds: Map<string, string>,
+): Promise<string[]> {
+  const { count: existing } = await supabase
+    .from("projects")
+    .select("id", { count: "exact", head: true });
+  if ((existing ?? 0) > 0) {
+    const { data } = await supabase.from("projects").select("id");
+    console.log("· 프로젝트 — 이미 있어 건너뜀");
+    return (data ?? []).map((p) => p.id as string);
+  }
+
+  const specs = [
+    {
+      name: "인트라넷 구축",
+      team: "플랫폼개발팀",
+      owner: "hjchoi",
+      status: "in_progress",
+      startOffset: -120,
+      endOffset: 30,
+      description: "근태·전자결재·게시판을 한 곳에 모은 사내 인트라넷.",
+      milestones: [
+        { title: "요구사항 정의", dueOffset: -110, done: true },
+        { title: "인증·조직도", dueOffset: -80, done: true },
+        { title: "근태·전자결재", dueOffset: -40, done: true },
+        { title: "게시판·파일함", dueOffset: -10, done: true },
+        { title: "업무일지·프로젝트", dueOffset: 14, done: false },
+        { title: "사내 오픈", dueOffset: 30, done: false },
+      ],
+    },
+    {
+      name: "2026 하반기 채용",
+      team: "인사총무팀",
+      owner: "jhkim",
+      status: "in_progress",
+      startOffset: -45,
+      endOffset: 60,
+      description: "개발·영업 직군 경력 채용.",
+      milestones: [
+        { title: "채용 공고 게시", dueOffset: -40, done: true },
+        { title: "1차 서류 심사", dueOffset: -12, done: true },
+        { title: "실무 면접", dueOffset: 7, done: false },
+        { title: "최종 합격 통보", dueOffset: 45, done: false },
+      ],
+    },
+    {
+      name: "영업 CRM 도입",
+      team: "영업1팀",
+      owner: "arshin",
+      status: "planning",
+      startOffset: 10,
+      endOffset: 120,
+      description: "고객사 이력 관리를 스프레드시트에서 옮긴다.",
+      milestones: [
+        { title: "솔루션 비교", dueOffset: 20, done: false },
+        { title: "파일럿 운영", dueOffset: 60, done: false },
+      ],
+    },
+    {
+      name: "회계 시스템 이관",
+      team: "재무회계팀",
+      owner: "mjpark",
+      status: "on_hold",
+      startOffset: -70,
+      endOffset: -5,
+      description: "예산 확정 전까지 보류.",
+      milestones: [{ title: "요건 정리", dueOffset: -60, done: true }],
+    },
+    {
+      name: "사내 복지제도 개편",
+      team: "인사총무팀",
+      owner: "sylee",
+      status: "completed",
+      startOffset: -200,
+      endOffset: -30,
+      description: "복지포인트·유연근무 도입.",
+      result: "복지포인트 연 120만원, 시차출퇴근 도입 완료. 만족도 조사 4.2/5.",
+      milestones: [
+        { title: "직원 설문", dueOffset: -190, done: true },
+        { title: "제도 설계", dueOffset: -120, done: true },
+        { title: "시행", dueOffset: -30, done: true },
+      ],
+    },
+  ];
+
+  const ids: string[] = [];
+  for (const spec of specs) {
+    const ownerId = empIds.get(spec.owner);
+    if (!ownerId) continue;
+
+    const { data: created, error } = await supabase
+      .from("projects")
+      .insert({
+        name: spec.name,
+        team_id: teamIds.get(spec.team) ?? null,
+        owner_id: ownerId,
+        status: spec.status,
+        start_date: addDays(TODAY, spec.startOffset),
+        end_date: addDays(TODAY, spec.endOffset),
+        description: spec.description,
+        result_summary: spec.result ?? null,
+      })
+      .select("id")
+      .single();
+    if (error) fail(`프로젝트 생성 실패(${spec.name}): ${error.message}`);
+    ids.push(created.id);
+
+    /*
+     * is_completed와 completed_at은 CHECK 제약으로 묶여 있다.
+     * 한쪽만 쓰면 저장이 통째로 실패한다.
+     */
+    const milestones = spec.milestones.map((m, index) => ({
+      project_id: created.id,
+      title: m.title,
+      due_date: addDays(TODAY, m.dueOffset),
+      is_completed: m.done,
+      completed_at: m.done
+        ? new Date(`${addDays(TODAY, m.dueOffset)}T09:00:00+09:00`).toISOString()
+        : null,
+      sort_order: index,
+    }));
+
+    const { error: msError } = await supabase
+      .from("project_milestones")
+      .insert(milestones);
+    if (msError) fail(`마일스톤 생성 실패(${spec.name}): ${msError.message}`);
+  }
+
+  console.log(`· 프로젝트 ${ids.length}건 · 마일스톤 ${specs.reduce((s, p) => s + p.milestones.length, 0)}건`);
+  return ids;
+}
+
+/**
+ * 업무일지 · 할일 · 목표.
+ *
+ * 업무일지는 사람마다 기록 습관이 달라야 한다 — 전원이 매일 쓰면
+ * "기록한 날 n/근무일 m" 지표가 항상 100%라 그 UI가 도는지 알 수 없다.
+ */
+async function seedWorkItems(
+  empIds: Map<string, string>,
+  projectIds: string[],
+) {
+  const { count: existing } = await supabase
+    .from("work_logs")
+    .select("id", { count: "exact", head: true });
+  if ((existing ?? 0) > 0) {
+    console.log("· 업무일지·할일·목표 — 이미 있어 건너뜀");
+    return;
+  }
+
+  const slugs = Array.from(empIds.keys());
+
+  // ── 업무일지: 최근 4주 ──────────────────────────────────────────
+  const TASKS = [
+    "결재 모듈 화면 재조립",
+    "고객사 미팅 준비 자료 정리",
+    "월말 마감 대사",
+    "채용 공고 초안 검토",
+    "근태 데이터 이관 스크립트 작성",
+    "팀 주간회의 진행",
+    "신규 입사자 온보딩 가이드 정리",
+    "분기 실적 취합",
+    "장애 대응 및 원인 분석",
+    "제도 개편 설문 결과 분석",
+  ];
+
+  const logs: Record<string, unknown>[] = [];
+  slugs.forEach((slug, personIndex) => {
+    const employeeId = empIds.get(slug)!;
+    const next = rand(personIndex * 104729 + 7);
+
+    for (let back = 27; back >= 0; back -= 1) {
+      const date = addDays(TODAY, -back);
+      const weekday = weekdayOf(date);
+      if (weekday === 0 || weekday === 6) continue;
+
+      // 사람마다 기록 습관이 다르다 (55~95%)
+      const habit = 0.55 + (personIndex % 5) * 0.1;
+      if (next() > habit) continue;
+
+      const task = TASKS[Math.floor(next() * TASKS.length)];
+      // 60%만 프로젝트 태깅 — 태깅 비율 지표가 100%면 의미가 없다
+      const tagged = projectIds.length > 0 && next() < 0.6;
+
+      logs.push({
+        employee_id: employeeId,
+        log_date: date,
+        content: `${task}. ${next() < 0.5 ? "이어서 내일 마무리 예정." : "완료."}`,
+        project_id: tagged
+          ? projectIds[Math.floor(next() * projectIds.length)]
+          : null,
+      });
+    }
+  });
+
+  for (let i = 0; i < logs.length; i += 500) {
+    const { error } = await supabase
+      .from("work_logs")
+      .insert(logs.slice(i, i + 500));
+    if (error) fail(`업무일지 생성 실패: ${error.message}`);
+  }
+  console.log(`· 업무일지 ${logs.length}건`);
+
+  // ── 할일 ────────────────────────────────────────────────────────
+  const TODO_TEXTS = [
+    "주간보고 작성",
+    "경비 영수증 정리",
+    "코드리뷰 3건",
+    "거래처 견적 회신",
+    "교육 이수하기",
+    "휴가 계획 등록",
+    "장비 반납 신청",
+    "회의록 공유",
+  ];
+
+  const todos: Record<string, unknown>[] = [];
+  slugs.forEach((slug, personIndex) => {
+    const employeeId = empIds.get(slug)!;
+    const next = rand(personIndex * 7919 + 31);
+    const count = 3 + Math.floor(next() * 4);
+
+    for (let i = 0; i < count; i += 1) {
+      const done = next() < 0.35;
+      // 기한 지난 항목이 있어야 '지연' 지표가 도는지 확인할 수 있다
+      const dueOffset = Math.floor(next() * 14) - 4;
+      todos.push({
+        employee_id: employeeId,
+        content: TODO_TEXTS[Math.floor(next() * TODO_TEXTS.length)],
+        is_completed: done,
+        // CHECK 제약: is_completed와 completed_at은 함께 간다
+        completed_at: done
+          ? new Date(Date.parse(`${addDays(TODAY, -1)}T10:00:00+09:00`)).toISOString()
+          : null,
+        due_date: next() < 0.75 ? addDays(TODAY, dueOffset) : null,
+        sort_order: i,
+      });
+    }
+  });
+
+  const { error: todoError } = await supabase.from("todos").insert(todos);
+  if (todoError) fail(`할일 생성 실패: ${todoError.message}`);
+  console.log(`· 할일 ${todos.length}건`);
+
+  // ── 목표 ────────────────────────────────────────────────────────
+  const GOALS = [
+    { title: "결재 처리 리드타임 2일 이내", desc: "평균 결재 소요를 절반으로 줄인다." },
+    { title: "월간 코드리뷰 20건", desc: "리뷰 문화 정착." },
+    { title: "신규 고객사 5곳 확보", desc: "하반기 영업 목표." },
+    { title: "재무 마감 D+3 달성", desc: "월말 마감 기간 단축." },
+    { title: "온보딩 만족도 4.5", desc: "신규 입사자 설문 기준." },
+    { title: "장애 대응 30분 이내", desc: "1차 응답 시간 기준." },
+  ];
+
+  const goals: Record<string, unknown>[] = [];
+  slugs.forEach((slug, personIndex) => {
+    const employeeId = empIds.get(slug)!;
+    const next = rand(personIndex * 3571 + 11);
+    const count = 1 + Math.floor(next() * 3);
+
+    for (let i = 0; i < count; i += 1) {
+      const roll = next();
+      // 진행중 / 완료 / 중단이 섞여야 상태 필터와 달성률이 의미를 갖는다
+      const status =
+        roll < 0.6 ? "active" : roll < 0.85 ? "completed" : "dropped";
+      const goal = GOALS[(personIndex + i) % GOALS.length];
+
+      goals.push({
+        employee_id: employeeId,
+        title: goal.title,
+        description: goal.desc,
+        target_date: addDays(TODAY, 20 + Math.floor(next() * 120)),
+        status,
+        // CHECK 제약: active가 아니면 closed_at이 반드시 있어야 한다
+        closed_at:
+          status === "active"
+            ? null
+            : new Date(
+                Date.parse(`${addDays(TODAY, -Math.floor(next() * 20) - 1)}T18:00:00+09:00`),
+              ).toISOString(),
+      });
+    }
+  });
+
+  const { error: goalError } = await supabase.from("goals").insert(goals);
+  if (goalError) fail(`목표 생성 실패: ${goalError.message}`);
+  console.log(`· 목표 ${goals.length}건`);
 }
 
 /**
@@ -724,6 +1026,9 @@ async function cleanUp() {
   // 부서장·팀장 참조를 먼저 끊는다 (FK on delete가 restrict일 수 있음)
   await supabase.from("departments").update({ manager_id: null }).in("manager_id", ids);
   await supabase.from("teams").update({ manager_id: null }).in("manager_id", ids);
+  // 프로젝트 담당자는 on delete set null이라 프로젝트가 주인 없이 남는다.
+  // 데모 프로젝트는 함께 지운다(마일스톤·파일은 cascade).
+  await supabase.from("projects").delete().in("owner_id", ids);
   // employees on delete cascade가 근태·연차·결재를 함께 지운다
   const { error } = await supabase.from("employees").delete().in("id", ids);
   if (error) fail(`데모 계정 삭제 실패: ${error.message}`);

@@ -41,7 +41,13 @@ export function ModulePanel({ role }: { role: RoleName }) {
   if (!active) return null;
 
   const sections = visibleChildSections(active, role);
-  const ActionIcon = active.primaryAction?.icon;
+  // 주요 액션에도 역할 제한이 있다 (프로젝트 등록은 팀장 이상)
+  const primaryAction =
+    active.primaryAction &&
+    (!active.primaryAction.roles || active.primaryAction.roles.includes(role))
+      ? active.primaryAction
+      : null;
+  const ActionIcon = primaryAction?.icon;
 
   return (
     <aside
@@ -56,16 +62,16 @@ export function ModulePanel({ role }: { role: RoleName }) {
         </h2>
       </div>
 
-      {active.primaryAction ? (
+      {primaryAction ? (
         <div className="shrink-0 px-3 pt-3">
           <LinkButton
-            href={active.primaryAction.href}
+            href={primaryAction.href}
             size="small"
             variant="primary-low"
             className="w-full"
           >
             {ActionIcon ? <ActionIcon className="size-4" aria-hidden /> : null}
-            {active.primaryAction.label}
+            {primaryAction.label}
           </LinkButton>
         </div>
       ) : null}

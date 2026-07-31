@@ -7,18 +7,22 @@ import {
   Clock,
   FileCheck,
   FilePlus2,
+  FolderKanban,
   FolderOpen,
   GitBranch,
   Home,
   Inbox,
   Library,
+  ListChecks,
   Megaphone,
   Network,
+  NotebookPen,
   ScrollText,
   Send,
   Settings,
   Shield,
   Star,
+  Target,
   Users,
   UsersRound,
   type LucideIcon,
@@ -258,6 +262,68 @@ export const NAV_MODULES: NavModule[] = [
           icon: ClipboardList,
         },
       ]),
+    ],
+  },
+  {
+    /*
+     * 업무일지·할일·목표는 "내가 무슨 일을 했고 무엇을 할 것인가"라는
+     * 한 축이라 모듈 하나로 묶는다. 셋을 레일에 따로 올리면 8칸이 11칸이 되고,
+     * 76px 폭에서 "일지"·"할일"·"목표"가 나란히 서면 무게가 과장된다.
+     */
+    key: "work",
+    label: "업무",
+    href: "/worklog",
+    icon: NotebookPen,
+    ready: true,
+    prefixes: ["/worklog", "/todos", "/goals"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "work-log",
+            label: "업무일지",
+            href: "/worklog",
+            icon: NotebookPen,
+          },
+          {
+            key: "work-todos",
+            label: "내 할일",
+            href: "/todos",
+            icon: ListChecks,
+          },
+          { key: "work-goals", label: "목표", href: "/goals", icon: Target },
+        ],
+      },
+    ],
+  },
+  {
+    key: "project",
+    label: "프로젝트",
+    short: "프로젝트",
+    href: "/projects",
+    icon: FolderKanban,
+    ready: true,
+    prefixes: ["/projects"],
+    primaryAction: {
+      label: "새 프로젝트",
+      href: "/projects/new",
+      icon: FilePlus2,
+      roles: ["manager", "system_admin"],
+    },
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "project-list",
+            label: "프로젝트 목록",
+            href: "/projects",
+            icon: FolderKanban,
+            prefixes: ["/projects"],
+          },
+        ],
+      },
     ],
   },
   {
