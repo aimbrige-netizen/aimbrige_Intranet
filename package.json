@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "seed": "tsx scripts/seed.ts",
     "seed:demo": "tsx scripts/seed-demo.ts",
-    "e2e:approval": "tsx scripts/e2e-approval.ts"
+    "e2e:approval": "tsx scripts/e2e-approval.ts",
+    "e2e:storage": "tsx scripts/e2e-storage.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",
