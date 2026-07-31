@@ -49,11 +49,11 @@ export default async function AdminOverviewPage() {
       .from("employees")
       .select("id", { count: "exact", head: true })
       .is("auth_user_id", null),
-    supabase.from("approval_line_configs").select("document_type, final_approver_id"),
+    supabase.from("approval_line_configs").select("document_type, step2_approver_id"),
     supabase.from("departments").select("id", { count: "exact", head: true }),
   ]);
 
-  const unsetLines = (lines ?? []).filter((l) => !l.final_approver_id).length;
+  const unsetLines = (lines ?? []).filter((l) => !l.step2_approver_id).length;
   const totalLines = (lines ?? []).length;
 
   return (

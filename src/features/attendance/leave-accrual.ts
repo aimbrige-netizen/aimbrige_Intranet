@@ -112,10 +112,46 @@ export function computeAccruedDays(
 }
 
 /**
+ * 현재 연차연도의 시작·종료일 (입사기념일 ~ 다음 기념일 전날).
+ *
+ * 화면이 "이번 연차연도" 기준으로 잔여를 보여주려면 이 구간이 필요하다.
+ * computeAccruedDays는 입사 이후 발생분을 전부 더하기 때문에,
+ * 2년 6개월 근속자에게 "잔여 41일"처럼 실무와 동떨어진 숫자가 나온다.
+ * (법적으로 총 발생은 41일이 맞지만, 각 연차는 발생일로부터 1년 내 사용해야 하고
+ *  미사용분은 정산·소멸된다 — 근로기준법 제60조⑦)
+ */
+export function leaveYearWindow(
+  hireDate: string | null | undefined,
+  asOf: string,
+): { start: string; end: string; yearIndex: number } | null {
+  if (!hireDate || hireDate > asOf) return null;
+
+  const years = yearsOfService(hireDate, asOf);
+  const start = addYears(hireDate, years);
+  // 종료일은 다음 기념일 전날 (포함 구간)
+  const end = addDaysYmdLocal(addYears(hireDate, years + 1), -1);
+  return { start, end, yearIndex: years };
+}
+
+/** 연 단위 가산. 2/29 입사자는 평년에 2/28로 당긴다 */
+function addYears(ymd: string, delta: number): string {
+  const { y, m, d } = parseYmd(ymd);
+  const year = y + delta;
+  const day = Math.min(d, lastDayOfMonth(year, m));
+  return `${year}-${String(m).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function addDaysYmdLocal(ymd: string, delta: number): string {
+  const { y, m, d } = parseYmd(ymd);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  return dt.toISOString().slice(0, 10);
+}
+
+/**
  * 현재 연차연도(입사기념일 ~ 다음 기념일)에 발생한 연차만.
  *
- * 미사용분 소멸 정책을 도입하면 잔여 계산의 기준이 이 값이 된다.
- * 지금은 화면에 "올해 발생분"을 함께 보여주는 용도로만 쓴다.
+ * 잔여 표시의 기준값. 소멸 정책이 확정되면 DB 차감 로직도 여기에 맞춘다.
  */
 export function accrualForLeaveYear(
   hireDate: string | null | undefined,
