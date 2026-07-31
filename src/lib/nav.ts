@@ -10,6 +10,7 @@ import {
   FilePlus2,
   FolderKanban,
   FolderOpen,
+  Gift,
   GitBranch,
   Home,
   Inbox,
@@ -18,6 +19,7 @@ import {
   Megaphone,
   Network,
   NotebookPen,
+  PackageOpen,
   ScrollText,
   Send,
   Settings,
@@ -439,6 +441,49 @@ export const NAV_MODULES: NavModule[] = [
           label: "파일함 관리",
           href: "/admin/files",
           icon: Settings,
+        },
+      ]),
+    ],
+  },
+  {
+    /*
+     * 자산과 복지포인트는 도메인이 다르지만 둘 다 "회사가 가진 것을 직원이
+     * 배정받아 쓴다"는 성격이고 각각 화면이 두어 개뿐이다(스펙 13 · 1장).
+     * 따로 올리면 레일 두 칸을 얇은 모듈 둘이 차지한다.
+     */
+    key: "resource",
+    label: "자산·복지",
+    short: "자산",
+    href: "/assets",
+    icon: Boxes,
+    ready: true,
+    prefixes: ["/assets", "/welfare", "/admin/assets", "/admin/welfare"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          { key: "assets-list", label: "자산 목록", href: "/assets", icon: Boxes },
+          {
+            key: "assets-my",
+            label: "내 대여 현황",
+            href: "/assets/my-loans",
+            icon: PackageOpen,
+          },
+          { key: "welfare", label: "복지포인트", href: "/welfare", icon: Gift },
+        ],
+      },
+      adminSection([
+        {
+          key: "admin-assets",
+          label: "자산 관리",
+          href: "/admin/assets",
+          icon: Settings,
+        },
+        {
+          key: "admin-welfare",
+          label: "복지포인트 관리",
+          href: "/admin/welfare",
+          icon: Gift,
         },
       ]),
     ],
