@@ -149,7 +149,7 @@ export function CalendarBoard({
         {/* 뷰 탭: 개인/팀/전사 */}
         <div
           role="tablist"
-          className="inline-flex rounded-card border border-line bg-surface p-0.5"
+          className="inline-flex rounded-card border border-line bg-subtle p-1"
         >
           {(Object.keys(SCOPE_LABELS) as CalendarScope[]).map((key) => (
             <button
@@ -159,10 +159,10 @@ export function CalendarBoard({
               aria-selected={scope === key}
               onClick={() => setParam({ scope: key === "personal" ? null : key })}
               className={cn(
-                "rounded-sm px-3 py-1.5 text-body transition-colors",
+                "rounded-sm px-3 py-1.5 text-body-sm transition-colors",
                 scope === key
-                  ? "bg-primary text-white"
-                  : "text-muted hover:bg-canvas hover:text-ink",
+                  ? "bg-surface font-bold text-ink"
+                  : "text-muted hover:text-ink",
               )}
             >
               {SCOPE_LABELS[key]}
@@ -171,7 +171,7 @@ export function CalendarBoard({
         </div>
 
         {/* 월간/주간/리스트 */}
-        <div className="inline-flex rounded-card border border-line bg-surface p-0.5">
+        <div className="inline-flex rounded-card border border-line bg-subtle p-1">
           {(Object.keys(VIEW_LABELS) as CalendarView[]).map((key) => (
             <button
               key={key}
@@ -185,10 +185,10 @@ export function CalendarBoard({
                 })
               }
               className={cn(
-                "rounded-sm px-3 py-1.5 text-body transition-colors",
+                "rounded-sm px-3 py-1.5 text-body-sm transition-colors",
                 view === key
-                  ? "bg-primary-light font-bold text-primary"
-                  : "text-muted hover:bg-canvas hover:text-ink",
+                  ? "bg-surface font-bold text-ink"
+                  : "text-muted hover:text-ink",
               )}
             >
               {VIEW_LABELS[key]}

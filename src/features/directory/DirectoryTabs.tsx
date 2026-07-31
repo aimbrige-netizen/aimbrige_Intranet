@@ -60,7 +60,7 @@ export function DirectoryTabs({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <div
           role="tablist"
-          className="inline-flex rounded-card border border-line bg-surface p-0.5"
+          className="inline-flex rounded-card border border-line bg-subtle p-1"
         >
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -75,10 +75,10 @@ export function DirectoryTabs({
                   setParam({ tab: tab.key === "org" ? null : tab.key })
                 }
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-body transition-colors",
+                  "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-body-sm transition-colors",
                   selected
-                    ? "bg-primary text-white"
-                    : "text-muted hover:bg-canvas hover:text-ink",
+                    ? "bg-surface font-bold text-ink"
+                    : "text-muted hover:text-ink",
                 )}
               >
                 <Icon className="size-3.5" aria-hidden />

@@ -10,7 +10,7 @@ const TABS = [
 
 export function FileTabs({ active }: { active: string }) {
   return (
-    <div className="mb-4 inline-flex rounded-card border border-line bg-surface p-0.5">
+    <div className="mb-4 inline-flex rounded-card border border-line bg-subtle p-1">
       {TABS.map((tab) => {
         const Icon = tab.icon;
         const selected = active === tab.href;
@@ -19,10 +19,10 @@ export function FileTabs({ active }: { active: string }) {
             key={tab.href}
             href={tab.href}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-body transition-colors",
+              "inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-body-sm transition-colors",
               selected
-                ? "bg-primary text-white"
-                : "text-muted hover:bg-canvas hover:text-ink",
+                ? "bg-surface font-bold text-ink"
+                : "text-muted hover:text-ink",
             )}
           >
             <Icon className="size-3.5" aria-hidden />
