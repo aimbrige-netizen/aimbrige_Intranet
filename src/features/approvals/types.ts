@@ -23,7 +23,16 @@ export const DOCUMENT_TYPES = [
 ] as const;
 
 export type DocumentType = (typeof DOCUMENT_TYPES)[number];
-export type DocumentStatus = "pending" | "rejected" | "approved" | "completed";
+/**
+ * draft는 아직 상신하지 않은 문서다. 결재선이 없고 current_step = 0이며
+ * 기안자 본인에게만 보인다. 회수한 문서도 여기로 돌아온다.
+ */
+export type DocumentStatus =
+  | "draft"
+  | "pending"
+  | "rejected"
+  | "approved"
+  | "completed";
 export type StepStatus = "pending" | "approved" | "rejected";
 
 export const DOCUMENT_TYPE_META: Record<
@@ -76,6 +85,7 @@ export const DOCUMENT_TYPE_META: Record<
 };
 
 export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
+  draft: "임시저장",
   pending: "진행중",
   rejected: "반려",
   approved: "승인",
@@ -89,8 +99,10 @@ export const DOCUMENT_STATUS_LABELS: Record<DocumentStatus, string> = {
  */
 export const DOCUMENT_STATUS_TONES: Record<
   DocumentStatus,
-  "info" | "danger" | "success" | "primary"
+  "info" | "danger" | "success" | "primary" | "neutral"
 > = {
+  // 임시저장은 아직 아무 일도 일어나지 않은 상태 — 색을 쓰지 않는다
+  draft: "neutral",
   pending: "info",
   rejected: "danger",
   approved: "success",
@@ -99,6 +111,7 @@ export const DOCUMENT_STATUS_TONES: Record<
 
 /** 목록 필터·요약 밴드의 고정 순서 */
 export const DOCUMENT_STATUS_ORDER: DocumentStatus[] = [
+  "draft",
   "pending",
   "approved",
   "completed",
@@ -201,6 +214,8 @@ export interface ApprovalLineConfig {
   id: string;
   document_type: DocumentType;
   step2_approver_id: string | null;
+  /** 1차 팀장 검토 사용 여부. false면 신청자 → 최종결재자 2단계 */
+  use_team_review: boolean;
   updated_at: string;
 }
 

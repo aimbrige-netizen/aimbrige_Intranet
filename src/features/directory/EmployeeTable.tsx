@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ArrowDown, ArrowUp, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { AvatarWithName } from "@/components/ui/Avatar";
 import { EmploymentStatusBadge, RoleBadge } from "@/components/ui/Badge";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { tenureLabel, tenureMonths } from "@/features/directory/org";
+import { ariaSortOf, SortHeaderLink, type SortDir } from "@/lib/sort";
 import { cn, formatDate } from "@/lib/utils";
 import type { EmploymentStatus, RoleName } from "@/types/db";
 
@@ -33,11 +34,70 @@ export interface EmployeeTableRow {
   hasAccount?: boolean;
 }
 
-export type EmployeeSortKey = "name" | "department" | "hire_date";
+export type EmployeeSortKey =
+  | "name"
+  | "position"
+  | "department"
+  | "status"
+  | "hire_date";
+
+/** 표가 그대로 지원하는 정렬 키. 조회 계층이 못 하는 건 sortableKeys로 뺀다 */
+export const EMPLOYEE_SORT_KEYS = [
+  "name",
+  "position",
+  "department",
+  "status",
+  "hire_date",
+] as const satisfies readonly EmployeeSortKey[];
 
 export interface EmployeeSort {
   key: EmployeeSortKey;
-  dir: "asc" | "desc";
+  dir: SortDir;
+}
+
+const STATUS_ORDER: Record<EmploymentStatus, number> = {
+  active: 0,
+  leave: 1,
+  terminated: 2,
+};
+
+/**
+ * 클라이언트(메모리) 정렬 — 조직도 목록 뷰처럼 전 인원을 이미 들고 있는 화면용.
+ * 서버 정렬(관리자 목록)과 결과 순서가 어긋나지 않도록 규칙을 한곳에 둔다.
+ */
+export function sortEmployeeRows<T extends EmployeeTableRow>(
+  rows: T[],
+  sort: EmployeeSort,
+): T[] {
+  const factor = sort.dir === "asc" ? 1 : -1;
+  const byName = (a: T, b: T) => a.name.localeCompare(b.name, "ko");
+
+  return [...rows].sort((a, b) => {
+    switch (sort.key) {
+      case "hire_date": {
+        const diff = (a.hireDate ?? "").localeCompare(b.hireDate ?? "");
+        return diff !== 0 ? diff * factor : byName(a, b);
+      }
+      case "position": {
+        const diff = (a.position ?? "").localeCompare(b.position ?? "", "ko");
+        return diff !== 0 ? diff * factor : byName(a, b);
+      }
+      case "department": {
+        const diff = (a.departmentName ?? "").localeCompare(
+          b.departmentName ?? "",
+          "ko",
+        );
+        return diff !== 0 ? diff * factor : byName(a, b);
+      }
+      case "status": {
+        const diff =
+          STATUS_ORDER[a.employmentStatus] - STATUS_ORDER[b.employmentStatus];
+        return diff !== 0 ? diff * factor : byName(a, b);
+      }
+      default:
+        return byName(a, b) * factor;
+    }
+  });
 }
 
 export interface EmployeeTableColumns {
@@ -96,16 +156,14 @@ export function EmployeeTable({
   minWidth?: string;
 }) {
   const show = { ...DEFAULT_COLUMNS, ...columns };
-  const sortable = new Set<EmployeeSortKey>(
-    sortableKeys ?? ["name", "department", "hire_date"],
-  );
+  const sortable = new Set<EmployeeSortKey>(sortableKeys ?? EMPLOYEE_SORT_KEYS);
 
   const headers: { key: EmployeeSortKey | null; label: string }[] = [
     { key: "name", label: "이름" },
-    { key: null, label: "직급" },
+    { key: "position", label: "직급" },
     ...(show.department ? [{ key: "department" as const, label: "부서" }] : []),
     ...(show.team ? [{ key: null, label: "팀" }] : []),
-    ...(show.status ? [{ key: null, label: "재직상태" }] : []),
+    ...(show.status ? [{ key: "status" as const, label: "재직상태" }] : []),
     ...(show.role ? [{ key: null, label: "역할" }] : []),
     ...(show.email ? [{ key: null, label: "이메일" }] : []),
     ...(show.phone ? [{ key: null, label: "전화" }] : []),
@@ -119,30 +177,33 @@ export function EmployeeTable({
       <table className={cn("ab-table", compact && "ab-table--compact", minWidth)}>
         <thead>
           <tr>
-            {headers.map((header) => (
-              <th key={header.label}>
-                {header.key && sortHref && sortable.has(header.key) ? (
-                  <Link
-                    href={sortHref(header.key)}
-                    className={cn(
-                      "inline-flex items-center gap-1 transition-colors duration-fast ease-standard hover:text-ink",
-                      sort?.key === header.key && "text-ink",
-                    )}
-                  >
-                    {header.label}
-                    {sort?.key === header.key ? (
-                      sort.dir === "asc" ? (
-                        <ArrowUp className="size-3" aria-hidden />
-                      ) : (
-                        <ArrowDown className="size-3" aria-hidden />
-                      )
-                    ) : null}
-                  </Link>
-                ) : (
-                  header.label
-                )}
-              </th>
-            ))}
+            {headers.map((header) => {
+              const sortableHere =
+                !!header.key && !!sortHref && sortable.has(header.key);
+              const current = sortableHere && sort?.key === header.key;
+
+              return (
+                <th
+                  key={header.label}
+                  aria-sort={
+                    sortableHere
+                      ? ariaSortOf(current, sort?.dir ?? "asc")
+                      : undefined
+                  }
+                >
+                  {sortableHere && header.key && sortHref ? (
+                    <SortHeaderLink
+                      href={sortHref(header.key)}
+                      label={header.label}
+                      active={current}
+                      dir={sort?.dir ?? "asc"}
+                    />
+                  ) : (
+                    header.label
+                  )}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>

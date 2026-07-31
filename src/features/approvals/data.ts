@@ -107,6 +107,7 @@ export interface DocumentStats {
 }
 
 const EMPTY_STATUS: Record<DocumentStatus, number> = {
+  draft: 0,
   pending: 0,
   approved: 0,
   completed: 0,
@@ -460,7 +461,7 @@ export async function getApprovalLineConfigs(): Promise<
   const { data, error } = await supabase
     .from("approval_line_configs")
     .select(
-      `id, document_type, step2_approver_id, updated_at,
+      `id, document_type, step2_approver_id, use_team_review, updated_at,
        approver:employees!step2_approver_id(id, name, position)`,
     )
     .order("document_type");

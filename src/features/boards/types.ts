@@ -36,6 +36,12 @@ export interface Post {
   category: string | null;
   is_pinned: boolean;
   author_id: string;
+  /**
+   * 총 조회수. 열람률(post_reads)과 다른 지표다 —
+   * post_reads는 "대상자 중 누가 읽었나", view_count는 "몇 번 열렸나".
+   * 본인 글 조회는 DB 함수가 세지 않는다.
+   */
+  view_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -63,6 +69,11 @@ export interface CommentWithAuthor extends Comment {
   author: Pick<Employee, "id" | "name" | "profile_image_url"> | null;
 }
 
+/**
+ * 첨부파일.
+ * file_url에는 공개 URL이 아니라 스토리지 경로가 들어간다
+ * (`<auth uid>/<글 id>/<파일명>`). 버킷이 비공개라 열 때마다 서명 URL을 받는다.
+ */
 export interface PostAttachment {
   id: string;
   post_id: string;
@@ -71,6 +82,18 @@ export interface PostAttachment {
   file_size: number | null;
   uploaded_at: string;
 }
+
+/** 첨부 허용 형식 — 버킷 정책(post-attachments)과 같은 값이어야 한다 */
+export const ATTACHMENT_MIME_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+] as const;
+
+/** 건당 10MB — 버킷의 file_size_limit과 같은 값 */
+export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
 
 export interface ReactionSummary {
   emoji: ReactionEmoji;

@@ -68,7 +68,9 @@ export function calendarHref({
 export function kindsForScope(scope: CalendarScope): CalendarItemKind[] {
   const own: CalendarItemKind =
     scope === "team" ? "team" : scope === "company" ? "company" : "personal";
-  return [own, "leave", "approval", "resource_booking"];
+  // '참석 일정'은 공개범위와 무관하게 나올 수 있다 — 남이 만든 팀 회의에
+  // 내가 참석자로 들어가면 팀 뷰에서도 이 종류로 나타난다.
+  return [own, "invited", "leave", "approval", "resource_booking"];
 }
 
 export type KindCounts = Record<CalendarItemKind, number>;
@@ -78,6 +80,7 @@ export function countByKind(items: CalendarItem[]): KindCounts {
     personal: 0,
     team: 0,
     company: 0,
+    invited: 0,
     leave: 0,
     approval: 0,
     resource_booking: 0,

@@ -35,9 +35,13 @@ type Tab = "org" | "people" | "external";
 
 const COMPANY_NAME = "에임브릿지";
 
+/**
+ * 목록 파라미터 규약은 관리자 임직원 목록과 동일하다
+ * (q / department / team / sort / dir). tab·inactive만 이 화면 고유.
+ */
 interface SearchParams {
   tab?: string;
-  dept?: string;
+  department?: string;
   team?: string;
   q?: string;
   sort?: string;
@@ -89,11 +93,14 @@ export default async function DirectoryPage({
     ? (index.membersByTeam.get(me.team_id)?.length ?? 0)
     : 0;
 
-  const scopeHref = (patch: { dept?: string; team?: string }) => {
+  const scopeHref = (patch: { department?: string; team?: string }) => {
     const params = new URLSearchParams();
     if (tab !== "org") params.set("tab", tab);
-    if (patch.dept) params.set("dept", patch.dept);
+    if (patch.department) params.set("department", patch.department);
     if (patch.team) params.set("team", patch.team);
+    if (searchParams.q) params.set("q", searchParams.q);
+    if (searchParams.sort) params.set("sort", searchParams.sort);
+    if (searchParams.dir) params.set("dir", searchParams.dir);
     if (searchParams.inactive) params.set("inactive", searchParams.inactive);
     const query = params.toString();
     return query ? `/directory?${query}` : "/directory";
@@ -102,16 +109,16 @@ export default async function DirectoryPage({
   const scope =
     searchParams.team && searchParams.team === me.team_id
       ? "team"
-      : searchParams.dept && searchParams.dept === me.department_id
+      : searchParams.department && searchParams.department === me.department_id
         ? "dept"
-        : searchParams.dept || searchParams.team
+        : searchParams.department || searchParams.team
           ? "custom"
           : "all";
 
   const initialSelection: OrgSelection = searchParams.team
     ? { kind: "team", id: searchParams.team }
-    : searchParams.dept && searchParams.dept !== "none"
-      ? { kind: "department", id: searchParams.dept }
+    : searchParams.department && searchParams.department !== "none"
+      ? { kind: "department", id: searchParams.department }
       : { kind: "company" };
 
   const title =
@@ -164,7 +171,9 @@ export default async function DirectoryPage({
                   {
                     value: "dept",
                     label: "내 부서",
-                    href: scopeHref({ dept: me.department_id ?? undefined }),
+                    href: scopeHref({
+                      department: me.department_id ?? undefined,
+                    }),
                     badge: myDepartmentSize,
                     disabled: !me.department_id,
                   },
@@ -266,7 +275,7 @@ export default async function DirectoryPage({
           today={today}
           params={{
             q: searchParams.q,
-            dept: searchParams.dept,
+            department: searchParams.department,
             team: searchParams.team,
             sort: searchParams.sort,
             dir: searchParams.dir,

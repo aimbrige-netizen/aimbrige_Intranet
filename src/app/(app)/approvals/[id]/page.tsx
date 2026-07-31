@@ -83,6 +83,17 @@ export default async function ApprovalDetailPage({
   const canComplete = doc.status === "approved" && me.isSystemAdmin;
   const canAttach = doc.requester_id === me.id && doc.status === "pending";
 
+  const isRequester = doc.requester_id === me.id;
+  /*
+   * 회수는 아직 아무도 승인하지 않았을 때만. 한 단계라도 승인된 뒤에 허용하면
+   * 그 승인 기록이 조용히 사라진다(DB도 같은 조건으로 막는다).
+   */
+  const canWithdraw =
+    isRequester &&
+    doc.status === "pending" &&
+    doc.steps.every((s) => s.status !== "approved");
+  const canResubmit = isRequester && doc.status === "rejected";
+
   const rejectedStep = doc.steps.find((s) => s.status === "rejected");
   const fields = buildFields(doc);
   const expenseItems = (doc.form_data?.items as ExpenseItem[] | undefined) ?? [];
@@ -145,8 +156,11 @@ export default async function ApprovalDetailPage({
               ) : null}
               <ApprovalActions
                 documentId={doc.id}
+                documentType={doc.document_type}
                 canProcess={canProcess}
                 canComplete={canComplete}
+                canWithdraw={canWithdraw}
+                canResubmit={canResubmit}
               />
             </div>
           ) : null}

@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireSessionEmployee, requireSystemAdmin } from "@/lib/auth/session";
-import { buildTitle, DOCUMENT_TYPES, type DocumentType } from "@/features/approvals/types";
+import {
+  buildTitle,
+  DOCUMENT_TYPES,
+  DOCUMENT_TYPE_META,
+  type DocumentType,
+} from "@/features/approvals/types";
 
 export interface ApprovalActionResult {
   ok: boolean;
@@ -152,6 +157,158 @@ export async function submitApprovalDocument(
   return { ok: true, documentId: data as string };
 }
 
+/**
+ * 임시저장용 느슨한 검증.
+ *
+ * 제출용 스키마(FORM_SCHEMAS)를 그대로 쓰면 안 된다 — 반쯤 채운 폼을 저장하지
+ * 못하면 임시저장이라는 기능 자체가 성립하지 않는다. 여기서는 "객체인가"와
+ * "크기가 상식적인가"만 본다. 형식 검증은 상신할 때 한 번 제대로 한다.
+ */
+const MAX_DRAFT_BYTES = 100_000;
+
+function sanitizeDraftForm(input: unknown): Record<string, unknown> | null {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return null;
+  }
+  try {
+    if (JSON.stringify(input).length > MAX_DRAFT_BYTES) return null;
+  } catch {
+    return null; // 순환 참조 등
+  }
+  return input as Record<string, unknown>;
+}
+
+/** 미완성 폼에서도 목록에 쓸 제목이 나와야 한다 */
+function draftTitle(type: DocumentType, form: Record<string, unknown>): string {
+  try {
+    const built = buildTitle(type, form);
+    if (built?.trim()) return built.trim();
+  } catch {
+    // 필수값이 아직 안 채워진 상태 — 유형 이름으로 대체한다
+  }
+  return `${DOCUMENT_TYPE_META[type].label} (작성 중)`;
+}
+
+/**
+ * 임시저장 (Phase 5)
+ * documentId가 없으면 새로 만들고, 있으면 본인 draft를 덮어쓴다.
+ */
+export async function saveApprovalDraft(
+  documentId: string | null,
+  documentType: string,
+  formInput: unknown,
+): Promise<ApprovalActionResult> {
+  await requireSessionEmployee();
+
+  if (!(DOCUMENT_TYPES as readonly string[]).includes(documentType)) {
+    return { ok: false, message: "알 수 없는 문서 유형입니다." };
+  }
+  const type = documentType as DocumentType;
+
+  const form = sanitizeDraftForm(formInput);
+  if (!form) {
+    return { ok: false, message: "저장할 수 없는 형식입니다." };
+  }
+
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase.rpc("save_approval_draft", {
+    p_document_id: documentId,
+    p_document_type: type,
+    p_title: draftTitle(type, form),
+    p_form_data: form,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/approvals");
+  return { ok: true, documentId: data as string };
+}
+
+/**
+ * 임시저장 문서 상신.
+ *
+ * 화면이 들고 있는 최신 폼으로 한 번 더 저장한 뒤 상신한다.
+ * 저장과 상신을 나눈 이유는 DB의 submit_approval_draft가 form_data를
+ * 검증하지 않기 때문 — 형식 검증은 여기서 제출용 스키마로 한다.
+ */
+export async function submitApprovalDraft(
+  documentId: string,
+  documentType: string,
+  formInput: unknown,
+): Promise<ApprovalActionResult> {
+  await requireSessionEmployee();
+
+  if (!(DOCUMENT_TYPES as readonly string[]).includes(documentType)) {
+    return { ok: false, message: "알 수 없는 문서 유형입니다." };
+  }
+  const type = documentType as DocumentType;
+
+  const parsed = FORM_SCHEMAS[type].safeParse(formInput);
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: toFieldErrors(parsed.error) };
+  }
+  const formData = parsed.data as Record<string, unknown>;
+
+  const supabase = createServerSupabase();
+  const { error: saveError } = await supabase.rpc("save_approval_draft", {
+    p_document_id: documentId,
+    p_document_type: type,
+    p_title: buildTitle(type, formData),
+    p_form_data: formData,
+  });
+  if (saveError) return { ok: false, message: saveError.message };
+
+  const { error } = await supabase.rpc("submit_approval_draft", {
+    p_document_id: documentId,
+  });
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/approvals");
+  revalidatePath(`/approvals/${documentId}`);
+  revalidatePath("/");
+  return { ok: true, documentId };
+}
+
+/**
+ * 상신 회수 (Phase 5)
+ * 아직 아무도 승인하지 않은 문서만 되돌릴 수 있다(DB가 검사한다).
+ * 회수한 문서는 임시저장으로 돌아가 수정 후 다시 올릴 수 있다.
+ */
+export async function withdrawApprovalDocument(
+  documentId: string,
+): Promise<ApprovalActionResult> {
+  await requireSessionEmployee();
+
+  const supabase = createServerSupabase();
+  const { error } = await supabase.rpc("withdraw_approval_document", {
+    p_document_id: documentId,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/approvals");
+  revalidatePath(`/approvals/${documentId}`);
+  revalidatePath("/");
+  return { ok: true, documentId };
+}
+
+/** 임시저장 삭제. 상신된 문서는 감사 추적 때문에 지울 수 없다(DB가 막는다) */
+export async function deleteApprovalDraft(
+  documentId: string,
+): Promise<ApprovalActionResult> {
+  await requireSessionEmployee();
+
+  const supabase = createServerSupabase();
+  const { error } = await supabase.rpc("delete_approval_draft", {
+    p_document_id: documentId,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/approvals");
+  return { ok: true };
+}
+
 /** 승인 / 반려 (스펙 5장 2·3번) */
 export async function processApprovalStep(
   documentId: string,
@@ -213,6 +370,36 @@ export async function setFinalApprover(
   const { error } = await supabase
     .from("approval_line_configs")
     .update({ step2_approver_id: approverId })
+    .eq("document_type", documentType);
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/admin/approval-lines");
+  revalidatePath("/approvals/new");
+  return { ok: true };
+}
+
+/**
+ * 1차 팀장 검토 사용 여부 (마이그레이션 14)
+ *
+ * 끄면 신청자 → 최종결재자 2단계. 팀장이 실제 인원으로 지정되기 전에는
+ * 결재가 엉뚱한 사람에게 가므로 기본값이 꺼짐이다.
+ * 켜져 있어도 팀장이 없거나 기안자 본인이면 그 단계는 자동으로 건너뛴다.
+ */
+export async function setTeamReview(
+  documentType: string,
+  enabled: boolean,
+): Promise<ApprovalActionResult> {
+  await requireSystemAdmin();
+
+  if (!(DOCUMENT_TYPES as readonly string[]).includes(documentType)) {
+    return { ok: false, message: "알 수 없는 문서 유형입니다." };
+  }
+
+  const supabase = createServerSupabase();
+  const { error } = await supabase
+    .from("approval_line_configs")
+    .update({ use_team_review: enabled })
     .eq("document_type", documentType);
 
   if (error) return { ok: false, message: error.message };

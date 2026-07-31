@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Select } from "@/components/ui/Field";
 import { Avatar } from "@/components/ui/Avatar";
-import { setFinalApprover } from "@/server/actions/approvals";
+import { setFinalApprover, setTeamReview } from "@/server/actions/approvals";
 import {
   DOCUMENT_TYPE_META,
   type DocumentType,
@@ -19,6 +19,8 @@ export interface ApprovalLineRow {
   approverId: string | null;
   approverName: string | null;
   approverPosition: string | null;
+  /** 1차 팀장 검토 사용 여부 */
+  useTeamReview: boolean;
 }
 
 export interface ApproverOption {
@@ -38,9 +40,12 @@ export interface ApproverOption {
 export function ApprovalLineBoard({
   rows,
   employees,
+  teamsWithoutManager,
 }: {
   rows: ApprovalLineRow[];
   employees: ApproverOption[];
+  /** 팀장이 지정되지 않은 팀 이름 — 1차 검토를 켜면 그 팀은 건너뛴다 */
+  teamsWithoutManager: string[];
 }) {
   const router = useRouter();
   const [saving, setSaving] = useState<string | null>(null);
@@ -67,11 +72,27 @@ export function ApprovalLineBoard({
     });
   };
 
+  const toggleTeamReview = (documentType: DocumentType, enabled: boolean) => {
+    setSaving(documentType);
+    setMessage(null);
+    setSavedType(null);
+    startTransition(async () => {
+      const result = await setTeamReview(documentType, enabled);
+      setSaving(null);
+      if (!result.ok) {
+        setMessage(result.message ?? "저장하지 못했습니다.");
+        return;
+      }
+      setSavedType(documentType);
+      router.refresh();
+    });
+  };
+
   return (
     <Card>
       <CardHeader
         title="문서유형별 결재선"
-        description="1차 검토는 기안자가 속한 팀의 팀장으로 규칙이 고정돼 있습니다"
+        description="1차 검토는 기안자가 속한 팀의 팀장이 맡습니다. 팀장 배치 전에는 꺼두세요."
         density="compact"
         action={
           message ? (
@@ -104,6 +125,22 @@ export function ApprovalLineBoard({
                   ) : (
                     <Badge tone="danger">미지정 · 기안 불가</Badge>
                   )}
+                  <Badge tone={row.useTeamReview ? "info" : "neutral"}>
+                    {row.useTeamReview ? "3단계" : "2단계"}
+                  </Badge>
+
+                  <label className="ml-auto flex cursor-pointer items-center gap-2 text-label text-ink">
+                    <input
+                      type="checkbox"
+                      checked={row.useTeamReview}
+                      onChange={(e) =>
+                        toggleTeamReview(row.documentType, e.target.checked)
+                      }
+                      disabled={busy}
+                      className="size-4 accent-[#ff6f0f]"
+                    />
+                    1차 팀장 검토
+                  </label>
                 </div>
 
                 <div className="flex flex-wrap items-stretch gap-1.5">
@@ -115,14 +152,22 @@ export function ApprovalLineBoard({
                     icon={PenLine}
                   />
                   <Arrow />
-                  <Step
-                    order="2"
-                    role="1차 검토"
-                    title="기안자 팀의 팀장"
-                    sub="규칙 고정"
-                    icon={UserCog}
-                  />
-                  <Arrow />
+                  {row.useTeamReview ? (
+                    <>
+                      <Step
+                        order="2"
+                        role="1차 검토"
+                        title="기안자 팀의 팀장"
+                        sub={
+                          teamsWithoutManager.length > 0
+                            ? `팀장 미지정 팀은 건너뜀 (${teamsWithoutManager.length}개 팀)`
+                            : "팀장이 없으면 건너뜀"
+                        }
+                        icon={UserCog}
+                      />
+                      <Arrow />
+                    </>
+                  ) : null}
                   <div
                     className={cn(
                       "min-w-60 flex-1 rounded-card border px-3 py-2",
@@ -132,7 +177,9 @@ export function ApprovalLineBoard({
                     )}
                   >
                     <p className="mb-1 flex items-center gap-1.5">
-                      <span className="text-nano font-bold text-muted">3</span>
+                      <span className="text-nano font-bold text-muted">
+                        {row.useTeamReview ? 3 : 2}
+                      </span>
                       <span className="text-nano text-muted">최종 승인</span>
                     </p>
                     <div className="flex items-center gap-2">
@@ -165,7 +212,7 @@ export function ApprovalLineBoard({
                   </div>
                   <Arrow />
                   <Step
-                    order="4"
+                    order={row.useTeamReview ? "4" : "3"}
                     role="완료"
                     title="시행완료"
                     sub={row.approverId ? "승인 즉시 처리" : "지정 후 진행"}

@@ -18,21 +18,30 @@ export default async function ApprovalLinesPage() {
   await requireSystemAdmin();
   const supabase = createServerSupabase();
 
-  const [configs, { data: employees }] = await Promise.all([
+  const [configs, { data: employees }, { data: teams }] = await Promise.all([
     getApprovalLineConfigs(),
     supabase
       .from("employees")
       .select("id, name, position")
       .eq("employment_status", "active")
       .order("name"),
+    supabase.from("teams").select("name, manager_id"),
   ]);
+
+  // 1차 검토를 켜도 팀장이 없는 팀은 그 단계를 건너뛴다 — 화면에 미리 알린다
+  const teamsWithoutManager = (teams ?? [])
+    .filter((t) => !t.manager_id)
+    .map((t) => t.name as string);
 
   const rows: ApprovalLineRow[] = configs.map((config) => ({
     documentType: config.document_type,
     approverId: config.step2_approver_id,
     approverName: config.approver?.name ?? null,
     approverPosition: config.approver?.position ?? null,
+    useTeamReview: config.use_team_review,
   }));
+
+  const teamReviewOn = rows.filter((row) => row.useTeamReview).length;
 
   const total = rows.length;
   const set = rows.filter((row) => row.approverId).length;
@@ -61,7 +70,13 @@ export default async function ApprovalLinesPage() {
           <>
             <span>문서유형 {total}종</span>
             <span>·</span>
-            <span>2단계 결재 (팀장 → 최종 승인자)</span>
+            <span>
+              {teamReviewOn === 0
+                ? "신청자 → 최종 승인자 (2단계)"
+                : teamReviewOn === total
+                  ? "신청자 → 팀장 → 최종 승인자 (3단계)"
+                  : `1차 팀장 검토 ${teamReviewOn}/${total}종`}
+            </span>
           </>
         }
       />
@@ -120,9 +135,8 @@ export default async function ApprovalLinesPage() {
 
       <ApprovalLineBoard
         rows={rows}
-        employees={
-          (employees ?? []) as ApproverOption[]
-        }
+        employees={(employees ?? []) as ApproverOption[]}
+        teamsWithoutManager={teamsWithoutManager}
       />
     </>
   );

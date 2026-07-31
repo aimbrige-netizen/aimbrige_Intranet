@@ -36,7 +36,7 @@ export default async function NewPostPage({
         }
       />
 
-      <PostEditor board={board} />
+      <PostEditor board={board} authUserId={me.auth_user_id} />
     </>
   );
 }

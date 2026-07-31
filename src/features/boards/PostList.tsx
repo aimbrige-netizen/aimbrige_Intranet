@@ -69,7 +69,7 @@ export function PostList({
     return query ? `${basePath}?${query}` : basePath;
   };
 
-  const columns = isNotice ? 7 : 5;
+  const columns = isNotice ? 8 : 6;
   // 마지막 고정글 뒤에 한 줄 굵은 구분선 — 고정 그룹과 일반 글을 가른다
   const lastPinned = posts.reduce(
     (index, post, i) => (post.is_pinned ? i : index),
@@ -124,7 +124,7 @@ export function PostList({
           <table
             className={cn(
               "ab-table ab-table--compact table-fixed",
-              isNotice ? "min-w-[880px]" : "min-w-[640px]",
+              isNotice ? "min-w-[940px]" : "min-w-[700px]",
             )}
           >
             <thead>
@@ -135,6 +135,8 @@ export function PostList({
                 {isNotice ? <th className="w-20">카테고리</th> : null}
                 <th>제목</th>
                 <th className="w-14 !text-right">댓글</th>
+                {/* 열람률(대상자 중 몇 명)과 다른 숫자다 — 이건 총 조회 횟수 */}
+                <th className="w-14 !text-right">조회</th>
                 {isNotice ? <th className="w-32">열람률</th> : null}
                 <th className="w-32">작성자</th>
                 <th className="w-24">작성일</th>
@@ -200,6 +202,14 @@ export function PostList({
                     <td className="text-right tabular-nums">
                       {post.commentCount > 0 ? (
                         post.commentCount
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </td>
+
+                    <td className="text-right tabular-nums">
+                      {post.view_count > 0 ? (
+                        post.view_count
                       ) : (
                         <span className="text-muted">-</span>
                       )}

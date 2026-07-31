@@ -6,6 +6,7 @@ import {
   Briefcase,
   Building,
   Contact,
+  Download,
   Handshake,
   Pencil,
   Plus,
@@ -26,6 +27,7 @@ import {
   deleteExternalContact,
   updateExternalContact,
 } from "@/server/actions/contacts";
+import { downloadCsv } from "@/lib/csv";
 import { formatDate } from "@/lib/utils";
 import type { ContactCategory, ExternalContactWithCreator } from "@/types/db";
 
@@ -141,6 +143,34 @@ export function ExternalContacts({
     });
   }, [contacts, category, keyword]);
 
+  /** 화면에 보이는 그대로(현재 분류·검색어)를 내려받는다 */
+  const exportCsv = () =>
+    downloadCsv(
+      "외부연락처",
+      [
+        "이름",
+        "소속 회사",
+        "직책",
+        "분류",
+        "전화번호",
+        "이메일",
+        "메모",
+        "등록자",
+        "등록일",
+      ],
+      filtered.map((contact) => [
+        contact.name,
+        contact.company ?? "",
+        contact.role ?? "",
+        contact.category ? CATEGORY_LABELS[contact.category] : "미분류",
+        contact.phone ?? "",
+        contact.email ?? "",
+        contact.memo ?? "",
+        contact.creator?.name ?? "",
+        formatDate(contact.created_at),
+      ]),
+    );
+
   const openCreate = () => {
     setValues(emptyForm());
     setErrors({});
@@ -254,10 +284,27 @@ export function ExternalContacts({
           }
           count={`${filtered.length}건 / 전체 ${contacts.length}건`}
           actions={
-            <Button size="small" onClick={openCreate}>
-              <Plus className="size-3.5" aria-hidden />
-              연락처 추가
-            </Button>
+            <>
+              <Button
+                size="small"
+                variant="secondary"
+                disabled={filtered.length === 0}
+                title={`현재 필터에 걸린 ${filtered.length}건을 CSV로 내려받습니다`}
+                onClick={exportCsv}
+              >
+                <Download className="size-3.5" aria-hidden />
+                내보내기
+                {filtered.length > 0 ? (
+                  <span className="tabular-nums opacity-70">
+                    {filtered.length}
+                  </span>
+                ) : null}
+              </Button>
+              <Button size="small" onClick={openCreate}>
+                <Plus className="size-3.5" aria-hidden />
+                연락처 추가
+              </Button>
+            </>
           }
         />
 

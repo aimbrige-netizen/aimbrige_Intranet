@@ -42,6 +42,22 @@ const eventSchema = z
     endTime: z.string().trim().optional(),
     allDay: z.boolean(),
     visibility: z.enum(["personal", "team", "company"]),
+    location: z
+      .string()
+      .trim()
+      .max(120, "장소는 120자까지 입력할 수 있습니다.")
+      .transform((v) => (v === "" ? null : v))
+      .nullable()
+      .optional(),
+    /*
+     * 참석자는 등록자 본인을 제외한 employees.id 배열이다.
+     * RLS SELECT 정책이 이 배열을 보므로, 여기 담기는 순간 그 사람에게
+     * 개인 일정도 열린다 — 중복·본인은 서버에서 정리한다.
+     */
+    attendeeIds: z
+      .array(z.string().uuid())
+      .max(50, "참석자는 50명까지 지정할 수 있습니다.")
+      .optional(),
   })
   .superRefine((value, ctx) => {
     const start = seoulToDate(value.startDate, value.allDay ? "00:00" : (value.startTime || "00:00"));
@@ -89,6 +105,11 @@ function resolveRange(values: z.infer<typeof eventSchema>) {
   };
 }
 
+/** 본인 제외 + 중복 제거. 등록자는 참석자 배열에 넣지 않는다(owner_id가 이미 있다) */
+function resolveAttendees(ids: string[] | undefined, ownerId: string): string[] {
+  return Array.from(new Set(ids ?? [])).filter((id) => id !== ownerId);
+}
+
 function addOneDay(ymd: string): string {
   const [y, m, d] = ymd.split("-").map(Number);
   const date = new Date(Date.UTC(y, m - 1, d));
@@ -129,6 +150,8 @@ export async function createCalendarEvent(
       end_at: endAt.toISOString(),
       all_day: values.allDay,
       visibility: values.visibility,
+      location: values.location ?? null,
+      attendee_ids: resolveAttendees(values.attendeeIds, me.id),
       owner_id: me.id,
       team_id: values.visibility === "team" ? me.team_id : null,
     })
@@ -144,6 +167,7 @@ export async function createCalendarEvent(
     startAt: startAt.toISOString(),
     endAt: endAt.toISOString(),
     allDay: values.allDay,
+    location: values.location ?? null,
   });
 
   if (googleId) {
@@ -195,6 +219,8 @@ export async function updateCalendarEvent(
         end_at: endAt.toISOString(),
         all_day: values.allDay,
         visibility: values.visibility,
+        location: values.location ?? null,
+        attendee_ids: resolveAttendees(values.attendeeIds, me.id),
         team_id: values.visibility === "team" ? me.team_id : null,
       },
       { count: "exact" },
@@ -213,6 +239,7 @@ export async function updateCalendarEvent(
       startAt: startAt.toISOString(),
       endAt: endAt.toISOString(),
       allDay: values.allDay,
+      location: values.location ?? null,
     });
   }
 

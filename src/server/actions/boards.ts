@@ -5,12 +5,20 @@ import { z } from "zod";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { requireSessionEmployee, requireSystemAdmin } from "@/lib/auth/session";
 import { REACTION_EMOJIS } from "@/features/boards/types";
+import type { PostAttachment } from "@/features/boards/types";
 
 export interface BoardActionResult {
   ok: boolean;
   fieldErrors?: Record<string, string>;
   message?: string;
   postId?: string;
+}
+
+export interface AttachmentActionResult {
+  ok: boolean;
+  message?: string;
+  /** 등록에 성공한 행 — 화면이 새로고침 없이 목록에 붙일 수 있게 돌려준다 */
+  attachment?: PostAttachment;
 }
 
 function toFieldErrors(error: z.ZodError): Record<string, string> {
@@ -129,6 +137,14 @@ export async function deletePost(
   await requireSessionEmployee();
 
   const supabase = createServerSupabase();
+
+  // 첨부 행은 글과 함께 cascade로 지워지지만 스토리지 파일은 남는다.
+  // 경로를 먼저 확보해 두고 글을 지운 뒤에 정리한다.
+  const { data: files } = await supabase
+    .from("post_attachments")
+    .select("file_url")
+    .eq("post_id", postId);
+
   const { error, count } = await supabase
     .from("posts")
     .delete({ count: "exact" })
@@ -137,6 +153,16 @@ export async function deletePost(
   if (error) return { ok: false, message: error.message };
   if (count === 0) {
     return { ok: false, message: "삭제 권한이 없습니다(작성자 본인만 가능)." };
+  }
+
+  const paths = (files ?? []).map((row) => row.file_url as string);
+  if (paths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from("post-attachments")
+      .remove(paths);
+    if (storageError) {
+      console.error("[boards] 첨부 파일 정리 실패:", storageError.message);
+    }
   }
 
   revalidatePath("/board");
@@ -160,6 +186,134 @@ export async function markPostRead(postId: string): Promise<void> {
     // 읽음 기록 실패가 글 조회를 막아서는 안 된다
     console.error("[boards] 읽음 기록 실패:", error.message);
   }
+}
+
+/**
+ * 조회수 +1 — 상세 진입 시 호출.
+ * 본인 글은 DB 함수가 세지 않으므로 여기서 작성자를 따로 걸러내지 않는다.
+ * 읽음 기록(post_reads)과는 별개다 — 그쪽은 "대상자 중 누가 읽었나"다.
+ */
+export async function incrementPostView(postId: string): Promise<void> {
+  await requireSessionEmployee();
+  const supabase = createServerSupabase();
+
+  const { error } = await supabase.rpc("increment_post_view", {
+    p_post_id: postId,
+  });
+
+  if (error) {
+    console.error("[boards] 조회수 기록 실패:", error.message);
+  }
+}
+
+// ---------------------------------------------------------------------
+// 첨부파일
+//
+// 업로드 경로는 `<auth uid>/<글 id>/<파일명>` 규칙을 지킨다 —
+// 스토리지 정책이 경로 첫 세그먼트를 auth.uid()와 대조하므로(마이그레이션 09)
+// 이 형식 자체가 권한 판정이다. 서버에서도 한 번 더 대조한다.
+// 비공개 버킷이라 다운로드는 그때그때 서명 URL을 발급한다.
+// ---------------------------------------------------------------------
+
+/** 업로드한 파일을 글에 등록 (RLS: 작성자 본인만) */
+export async function registerPostAttachment(
+  postId: string,
+  boardId: string,
+  storagePath: string,
+  fileName: string,
+  fileSize: number,
+): Promise<AttachmentActionResult> {
+  await requireSessionEmployee();
+
+  const supabase = createServerSupabase();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, message: "세션이 만료되었습니다." };
+
+  if (!storagePath.startsWith(`${user.id}/${postId}/`)) {
+    return { ok: false, message: "첨부 경로가 올바르지 않습니다." };
+  }
+
+  const { data, error } = await supabase
+    .from("post_attachments")
+    .insert({
+      post_id: postId,
+      file_url: storagePath,
+      file_name: fileName,
+      file_size: fileSize,
+    })
+    .select("id, post_id, file_url, file_name, file_size, uploaded_at")
+    .single<PostAttachment>();
+
+  if (error) {
+    return {
+      ok: false,
+      message:
+        error.code === "42501"
+          ? "첨부는 글 작성자 본인만 추가할 수 있습니다."
+          : error.message,
+    };
+  }
+
+  revalidatePath(`/board/${boardId}/${postId}`);
+  return { ok: true, attachment: data };
+}
+
+/** 첨부 삭제 — 메타 행과 실제 파일을 함께 정리한다 */
+export async function removePostAttachment(
+  attachmentId: string,
+  postId: string,
+  boardId: string,
+): Promise<AttachmentActionResult> {
+  await requireSessionEmployee();
+  const supabase = createServerSupabase();
+
+  const { data: row } = await supabase
+    .from("post_attachments")
+    .select("file_url")
+    .eq("id", attachmentId)
+    .maybeSingle<{ file_url: string }>();
+
+  const { error, count } = await supabase
+    .from("post_attachments")
+    .delete({ count: "exact" })
+    .eq("id", attachmentId);
+
+  if (error) return { ok: false, message: error.message };
+  if (count === 0) {
+    return { ok: false, message: "삭제 권한이 없습니다(작성자 본인만 가능)." };
+  }
+
+  // 메타를 지웠으면 파일도 지운다.
+  // 관리자는 남의 경로를 지울 수 없어 실패할 수 있는데, 그렇다고 목록에
+  // 되살릴 일은 아니라 로그만 남긴다.
+  if (row?.file_url) {
+    const { error: storageError } = await supabase.storage
+      .from("post-attachments")
+      .remove([row.file_url]);
+    if (storageError) {
+      console.error("[boards] 첨부 파일 삭제 실패:", storageError.message);
+    }
+  }
+
+  revalidatePath(`/board/${boardId}/${postId}`);
+  return { ok: true };
+}
+
+/** 다운로드용 서명 URL (5분) */
+export async function getPostAttachmentUrl(
+  storagePath: string,
+): Promise<{ ok: boolean; url?: string; message?: string }> {
+  await requireSessionEmployee();
+  const supabase = createServerSupabase();
+
+  const { data, error } = await supabase.storage
+    .from("post-attachments")
+    .createSignedUrl(storagePath, 60 * 5);
+
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, url: data.signedUrl };
 }
 
 const commentSchema = z.object({

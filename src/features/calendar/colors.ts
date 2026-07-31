@@ -29,6 +29,18 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
     chip: "bg-primary-light text-primary",
     dot: "bg-primary",
   },
+  /*
+   * 남이 만든 일정에 참석자로 지정된 것.
+   * 색상축을 하나 더 만들면 6종이 이미 다 쓴 hue와 부딪힌다. 대신 같은
+   * 오렌지축에서 면(내가 만든 것) ↔ 테두리(초대받은 것)로 나눈다 —
+   * "내 일정과 같은 무게로 봐야 하지만 내가 고칠 수는 없다"가 그대로 읽힌다.
+   */
+  invited: {
+    label: "참석 일정",
+    hex: "#ff6f0f", // primary
+    chip: "border border-primary bg-surface text-primary",
+    dot: "border border-primary bg-surface",
+  },
   team: {
     label: "팀 일정",
     hex: "#1aa174", // success

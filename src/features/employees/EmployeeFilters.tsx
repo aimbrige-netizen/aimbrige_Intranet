@@ -22,6 +22,15 @@ export interface EmployeeFilterParams {
   status?: string;
 }
 
+/**
+ * 필터를 바꿔도 정렬은 유지된다. 예전에는 칩을 누를 때마다 sort/dir이
+ * 링크에서 빠져 이름 오름차순으로 되돌아갔다. page만 의도적으로 버린다.
+ */
+export interface EmployeeSortParams {
+  sort?: string;
+  dir?: string;
+}
+
 const STATUS_OPTIONS: { value: EmploymentStatus; label: string }[] = [
   { value: "active", label: "재직중" },
   { value: "leave", label: "휴직" },
@@ -37,6 +46,7 @@ const ROLE_OPTIONS: { value: RoleName; label: string }[] = [
 export function EmployeeFilters({
   departments,
   params,
+  sortParams,
   statusCounts,
   departmentCounts,
   total,
@@ -45,6 +55,8 @@ export function EmployeeFilters({
 }: {
   departments: OrgOption[];
   params: EmployeeFilterParams;
+  /** 필터 링크·검색 폼이 함께 실어 나를 정렬 상태 */
+  sortParams?: EmployeeSortParams;
   statusCounts: Record<EmploymentStatus, number>;
   departmentCounts: Map<string, number>;
   total: number;
@@ -58,6 +70,8 @@ export function EmployeeFilters({
       department: params.department,
       role: params.role,
       status: params.status,
+      sort: sortParams?.sort,
+      dir: sortParams?.dir,
       ...patch,
     };
     Object.entries(merged).forEach(([key, value]) => {
@@ -84,6 +98,12 @@ export function EmployeeFilters({
             ) : null}
             {params.status ? (
               <input type="hidden" name="status" value={params.status} />
+            ) : null}
+            {sortParams?.sort ? (
+              <input type="hidden" name="sort" value={sortParams.sort} />
+            ) : null}
+            {sortParams?.dir ? (
+              <input type="hidden" name="dir" value={sortParams.dir} />
             ) : null}
             <ToolbarSearch
               name="q"

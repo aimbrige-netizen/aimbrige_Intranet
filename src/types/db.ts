@@ -164,6 +164,13 @@ export interface CalendarEvent {
   end_at: string;
   all_day: boolean;
   visibility: EventVisibility;
+  /** 회의 장소. 자유 입력 — 사내 회의실은 리소스 예약이 따로 있다 */
+  location: string | null;
+  /**
+   * 참석자 employees.id 배열.
+   * SELECT 정책이 이 배열을 보므로, 여기 담긴 사람은 개인 일정이어도 볼 수 있다.
+   */
+  attendee_ids: string[];
   owner_id: string;
   team_id: string | null;
   google_calendar_event_id: string | null;
@@ -337,9 +344,18 @@ export type CalendarItemKind =
   | "personal"
   | "team"
   | "company"
+  /** 남이 만든 일정에 내가 참석자로 지정된 것 */
+  | "invited"
   | "resource_booking"
   | "leave"
   | "approval";
+
+/** 일정 참석자 표시에 필요한 최소 정보 */
+export interface CalendarAttendee {
+  id: string;
+  name: string;
+  profileImageUrl: string | null;
+}
 
 export interface CalendarItem {
   id: string;
@@ -351,6 +367,10 @@ export interface CalendarItem {
   allDay: boolean;
   ownerId: string | null;
   ownerName: string | null;
+  /** 어디서 하는가. 리소스 예약은 리소스에 등록된 위치를 그대로 쓴다 */
+  location: string | null;
+  /** 누가 오는가. 일정 외 종류(휴가·결재·예약)는 빈 배열 */
+  attendees: CalendarAttendee[];
   /** 본인이 수정·삭제할 수 있는 항목인지 */
   editable: boolean;
 }

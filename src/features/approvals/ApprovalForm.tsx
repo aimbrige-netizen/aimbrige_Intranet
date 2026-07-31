@@ -2,12 +2,17 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { FormRow, Input, Textarea } from "@/components/ui/Field";
-import { submitApprovalDocument } from "@/server/actions/approvals";
+import {
+  deleteApprovalDraft,
+  saveApprovalDraft,
+  submitApprovalDocument,
+  submitApprovalDraft,
+} from "@/server/actions/approvals";
 import { todayYmd } from "@/features/calendar/date";
 import { ApprovalStepStrip, type StripStep } from "./ApprovalStepStrip";
 import { DOCUMENT_TYPE_META, type DocumentType } from "./types";
@@ -23,33 +28,69 @@ interface LinePreview {
  * 유형별 기안 작성 폼 (스펙 04 · 3.3)
  * 항목이 많은 신청서라 디자인시스템 원칙대로 라벨-옆-인풋 표 형태를 쓴다.
  */
+/** form_data에서 문자열 필드를 안전하게 꺼낸다 (임시저장은 미완성일 수 있다) */
+function str(form: Record<string, unknown> | undefined, key: string, fallback = "") {
+  const value = form?.[key];
+  return value === null || value === undefined ? fallback : String(value);
+}
+
 export function ApprovalForm({
   documentType,
   line,
+  draftId,
+  initial,
 }: {
   documentType: DocumentType;
   line: LinePreview;
+  /** 기존 임시저장을 이어 쓰는 경우의 문서 id */
+  draftId?: string;
+  /**
+   * 프리필할 form_data.
+   * 임시저장을 이어 열 때와, 반려된 문서를 재상신할 때 둘 다 쓴다.
+   * 반려 후 처음부터 다시 입력하게 만들지 않으려는 것이 핵심.
+   */
+  initial?: Record<string, unknown>;
 }) {
   const router = useRouter();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  // 저장하면 id가 생기고, 이후 저장은 그 문서를 갱신한다
+  const [documentId, setDocumentId] = useState<string | null>(draftId ?? null);
+
+  const today = todayYmd();
 
   // 공통 필드
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
-  const [reason, setReason] = useState("");
-  const [startDate, setStartDate] = useState(todayYmd());
-  const [endDate, setEndDate] = useState(todayYmd());
+  const [title, setTitle] = useState(() => str(initial, "title"));
+  const [content, setContent] = useState(() => str(initial, "content"));
+  const [reason, setReason] = useState(() => str(initial, "reason"));
+  const [startDate, setStartDate] = useState(() =>
+    str(initial, "startDate", today),
+  );
+  const [endDate, setEndDate] = useState(() => str(initial, "endDate", today));
   // 출장
-  const [destination, setDestination] = useState("");
-  const [purpose, setPurpose] = useState("");
-  const [estimatedCost, setEstimatedCost] = useState("");
+  const [destination, setDestination] = useState(() =>
+    str(initial, "destination"),
+  );
+  const [purpose, setPurpose] = useState(() => str(initial, "purpose"));
+  const [estimatedCost, setEstimatedCost] = useState(() =>
+    str(initial, "estimatedCost"),
+  );
   // 비품
-  const [itemName, setItemName] = useState("");
-  const [quantity, setQuantity] = useState("1");
+  const [itemName, setItemName] = useState(() => str(initial, "itemName"));
+  const [quantity, setQuantity] = useState(() => str(initial, "quantity", "1"));
   // 경비
-  const [items, setItems] = useState<ExpenseItem[]>([{ name: "", amount: 0 }]);
+  const [items, setItems] = useState<ExpenseItem[]>(() => {
+    const saved = initial?.items;
+    if (Array.isArray(saved) && saved.length > 0) {
+      return saved.map((i) => ({
+        name: String((i as ExpenseItem)?.name ?? ""),
+        amount: Number((i as ExpenseItem)?.amount) || 0,
+      }));
+    }
+    return [{ name: "", amount: 0 }];
+  });
 
   const total = useMemo(
     () => items.reduce((s, i) => s + (Number(i.amount) || 0), 0),
@@ -110,14 +151,56 @@ export function ApprovalForm({
   const submit = () => {
     setErrors({});
     setMessage(null);
+    setNotice(null);
     startTransition(async () => {
-      const result = await submitApprovalDocument(documentType, buildPayload());
+      // 임시저장에서 이어 온 경우엔 그 문서를 상신한다(새 문서를 만들지 않는다)
+      const result = documentId
+        ? await submitApprovalDraft(documentId, documentType, buildPayload())
+        : await submitApprovalDocument(documentType, buildPayload());
+
       if (result.ok) {
         router.push(`/approvals/${result.documentId}`);
         return;
       }
       setErrors(result.fieldErrors ?? {});
       setMessage(result.message ?? null);
+    });
+  };
+
+  /**
+   * 임시저장 — 형식 검증을 하지 않는다.
+   * 반쯤 채운 폼을 저장하지 못하면 임시저장이라는 기능 자체가 성립하지 않는다.
+   */
+  const saveDraft = () => {
+    setErrors({});
+    setMessage(null);
+    setNotice(null);
+    startTransition(async () => {
+      const result = await saveApprovalDraft(
+        documentId,
+        documentType,
+        buildPayload(),
+      );
+      if (result.ok) {
+        setDocumentId(result.documentId ?? documentId);
+        setNotice("임시저장했습니다. 목록의 '임시저장'에서 다시 열 수 있습니다.");
+        router.refresh();
+        return;
+      }
+      setMessage(result.message ?? "임시저장하지 못했습니다.");
+    });
+  };
+
+  const discardDraft = () => {
+    if (!documentId) return;
+    if (!window.confirm("이 임시저장을 삭제할까요?")) return;
+    startTransition(async () => {
+      const result = await deleteApprovalDraft(documentId);
+      if (result.ok) {
+        router.push("/approvals?status=draft");
+        return;
+      }
+      setMessage(result.message ?? "삭제하지 못했습니다.");
     });
   };
 
@@ -441,12 +524,29 @@ export function ApprovalForm({
         </CardBody>
       </Card>
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-2">
         {message ? (
           <p className="mr-auto text-label text-danger">{message}</p>
+        ) : notice ? (
+          <p className="mr-auto text-label text-success-ink">{notice}</p>
         ) : null}
+
+        {documentId ? (
+          <Button variant="ghost" onClick={discardDraft} disabled={pending}>
+            <Trash2 className="size-4" />
+            임시저장 삭제
+          </Button>
+        ) : null}
+        {/*
+          임시저장은 결재선이 미지정이어도 된다(line.blocked와 무관).
+          막히는 건 상신뿐이다.
+        */}
+        <Button variant="secondary" onClick={saveDraft} disabled={pending}>
+          <Save className="size-4" />
+          임시저장
+        </Button>
         <Button onClick={submit} disabled={pending || line.blocked}>
-          {pending ? "제출 중…" : "제출"}
+          {pending ? "처리 중…" : "제출"}
         </Button>
       </div>
     </div>

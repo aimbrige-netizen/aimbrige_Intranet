@@ -2,13 +2,14 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CircleCheckBig, X } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Check, CircleCheckBig, RotateCcw, Undo2, X } from "lucide-react";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Textarea } from "@/components/ui/Field";
 import {
   completeApprovalDocument,
   processApprovalStep,
+  withdrawApprovalDocument,
 } from "@/server/actions/approvals";
 
 /**
@@ -21,18 +22,48 @@ import {
  */
 export function ApprovalActions({
   documentId,
+  documentType,
   canProcess,
   canComplete,
+  canWithdraw,
+  canResubmit,
 }: {
   documentId: string;
+  documentType: string;
   canProcess: boolean;
   canComplete: boolean;
+  /** 기안자 본인 + 진행중 + 아직 아무도 승인하지 않음 */
+  canWithdraw?: boolean;
+  /** 기안자 본인 + 반려됨 */
+  canResubmit?: boolean;
 }) {
   const router = useRouter();
   const [rejectOpen, setRejectOpen] = useState(false);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  /**
+   * 상신 회수 — 임시저장으로 되돌린다.
+   * 한 단계라도 승인된 뒤에는 DB가 막는다(그 승인 기록이 사라지면 안 되므로).
+   */
+  const withdraw = () => {
+    if (
+      !window.confirm(
+        "이 문서를 회수할까요? 임시저장으로 돌아가며 수정 후 다시 올릴 수 있습니다.",
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await withdrawApprovalDocument(documentId);
+      if (!result.ok) {
+        window.alert(result.message ?? "회수하지 못했습니다.");
+        return;
+      }
+      router.push(`/approvals/new/${documentType}?draft=${documentId}`);
+    });
+  };
 
   const approve = () => {
     setError(null);
@@ -74,11 +105,33 @@ export function ApprovalActions({
     });
   };
 
-  if (!canProcess && !canComplete) return null;
+  if (!canProcess && !canComplete && !canWithdraw && !canResubmit) return null;
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
+        {canResubmit ? (
+          <LinkButton
+            size="small"
+            href={`/approvals/new/${documentType}?from=${documentId}`}
+          >
+            <RotateCcw className="size-4" />
+            수정해서 재상신
+          </LinkButton>
+        ) : null}
+
+        {canWithdraw ? (
+          <Button
+            size="small"
+            variant="secondary"
+            onClick={withdraw}
+            disabled={pending}
+          >
+            <Undo2 className="size-4" />
+            상신 회수
+          </Button>
+        ) : null}
+
         {canProcess ? (
           <>
             <Button size="small" onClick={approve} disabled={pending}>

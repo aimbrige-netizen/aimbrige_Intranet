@@ -17,12 +17,16 @@ import {
   bookingHours,
   bookingYmd,
   formatBookingHours,
+  OPEN_HOURS_LABEL,
+  OPEN_HOURS_PER_DAY,
   RESOURCE_TYPE_LABELS,
   RESOURCE_TYPES,
+  type AttendeeOption,
   type ResourceBookingBrief,
 } from "@/features/calendar/data-client";
 import {
   getActiveResources,
+  getAttendeeOptions,
   getCalendarItems,
   getHolidayMap,
   getResourceBookingsInRange,
@@ -56,9 +60,6 @@ export const metadata: Metadata = { title: "캘린더" };
 
 const YM_PATTERN = /^\d{4}-\d{2}$/;
 const YMD_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-/** 리소스 한 대가 하루에 열려 있다고 보는 시간 (09:00~18:00) — ResourceBoard와 같은 규칙 */
-const OPEN_HOURS_PER_DAY = 9;
 
 /**
  * 캘린더 (스펙 02 · 3.4~3.6)
@@ -114,24 +115,29 @@ export default async function CalendarPage({
   const bookingFrom = first < today ? first : today;
   const bookingTo = maxYmd(last, addDaysYmd(today, 60));
 
-  const [items, resources, holidays, bookings] = await Promise.all([
-    // 리소스 화면은 일정 격자를 그리지 않는다 — 4개 테이블을 헛되이 읽지 않는다
-    view === "resources"
-      ? Promise.resolve<CalendarItem[]>([])
-      : getCalendarItems({
-          scope,
-          from,
-          to,
-          employeeId: me.id,
-          teamId: me.team_id,
-        }),
-    getActiveResources(),
-    getHolidayMap(first, last),
-    getResourceBookingsInRange(
-      seoulToDate(bookingFrom),
-      seoulToDate(addDaysYmd(bookingTo, 1)),
-    ),
-  ]);
+  const [items, resources, holidays, bookings, attendeeOptions] =
+    await Promise.all([
+      // 리소스 화면은 일정 격자를 그리지 않는다 — 4개 테이블을 헛되이 읽지 않는다
+      view === "resources"
+        ? Promise.resolve<CalendarItem[]>([])
+        : getCalendarItems({
+            scope,
+            from,
+            to,
+            employeeId: me.id,
+            teamId: me.team_id,
+          }),
+      getActiveResources(),
+      getHolidayMap(first, last),
+      getResourceBookingsInRange(
+        seoulToDate(bookingFrom),
+        seoulToDate(addDaysYmd(bookingTo, 1)),
+      ),
+      // 참석자 선택기는 일정 모달에서만 쓴다
+      view === "resources"
+        ? Promise.resolve<AttendeeOption[]>([])
+        : getAttendeeOptions(me.id),
+    ]);
 
   const inPeriod = today >= first && today <= last;
   const step = (delta: number) =>
@@ -209,10 +215,11 @@ export default async function CalendarPage({
   const daysWithItems = days.filter((day) =>
     items.some((item) => occursOn(item, day)),
   ).length;
-  // 종류 이름과 스코프 이름이 같다 — personal/team/company
-  const allDay = items.filter(
-    (item) => item.allDay && item.kind === scope,
-  ).length;
+  /*
+   * 참석자로 지정된 남의 일정은 공개범위 칸에 잡히지 않는다. 그런데 읽는 사람에게는
+   * "내가 가야 하는 자리"라 내 일정과 같은 무게다 — 합쳐 세고 sub에서 쪼갠다.
+   */
+  const mine = own + counts.invited;
 
   const bandLabel =
     view === "month"
@@ -254,15 +261,15 @@ export default async function CalendarPage({
         />
         <StatCard
           label={`${SCOPE_LABELS[scope]} 일정`}
-          value={own}
+          value={mine}
           unit="건"
           denominator={total}
           denominatorUnit="건"
           tone="informative"
           icon={scope === "personal" ? UserRound : CalendarRange}
           max={total || 1}
-          meterValue={own}
-          sub={`종일 ${allDay}건 · 시간 지정 ${own - allDay}건`}
+          meterValue={mine}
+          sub={`내가 등록 ${own}건 · 참석 요청 ${counts.invited}건`}
         />
         <StatCard
           label="휴가·출장"
@@ -303,6 +310,7 @@ export default async function CalendarPage({
         today={today}
         focusDate={focusDateOf(view, days, today, cursor)}
         canCreateTeamEvent={!!me.team_id}
+        attendeeOptions={attendeeOptions}
         openCreateOnMount={searchParams.new === "1"}
       />
     </>
@@ -407,7 +415,7 @@ function ResourceScreen({
           meterValue={usedHours}
           scale
           scaleMaxLabel={`${openHours}h`}
-          sub={`가동률 ${rate}% · 근무일 09:00~18:00 기준`}
+          sub={`가동률 ${rate}% · 근무일 ${OPEN_HOURS_LABEL} 기준`}
         />
         <StatCard
           label="예약 가능 리소스"

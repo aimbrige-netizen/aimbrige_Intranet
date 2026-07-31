@@ -2,8 +2,13 @@ import "server-only";
 
 import { createServerSupabase } from "@/lib/supabase/server";
 import { addDaysYmd } from "@/features/calendar/date";
-import type { ResourceBookingBrief } from "@/features/calendar/data-client";
+import { getDirectory } from "@/features/directory/data";
 import type {
+  AttendeeOption,
+  ResourceBookingBrief,
+} from "@/features/calendar/data-client";
+import type {
+  CalendarAttendee,
   CalendarEventWithOwner,
   CalendarItem,
   Holiday,
@@ -40,8 +45,9 @@ export async function getCalendarItems({
   let eventQuery = supabase
     .from("calendar_events")
     .select(
-      `id, title, description, start_at, end_at, all_day, visibility, owner_id,
-       team_id, google_calendar_event_id, created_at, updated_at,
+      `id, title, description, start_at, end_at, all_day, visibility, location,
+       attendee_ids, owner_id, team_id, google_calendar_event_id, created_at,
+       updated_at,
        owner:employees!owner_id(id, name, profile_image_url)`,
     )
     // 기간이 겹치는 항목: 시작이 to 이전이고, 끝이 from 이후
@@ -50,7 +56,14 @@ export async function getCalendarItems({
     .order("start_at");
 
   if (scope === "personal") {
-    eventQuery = eventQuery.eq("owner_id", employeeId);
+    /*
+     * "내 캘린더"는 내가 만든 일정 + 내가 참석자로 지정된 일정이다.
+     * owner_id만 걸면, 팀장이 만든 개인 일정에 나를 참석자로 넣어도
+     * (RLS는 통과하는데) 어느 뷰에도 나타나지 않는다.
+     */
+    eventQuery = eventQuery.or(
+      `owner_id.eq.${employeeId},attendee_ids.cs.{${employeeId}}`,
+    );
   } else if (scope === "team") {
     eventQuery = eventQuery.eq("visibility", "team");
     // 팀 미배정자는 팀 일정이 없다. RLS도 막지만 쿼리에서도 명시적으로 비운다.
@@ -77,25 +90,50 @@ export async function getCalendarItems({
     bookingQuery = bookingQuery.eq("booked_by", employeeId);
   }
 
-  const [{ data: events }, { data: bookings }] = await Promise.all([
-    eventQuery,
-    bookingQuery,
-  ]);
+  const [
+    { data: events, error: eventError },
+    { data: bookings, error: bookingError },
+  ] = await Promise.all([eventQuery, bookingQuery]);
 
-  const eventItems: CalendarItem[] = (
-    (events ?? []) as unknown as CalendarEventWithOwner[]
-  ).map((event) => ({
-    id: event.id,
-    kind: event.visibility,
-    title: event.title,
-    description: event.description,
-    startAt: event.start_at,
-    endAt: event.end_at,
-    allDay: event.all_day,
-    ownerId: event.owner_id,
-    ownerName: event.owner?.name ?? null,
-    editable: event.owner_id === employeeId,
-  }));
+  // 실패하면 데이터가 없는 것과 화면이 구분되지 않는다 — 최소한 서버 로그에는 남긴다
+  if (eventError) console.error("[calendar] 일정 조회 실패:", eventError.message);
+  if (bookingError) {
+    console.error("[calendar] 리소스 예약 조회 실패:", bookingError.message);
+  }
+
+  const eventRows = (events ?? []) as unknown as CalendarEventWithOwner[];
+  const attendeeMap = await getAttendeeMap(
+    eventRows.flatMap((event) => event.attendee_ids ?? []),
+  );
+
+  const eventItems: CalendarItem[] = eventRows.map((event) => {
+    const attendeeIds = event.attendee_ids ?? [];
+    return {
+      id: event.id,
+      /*
+       * 참석자로 지정된 남의 일정은 공개범위가 아니라 '참석 일정'으로 둔다.
+       * 읽는 사람에게 중요한 건 "이건 전사 공지인가"가 아니라 "내가 가야 하는가"고,
+       * 공개범위 그대로 두면 남의 개인 일정이 내 '개인 일정' 칩으로 섞여
+       * 수정할 수 있는 것처럼 보인다(실제로는 등록자만 수정 가능).
+       */
+      kind:
+        event.owner_id !== employeeId && attendeeIds.includes(employeeId)
+          ? ("invited" as const)
+          : event.visibility,
+      title: event.title,
+      description: event.description,
+      startAt: event.start_at,
+      endAt: event.end_at,
+      allDay: event.all_day,
+      ownerId: event.owner_id,
+      ownerName: event.owner?.name ?? null,
+      location: event.location ?? null,
+      attendees: attendeeIds
+        .map((id) => attendeeMap.get(id))
+        .filter((value): value is CalendarAttendee => !!value),
+      editable: event.owner_id === employeeId,
+    };
+  });
 
   const bookingItems: CalendarItem[] = (
     (bookings ?? []) as unknown as ResourceBookingWithRelations[]
@@ -111,6 +149,8 @@ export async function getCalendarItems({
     allDay: false,
     ownerId: booking.booked_by,
     ownerName: booking.booker?.name ?? null,
+    location: booking.resource?.location ?? null,
+    attendees: [],
     editable: booking.booked_by === employeeId,
   }));
 
@@ -137,6 +177,44 @@ export async function getCalendarItems({
     ...leaveItems,
     ...approvalItems,
   ].sort((a, b) => a.startAt.localeCompare(b.startAt));
+}
+
+/**
+ * 참석자 id → 표시용 정보.
+ *
+ * attendee_ids는 조인 테이블이 아니라 배열이라 PostgREST 조인이 걸리지 않는다.
+ * 화면에 아바타를 띄우려면 이름이 필요하므로 구간 안 참석자를 한 번에 모아 온다.
+ * 퇴사자도 이름은 남겨야 하므로 employment_status로 거르지 않는다.
+ */
+async function getAttendeeMap(
+  ids: string[],
+): Promise<Map<string, CalendarAttendee>> {
+  const unique = Array.from(new Set(ids.filter(Boolean)));
+  if (unique.length === 0) return new Map();
+
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("employees")
+    .select("id, name, profile_image_url")
+    .in("id", unique);
+
+  if (error) {
+    console.error("[calendar] 참석자 조회 실패:", error.message);
+    return new Map();
+  }
+
+  const rows = (data ?? []) as {
+    id: string;
+    name: string;
+    profile_image_url: string | null;
+  }[];
+
+  return new Map(
+    rows.map((row) => [
+      row.id,
+      { id: row.id, name: row.name, profileImageUrl: row.profile_image_url },
+    ]),
+  );
 }
 
 /**
@@ -196,6 +274,8 @@ async function getApprovalItems({
         allDay: true,
         ownerId: r.requester_id,
         ownerName: r.requester_name,
+        location: null,
+        attendees: [],
         editable: false,
       };
     });
@@ -272,6 +352,8 @@ async function getLeaveItems({
       allDay: true,
       ownerId: r.employee_id,
       ownerName: r.employee_name,
+      location: null,
+      attendees: [],
       // 휴가는 캘린더에서 직접 수정하지 않는다(근태 화면에서 취소)
       editable: false,
     }));
@@ -346,6 +428,39 @@ export async function getResourceBookingsInRange(
     bookerId: booking.booked_by,
     bookerName: booking.booker?.name ?? null,
   }));
+}
+
+/**
+ * 참석자로 고를 수 있는 임직원 (재직자만).
+ *
+ * 조직도와 같은 목록을 봐야 하므로 getDirectory()를 그대로 쓴다. 여기서
+ * employees를 다시 조회하면 "재직자만" 같은 규칙이 두 곳으로 갈라진다.
+ * 등록자는 자동으로 참석하므로 목록에서 뺀다.
+ */
+export async function getAttendeeOptions(
+  excludeId: string,
+): Promise<AttendeeOption[]> {
+  const { employees, departments, teams } = await getDirectory();
+  const departmentName = new Map(departments.map((d) => [d.id, d.name]));
+  const teamName = new Map(teams.map((t) => [t.id, t.name]));
+
+  return employees
+    .filter((employee) => employee.id !== excludeId)
+    .map((employee) => ({
+      id: employee.id,
+      name: employee.name,
+      position: employee.position,
+      org:
+        [
+          employee.department_id
+            ? departmentName.get(employee.department_id)
+            : null,
+          employee.team_id ? teamName.get(employee.team_id) : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || null,
+      profileImageUrl: employee.profile_image_url,
+    }));
 }
 
 /** 예약 가능한 활성 리소스 (스펙 3.6) */

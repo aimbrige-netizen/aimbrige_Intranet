@@ -2,8 +2,9 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Trash2, Users } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
+import { Avatar } from "@/components/ui/Avatar";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { EVENT_COLORS } from "@/features/calendar/colors";
@@ -26,6 +27,7 @@ const SOURCE_LABELS: Record<CalendarItemKind, string> = {
   personal: "나만 보기",
   team: "팀 공개",
   company: "전사 공개",
+  invited: "참석 요청",
   leave: "승인된 휴가",
   approval: "승인된 결재 문서",
   resource_booking: "리소스 예약",
@@ -35,6 +37,8 @@ const SOURCE_LABELS: Record<CalendarItemKind, string> = {
 const LOCK_NOTES: Partial<Record<CalendarItemKind, string>> = {
   leave: "승인된 휴가는 근태 신청 내역에서 취소할 수 있습니다.",
   approval: "승인된 출장·재택은 결재 문서를 따라 표시됩니다.",
+  invited:
+    "참석자로 지정돼 내 캘린더에 표시됩니다. 시간·장소 변경은 등록자가 합니다.",
 };
 
 /**
@@ -60,6 +64,12 @@ export function EventDetail({
 
   const color = EVENT_COLORS[item.kind];
   const isBooking = item.kind === "resource_booking";
+  /*
+   * 장소·참석자는 일정과 리소스 예약에만 있는 개념이다. 휴가·출장은 결재 문서가
+   * 원본이라 여기에 빈 칸을 세우면 "적을 수 있는데 안 적었다"로 잘못 읽힌다.
+   */
+  const showPlace =
+    item.kind !== "leave" && item.kind !== "approval";
 
   const remove = () => {
     if (!window.confirm(`"${item.title}"을(를) 삭제하시겠습니까?`)) return;
@@ -145,10 +155,58 @@ export function EventDetail({
           <Row label={isBooking ? "예약자" : "등록자"}>
             {item.ownerName ?? "-"}
           </Row>
+          {/* 장소가 비어 있어도 줄은 남긴다 — "안 적혔다"와 "칸이 없다"는 다르다 */}
+          {showPlace ? (
+            <Row label="장소">
+              {item.location ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="size-3.5 shrink-0 text-muted" aria-hidden />
+                  {item.location}
+                </span>
+              ) : (
+                <span className="text-muted">장소 미지정</span>
+              )}
+            </Row>
+          ) : null}
           <Row label={isBooking ? "구분" : "공개범위"}>
             {SOURCE_LABELS[item.kind]}
           </Row>
         </dl>
+
+        {showPlace && !isBooking ? (
+          <div>
+            <p className="mb-1.5 flex items-center gap-1.5 text-label font-bold text-ink">
+              <Users className="size-3.5 text-muted" aria-hidden />
+              참석자
+              <span className="font-normal text-muted tabular-nums">
+                {item.attendees.length > 0
+                  ? `${item.attendees.length + 1}명 (등록자 포함)`
+                  : "등록자만"}
+              </span>
+            </p>
+            {item.attendees.length === 0 ? (
+              <p className="text-caption">
+                지정된 참석자가 없습니다. 이 일정은 등록자만 참석합니다.
+              </p>
+            ) : (
+              <ul className="flex flex-wrap gap-1.5">
+                {item.attendees.map((attendee) => (
+                  <li
+                    key={attendee.id}
+                    className="inline-flex items-center gap-1.5 rounded-pill bg-subtle py-0.5 pl-0.5 pr-2 text-label text-ink"
+                  >
+                    <Avatar
+                      name={attendee.name}
+                      src={attendee.profileImageUrl}
+                      size="small"
+                    />
+                    {attendee.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ) : null}
 
         {item.description ? (
           <div>

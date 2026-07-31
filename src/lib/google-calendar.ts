@@ -25,6 +25,8 @@ export interface GoogleSyncInput {
   startAt: string;
   endAt: string;
   allDay: boolean;
+  /** 회의 장소. 구글의 location 필드로 그대로 나간다 */
+  location?: string | null;
 }
 
 /**
@@ -86,6 +88,7 @@ export async function createGoogleEvent(
       body: JSON.stringify({
         summary: input.title,
         description: input.description ?? undefined,
+        location: input.location ?? undefined,
         start: toGoogleTime(input.startAt, input.allDay),
         end: toGoogleTime(input.endAt, input.allDay),
       }),
@@ -125,6 +128,8 @@ export async function updateGoogleEvent(
       body: JSON.stringify({
         summary: input.title,
         description: input.description ?? undefined,
+        // null이면 undefined가 되어 PATCH에서 빠진다 → 장소를 지우려면 빈 문자열
+        location: input.location ?? "",
         start: toGoogleTime(input.startAt, input.allDay),
         end: toGoogleTime(input.endAt, input.allDay),
       }),

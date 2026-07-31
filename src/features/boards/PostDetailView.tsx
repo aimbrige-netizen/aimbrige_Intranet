@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  Download,
   Eye,
   MessageSquare,
   Paperclip,
@@ -11,6 +12,7 @@ import {
   Pin,
   Send,
   Trash2,
+  Users,
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -25,12 +27,40 @@ import {
   createComment,
   deleteComment,
   deletePost,
+  getPostAttachmentUrl,
   toggleReaction,
 } from "@/server/actions/boards";
 import { formatDateTime } from "@/lib/utils";
 import { cn } from "@/lib/utils";
-import { formatFileSize, percent } from "./format";
+import { formatFileSize, percent, splitLinks } from "./format";
 import type { PostDetail, ReadStatusRow } from "./types";
+
+/**
+ * 평문 본문을 그대로 보여준다 — 줄바꿈은 whitespace-pre-wrap이 유지하고,
+ * 주소는 눌러서 열 수 있게 끊어낸다. 에디터가 평문 textarea라
+ * 여기서 처리하지 않으면 링크가 글자로만 남는다.
+ */
+function PostText({ text, className }: { text: string; className?: string }) {
+  return (
+    <p className={cn("whitespace-pre-wrap break-words", className)}>
+      {splitLinks(text).map((segment, i) =>
+        segment.kind === "link" ? (
+          <a
+            key={i}
+            href={segment.href}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="text-primary underline underline-offset-2"
+          >
+            {segment.value}
+          </a>
+        ) : (
+          <span key={i}>{segment.value}</span>
+        ),
+      )}
+    </p>
+  );
+}
 
 /** 게시글 상세 (스펙 3.3) */
 export function PostDetailView({
@@ -48,6 +78,7 @@ export function PostDetailView({
   const [comment, setComment] = useState("");
   const [readOpen, setReadOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   const isAuthor = post.author_id === currentEmployeeId;
@@ -105,6 +136,19 @@ export function PostDetailView({
     });
   };
 
+  /** 비공개 버킷이라 열 때마다 서명 URL을 받는다 (결재 첨부와 같은 방식) */
+  const download = (storagePath: string) => {
+    setFileError(null);
+    startTransition(async () => {
+      const result = await getPostAttachmentUrl(storagePath);
+      if (!result.ok || !result.url) {
+        setFileError(result.message ?? "다운로드 링크를 만들지 못했습니다.");
+        return;
+      }
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    });
+  };
+
   const unread = readStatus.filter((r) => !r.read_at);
 
   return (
@@ -139,6 +183,21 @@ export function PostDetailView({
                     ? ` (수정 ${formatDateTime(post.updated_at)})`
                     : ""}
                 </span>
+                {/*
+                  조회수는 열람률과 다른 숫자다 — 열람률은 "대상자 중 누가
+                  읽었나"(명), 조회는 "몇 번 열렸나"(회). 라벨과 단위로 가른다.
+                  본인 글 조회는 세지 않는다.
+                */}
+                <span className="inline-flex items-center gap-1 text-caption tabular-nums">
+                  <Eye className="size-3.5 text-muted" aria-hidden />
+                  조회 {post.view_count}회
+                </span>
+                {post.attachments.length > 0 ? (
+                  <span className="inline-flex items-center gap-1 text-caption tabular-nums">
+                    <Paperclip className="size-3.5 text-muted" aria-hidden />
+                    첨부 {post.attachments.length}건
+                  </span>
+                ) : null}
               </div>
             </div>
 
@@ -196,7 +255,7 @@ export function PostDetailView({
                     className="ml-auto"
                     onClick={() => setReadOpen(true)}
                   >
-                    <Eye className="size-3.5" />
+                    <Users className="size-3.5" />
                     읽음 현황
                   </Button>
                 ) : null}
@@ -204,33 +263,50 @@ export function PostDetailView({
             </div>
           ) : null}
 
-          <div className="mt-5 whitespace-pre-wrap border-t border-line pt-5 text-body leading-relaxed text-ink">
-            {post.content}
+          <div className="mt-5 border-t border-line pt-5 text-body leading-relaxed text-ink">
+            <PostText text={post.content} />
           </div>
 
+          {/*
+            비공개 버킷이라 file_url은 열 수 있는 주소가 아니라 스토리지
+            경로다. 누를 때 서명 URL을 받아 연다.
+          */}
           {post.attachments.length > 0 ? (
-            <ul className="mt-5 divide-y divide-line border-t border-line pt-3">
-              {post.attachments.map((file) => (
-                <li key={file.id}>
-                  <a
-                    href={file.file_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 py-2 text-body text-ink hover:underline"
-                  >
-                    <Paperclip className="size-3.5 shrink-0 text-muted" aria-hidden />
-                    <span className="min-w-0 truncate">
-                      {file.file_name ?? file.file_url}
+            <div className="mt-5 border-t border-line pt-4">
+              <p className="mb-1 text-label font-bold text-muted">
+                첨부파일 {post.attachments.length}건
+              </p>
+              <ul className="divide-y divide-line">
+                {post.attachments.map((file) => (
+                  <li key={file.id} className="flex items-center gap-2 py-2">
+                    <Paperclip
+                      className="size-4 shrink-0 text-muted"
+                      aria-hidden
+                    />
+                    <span className="min-w-0 flex-1 truncate text-body text-ink">
+                      {file.file_name ?? "첨부파일"}
                     </span>
                     {formatFileSize(file.file_size) ? (
-                      <span className="shrink-0 text-caption">
+                      <span className="shrink-0 tabular-nums text-caption">
                         {formatFileSize(file.file_size)}
                       </span>
                     ) : null}
-                  </a>
-                </li>
-              ))}
-            </ul>
+                    <button
+                      type="button"
+                      onClick={() => download(file.file_url)}
+                      disabled={pending}
+                      aria-label={`${file.file_name ?? "첨부"} 내려받기`}
+                      className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50"
+                    >
+                      <Download className="size-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {fileError ? (
+                <p className="mt-1.5 text-label text-danger">{fileError}</p>
+              ) : null}
+            </div>
           ) : null}
 
           {/* 이모지 반응 4종 고정 (스펙 3.3) */}
@@ -304,9 +380,10 @@ export function PostDetailView({
                         </button>
                       ) : null}
                     </div>
-                    <p className="mt-0.5 whitespace-pre-wrap text-body text-ink">
-                      {c.content}
-                    </p>
+                    <PostText
+                      text={c.content}
+                      className="mt-0.5 text-body text-ink"
+                    />
                   </div>
                 </li>
               ))}

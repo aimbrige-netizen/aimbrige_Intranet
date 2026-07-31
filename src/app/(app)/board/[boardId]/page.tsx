@@ -147,7 +147,7 @@ export default async function BoardPage({
           unit="건"
           tone="neutral"
           icon={ScrollText}
-          sub={`이번 달 ${overview.thisMonth}건`}
+          sub={`이번 달 ${overview.thisMonth}건 · 조회 ${overview.viewTotal}회`}
         />
         <StatCard
           label="이번 주 새 글"

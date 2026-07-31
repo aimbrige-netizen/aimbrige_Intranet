@@ -393,8 +393,17 @@ export default async function ApprovalsPage({
                           </span>
                         </td>
                         <td>
+                          {/*
+                            임시저장은 상세(결재 진행 화면)가 아니라 작성 폼으로
+                            보낸다. 결재선도 이력도 없는 문서를 상세로 열면
+                            빈 껍데기만 보인다.
+                          */}
                           <Link
-                            href={`/approvals/${doc.id}`}
+                            href={
+                              doc.status === "draft"
+                                ? `/approvals/new/${doc.document_type}?draft=${doc.id}`
+                                : `/approvals/${doc.id}`
+                            }
                             className="text-ink hover:text-primary hover:underline"
                           >
                             {doc.title}

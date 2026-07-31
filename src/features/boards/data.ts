@@ -119,7 +119,7 @@ export async function getPosts(
   let query = supabase
     .from("posts")
     .select(
-      `id, board_id, title, content, category, is_pinned, author_id,
+      `id, board_id, title, content, category, is_pinned, author_id, view_count,
        created_at, updated_at,
        author:employees!author_id(id, name, profile_image_url),
        comments:comments(count)`,
@@ -202,6 +202,8 @@ export interface BoardOverview {
   unread: number;
   /** 내가 쓴 글 */
   myPosts: number;
+  /** 총 조회수 합 — 열람률과 다른 지표라 라벨을 "조회"로 구분한다 */
+  viewTotal: number;
   latestAt: string | null;
   /** 카테고리별 건수 (필터 칩의 분모) */
   categoryCounts: Record<string, number>;
@@ -222,6 +224,7 @@ const EMPTY_OVERVIEW: BoardOverview = {
   thisMonth: 0,
   unread: 0,
   myPosts: 0,
+  viewTotal: 0,
   latestAt: null,
   categoryCounts: {},
   uncategorized: 0,
@@ -247,7 +250,9 @@ export async function getBoardOverview(
   const [{ data, count, error }, board] = await Promise.all([
     supabase
       .from("posts")
-      .select("id, title, category, author_id, created_at", { count: "exact" })
+      .select("id, title, category, author_id, view_count, created_at", {
+        count: "exact",
+      })
       .eq("board_id", boardId)
       .order("created_at", { ascending: false })
       .limit(OVERVIEW_SCAN_LIMIT),
@@ -264,6 +269,7 @@ export async function getBoardOverview(
     title: string;
     category: string | null;
     author_id: string;
+    view_count: number;
     created_at: string;
   }[];
 
@@ -278,6 +284,7 @@ export async function getBoardOverview(
   let lastWeek = 0;
   let thisMonth = 0;
   let myPosts = 0;
+  let viewTotal = 0;
 
   rows.forEach((row) => {
     const ymd = toSeoulYmd(row.created_at);
@@ -285,6 +292,7 @@ export async function getBoardOverview(
     else if (ymd >= lastWeekStart) lastWeek += 1;
     if (ymd >= monthStart) thisMonth += 1;
     if (row.author_id === employeeId) myPosts += 1;
+    viewTotal += row.view_count ?? 0;
     if (row.category) {
       categoryCounts[row.category] = (categoryCounts[row.category] ?? 0) + 1;
     } else {
@@ -330,6 +338,7 @@ export async function getBoardOverview(
     thisMonth,
     unread: unreadRows.length,
     myPosts,
+    viewTotal,
     latestAt: rows[0]?.created_at ?? null,
     categoryCounts,
     uncategorized,
@@ -355,7 +364,7 @@ export async function getPostDetail(
   const { data, error } = await supabase
     .from("posts")
     .select(
-      `id, board_id, title, content, category, is_pinned, author_id,
+      `id, board_id, title, content, category, is_pinned, author_id, view_count,
        created_at, updated_at,
        author:employees!author_id(id, name, position, profile_image_url),
        board:boards!board_id(id, name, board_type, department_id, sort_order, created_at),
@@ -379,6 +388,10 @@ export async function getPostDetail(
   const post = data as unknown as PostDetail;
   post.comments = [...(post.comments ?? [])].sort((a, b) =>
     a.created_at.localeCompare(b.created_at),
+  );
+  // 임베드 순서는 보장되지 않는다 — 올린 순서로 고정한다
+  post.attachments = [...(post.attachments ?? [])].sort((a, b) =>
+    a.uploaded_at.localeCompare(b.uploaded_at),
   );
 
   // 반응 집계 — 4종 고정이라 전체를 가져와 세는 편이 단순하다

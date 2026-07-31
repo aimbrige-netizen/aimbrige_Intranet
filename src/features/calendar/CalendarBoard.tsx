@@ -16,7 +16,10 @@ import {
   toSeoulTime,
   weekdayOf,
 } from "@/features/calendar/date";
-import type { ResourceBookingBrief } from "@/features/calendar/data-client";
+import type {
+  AttendeeOption,
+  ResourceBookingBrief,
+} from "@/features/calendar/data-client";
 import {
   SCOPE_LABELS,
   calendarHref,
@@ -66,6 +69,7 @@ function dayToneClass(
 /** 요일별 분포 막대에서 쓸 종류별 톤 */
 const KIND_METER_TONE: Record<CalendarItemKind, MeterTone> = {
   personal: "brand",
+  invited: "brand",
   team: "positive",
   company: "informative",
   leave: "warning",
@@ -74,6 +78,16 @@ const KIND_METER_TONE: Record<CalendarItemKind, MeterTone> = {
 };
 
 const MONTH_CHIP_LIMIT = 4;
+
+/** '본사 3층 대회의실 · 참석 4명' — 없으면 빈 문자열 */
+function placeLine(item: CalendarItem): string {
+  return [
+    item.location,
+    item.attendees.length > 0 ? `참석 ${item.attendees.length}명` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
 
 interface DayRow {
   date: string;
@@ -93,6 +107,7 @@ export function CalendarBoard({
   today,
   focusDate,
   canCreateTeamEvent,
+  attendeeOptions,
   openCreateOnMount,
 }: {
   items: CalendarItem[];
@@ -112,6 +127,8 @@ export function CalendarBoard({
   /** 상세 패널이 처음 여는 날짜 */
   focusDate: string;
   canCreateTeamEvent: boolean;
+  /** 참석자로 고를 수 있는 재직 임직원 (본인 제외) */
+  attendeeOptions: AttendeeOption[];
   /** ?new=1로 들어오면 마운트 직후 작성 모달을 연다 */
   openCreateOnMount?: boolean;
 }) {
@@ -397,6 +414,7 @@ export function CalendarBoard({
         editing={editing}
         presetDate={presetDate}
         canCreateTeamEvent={canCreateTeamEvent}
+        attendeeOptions={attendeeOptions}
       />
 
       <BookingModal
@@ -517,12 +535,15 @@ function EventChip({
   const time = item.allDay
     ? "종일"
     : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`;
+  const place = placeLine(item);
 
   return (
     <button
       type="button"
       onClick={() => onPick(item)}
-      title={`${color.label} · ${time} · ${item.title}`}
+      title={[`${color.label} · ${time} · ${item.title}`, place]
+        .filter(Boolean)
+        .join(" · ")}
       className={cn(
         "flex w-full items-center gap-1 truncate rounded-sm px-1.5 py-0.5 text-left text-nano transition-opacity duration-fast ease-standard hover:opacity-80",
         color.chip,
@@ -851,9 +872,17 @@ function ItemTable({
                     <button
                       type="button"
                       onClick={() => onPick(item)}
-                      className="block w-full truncate text-left text-body-sm text-ink transition-colors duration-fast ease-standard hover:text-primary"
+                      className="block w-full text-left transition-colors duration-fast ease-standard hover:text-primary"
                     >
-                      {item.title}
+                      <span className="block truncate text-body-sm text-ink">
+                        {item.title}
+                      </span>
+                      {/* 회의는 "어디서 · 누가"까지 봐야 갈지 말지가 정해진다 */}
+                      {placeLine(item) ? (
+                        <span className="block truncate text-nano text-muted">
+                          {placeLine(item)}
+                        </span>
+                      ) : null}
                     </button>
                   </td>
                   <td className="truncate text-caption">

@@ -16,16 +16,18 @@ import { toSeoulTime, WEEKDAY_LABELS, weekdayOf } from "@/features/calendar/date
 import {
   RESOURCE_TYPES,
   RESOURCE_TYPE_LABELS,
-  TIMELINE_END_MIN,
-  TIMELINE_START_MIN,
   bookingYmd,
   minutesOfIso,
   minutesOfTime,
   overlaps,
   resourceMeta,
+  timeOfMinutes,
   type ResourceBookingBrief,
 } from "@/features/calendar/data-client";
-import { cn } from "@/lib/utils";
+import {
+  TimelineAxis,
+  TimelineTrack,
+} from "@/features/calendar/ResourceTimeline";
 import type { Resource, ResourceType } from "@/types/db";
 
 const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
@@ -37,7 +39,13 @@ const TYPE_ICONS: Record<ResourceType, LucideIcon> = {
 export interface BookingPreset {
   resourceId?: string;
   date?: string;
+  /** 타임라인 빈칸에서 열었을 때 미리 채워 넣을 시간 */
+  startTime?: string;
+  endTime?: string;
 }
+
+const DEFAULT_START = "09:00";
+const DEFAULT_END = "10:00";
 
 /**
  * 리소스 예약 모달 (스펙 02 · 3.6)
@@ -73,8 +81,8 @@ export function BookingModal({
   const [typeFilter, setTypeFilter] = useState<ResourceType | null>(null);
   const [resourceId, setResourceId] = useState("");
   const [date, setDate] = useState(defaultDate);
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
+  const [startTime, setStartTime] = useState(DEFAULT_START);
+  const [endTime, setEndTime] = useState(DEFAULT_END);
   const [purpose, setPurpose] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
@@ -85,8 +93,8 @@ export function BookingModal({
     setTypeFilter(null);
     setDate(preset?.date ?? defaultDate);
     setResourceId(preset?.resourceId ?? resources[0]?.id ?? "");
-    setStartTime("09:00");
-    setEndTime("10:00");
+    setStartTime(preset?.startTime ?? DEFAULT_START);
+    setEndTime(preset?.endTime ?? DEFAULT_END);
     setPurpose("");
     setErrors({});
     setMessage(null);
@@ -125,6 +133,9 @@ export function BookingModal({
 
   const selected = resources.find((resource) => resource.id === resourceId);
   const selectedConflict = resourceId ? conflictOf(resourceId) : undefined;
+  const selectedBookings = dayBookings.filter(
+    (booking) => booking.resourceId === resourceId,
+  );
 
   const submit = () => {
     setErrors({});
@@ -308,19 +319,23 @@ export function BookingModal({
                 <p className="text-nano tabular-nums text-muted">
                   {date}
                   {weekday !== null ? ` (${WEEKDAY_LABELS[weekday]})` : ""} ·
-                  기존 예약{" "}
-                  {
-                    dayBookings.filter((b) => b.resourceId === selected.id)
-                      .length
-                  }
-                  건
+                  기존 예약 {selectedBookings.length}건
                 </p>
               </div>
-              <DayTimeline
-                blocks={dayBookings.filter((b) => b.resourceId === selected.id)}
+              <TimelineTrack
+                blocks={selectedBookings}
                 selection={validRange ? { startMin, endMin } : null}
                 conflict={!!selectedConflict}
+                slotLabel={selected.name}
+                onPickSlot={(range) => {
+                  setStartTime(timeOfMinutes(range.startMin));
+                  setEndTime(timeOfMinutes(range.endMin));
+                }}
               />
+              <TimelineAxis className="mt-1" />
+              <p className="mt-1.5 text-nano text-muted">
+                빈 구간을 누르면 그 시간이 위 시작·종료에 들어갑니다.
+              </p>
             </div>
           ) : null}
 
@@ -347,92 +362,5 @@ export function BookingModal({
         </div>
       )}
     </Modal>
-  );
-}
-
-const TIMELINE_SPAN = TIMELINE_END_MIN - TIMELINE_START_MIN;
-
-/** 값을 08:00~20:00 창 안의 % 로 */
-function pct(minutes: number) {
-  return Math.min(
-    100,
-    Math.max(0, ((minutes - TIMELINE_START_MIN) / TIMELINE_SPAN) * 100),
-  );
-}
-
-/**
- * 하루 08:00~20:00 타임라인.
- * "빈 시간을 찾는" 작업은 목록이 아니라 자리 그림으로 봐야 한다.
- */
-export function DayTimeline({
-  blocks,
-  selection,
-  conflict,
-}: {
-  blocks: ResourceBookingBrief[];
-  selection: { startMin: number; endMin: number } | null;
-  conflict?: boolean;
-}) {
-  const ticks = [8, 10, 12, 14, 16, 18, 20];
-
-  return (
-    <div>
-      <div className="relative h-9 overflow-hidden rounded-sm bg-subtle">
-        {ticks.slice(1, -1).map((hour) => (
-          <span
-            key={hour}
-            aria-hidden
-            className="absolute inset-y-0 w-px bg-line"
-            style={{ left: `${pct(hour * 60)}%` }}
-          />
-        ))}
-
-        {blocks.map((booking) => {
-          const left = pct(minutesOfIso(booking.startAt));
-          const right = pct(minutesOfIso(booking.endAt));
-          return (
-            <span
-              key={booking.id}
-              title={`${toSeoulTime(booking.startAt)}–${toSeoulTime(booking.endAt)} ${booking.bookerName ?? ""}`}
-              className="absolute inset-y-1 flex items-center overflow-hidden rounded-sm bg-line-strong px-1 text-nano text-ink"
-              style={{ left: `${left}%`, width: `${Math.max(right - left, 1)}%` }}
-            >
-              <span className="truncate">{booking.bookerName ?? "예약됨"}</span>
-            </span>
-          );
-        })}
-
-        {selection ? (
-          <span
-            aria-hidden
-            className={cn(
-              "absolute inset-y-0 rounded-sm border-2",
-              conflict
-                ? "border-danger bg-danger-light/70"
-                : "border-primary bg-primary-light/80",
-            )}
-            style={{
-              left: `${pct(selection.startMin)}%`,
-              width: `${Math.max(pct(selection.endMin) - pct(selection.startMin), 1)}%`,
-            }}
-          />
-        ) : null}
-      </div>
-
-      <div className="relative mt-1 h-3">
-        {ticks.map((hour) => (
-          <span
-            key={hour}
-            className={cn(
-              "absolute text-nano tabular-nums text-muted",
-              hour === 8 ? "left-0" : hour === 20 ? "right-0" : "-translate-x-1/2",
-            )}
-            style={hour === 8 || hour === 20 ? undefined : { left: `${pct(hour * 60)}%` }}
-          >
-            {String(hour).padStart(2, "0")}
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }

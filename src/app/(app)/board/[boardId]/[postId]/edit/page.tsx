@@ -38,7 +38,12 @@ export default async function EditPostPage({
         }
       />
 
-      <PostEditor board={board} post={post} />
+      <PostEditor
+        board={board}
+        post={post}
+        attachments={post.attachments}
+        authUserId={me.auth_user_id}
+      />
     </>
   );
 }

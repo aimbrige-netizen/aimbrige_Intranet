@@ -5,7 +5,9 @@ import {
 } from "@/components/ui/TableToolbar";
 import {
   EmployeeTable,
+  sortEmployeeRows,
   toEmployeeRow,
+  EMPLOYEE_SORT_KEYS,
   type EmployeeSortKey,
 } from "@/features/directory/EmployeeTable";
 import { EmployeeExportButton } from "@/features/directory/EmployeeExportButton";
@@ -13,9 +15,9 @@ import {
   departmentMembers,
   tenureLabel,
   tenureMonths,
-  type DirectoryEmployee,
   type OrgIndex,
 } from "@/features/directory/org";
+import { parseSortDir, parseSortKey, toggledDir } from "@/lib/sort";
 
 /**
  * 임직원 목록 (조직도 모듈 · 목록 뷰)
@@ -23,15 +25,22 @@ import {
  * 예전 목록은 검색어·부서·팀이 컴포넌트 로컬 state였다. URL에 남지 않으니
  * 공유·북마크·뒤로가기가 전부 깨졌고, includeInactive만 URL 파라미터여서
  * 한 화면 안에 필터 저장 방식이 두 개였다. 전부 searchParams로 통일한다.
+ *
+ * 파라미터 이름은 관리자 임직원 목록과 같은 규약을 쓴다
+ * (q / department / team / status / sort / dir). 예전 dept는 여기서만
+ * 쓰던 이름이라 department로 맞췄다.
  */
 export interface PeopleParams {
   q?: string;
-  dept?: string;
+  department?: string;
   team?: string;
   sort?: string;
   dir?: string;
   inactive?: string;
 }
+
+/** 이 뷰는 전 인원을 메모리에 들고 있어 부서 정렬까지 그대로 된다 */
+const SORTABLE: readonly EmployeeSortKey[] = EMPLOYEE_SORT_KEYS;
 
 export function PeopleBoard({
   index,
@@ -47,11 +56,8 @@ export function PeopleBoard({
   includeInactive: boolean;
 }) {
   const keyword = (params.q ?? "").trim().toLowerCase();
-  const sortKey: EmployeeSortKey =
-    params.sort === "hire_date" || params.sort === "department"
-      ? params.sort
-      : "name";
-  const dir = params.dir === "desc" ? "desc" : "asc";
+  const sortKey = parseSortKey(params.sort, SORTABLE);
+  const dir = parseSortDir(params.dir);
 
   const departmentName = (id: string | null) =>
     id ? (index.departmentById.get(id)?.name ?? null) : null;
@@ -60,12 +66,12 @@ export function PeopleBoard({
 
   /** 부서 필터는 하위 부서·팀까지 포함한다 — 상위 부서를 골랐는데 본부장만 나오면 안 된다 */
   const scopeIds =
-    params.dept && params.dept !== "none"
-      ? new Set(departmentMembers(index, params.dept).map((e) => e.id))
+    params.department && params.department !== "none"
+      ? new Set(departmentMembers(index, params.department).map((e) => e.id))
       : null;
 
   const filtered = index.employees.filter((employee) => {
-    if (params.dept === "none") {
+    if (params.department === "none") {
       if (employee.department_id || employee.team_id) return false;
     } else if (scopeIds && !scopeIds.has(employee.id)) {
       return false;
@@ -85,26 +91,19 @@ export function PeopleBoard({
       .includes(keyword);
   });
 
-  const sorted = [...filtered].sort((a, b) => {
-    const factor = dir === "asc" ? 1 : -1;
-    if (sortKey === "hire_date") {
-      return (a.hire_date ?? "").localeCompare(b.hire_date ?? "") * factor;
-    }
-    if (sortKey === "department") {
-      const left = departmentName(a.department_id) ?? "";
-      const right = departmentName(b.department_id) ?? "";
-      if (left !== right) return left.localeCompare(right, "ko") * factor;
-      return a.name.localeCompare(b.name, "ko");
-    }
-    return a.name.localeCompare(b.name, "ko") * factor;
-  });
+  const sorted = sortEmployeeRows(
+    filtered.map((employee) =>
+      toEmployeeRow(employee, departmentName, teamName),
+    ),
+    { key: sortKey, dir },
+  );
 
   const href = (patch: PeopleParams & { tab?: string }) => {
     const search = new URLSearchParams();
     search.set("tab", "people");
     const merged: Record<string, string | undefined> = {
       q: params.q,
-      dept: params.dept,
+      department: params.department,
       team: params.team,
       sort: params.sort,
       dir: params.dir,
@@ -120,12 +119,13 @@ export function PeopleBoard({
   const sortHref = (key: EmployeeSortKey) =>
     href({
       sort: key,
-      dir: sortKey === key && dir === "asc" ? "desc" : "asc",
+      // 입사일은 최근 입사자부터 보는 쪽이 자연스럽다
+      dir: toggledDir(sortKey === key, dir, key === "hire_date" ? "desc" : "asc"),
     });
 
   const teamsOfDepartment =
-    params.dept && params.dept !== "none"
-      ? (index.teamsByDepartment.get(params.dept) ?? [])
+    params.department && params.department !== "none"
+      ? (index.teamsByDepartment.get(params.department) ?? [])
       : [];
 
   return (
@@ -134,11 +134,21 @@ export function PeopleBoard({
         search={
           <form action="/directory" className="contents">
             <input type="hidden" name="tab" value="people" />
-            {params.dept ? (
-              <input type="hidden" name="dept" value={params.dept} />
+            {params.department ? (
+              <input
+                type="hidden"
+                name="department"
+                value={params.department}
+              />
             ) : null}
             {params.team ? (
               <input type="hidden" name="team" value={params.team} />
+            ) : null}
+            {params.sort ? (
+              <input type="hidden" name="sort" value={params.sort} />
+            ) : null}
+            {params.dir ? (
+              <input type="hidden" name="dir" value={params.dir} />
             ) : null}
             {params.inactive ? (
               <input type="hidden" name="inactive" value={params.inactive} />
@@ -154,8 +164,8 @@ export function PeopleBoard({
         filters={
           <>
             <FilterChip
-              href={href({ dept: undefined, team: undefined })}
-              active={!params.dept}
+              href={href({ department: undefined, team: undefined })}
+              active={!params.department}
               count={index.employees.length}
             >
               전체
@@ -163,8 +173,8 @@ export function PeopleBoard({
             {index.roots.map((department) => (
               <FilterChip
                 key={department.id}
-                href={href({ dept: department.id, team: undefined })}
-                active={params.dept === department.id}
+                href={href({ department: department.id, team: undefined })}
+                active={params.department === department.id}
                 count={index.totalByDepartment.get(department.id) ?? 0}
               >
                 {department.name}
@@ -172,8 +182,8 @@ export function PeopleBoard({
             ))}
             {index.unassigned.length > 0 ? (
               <FilterChip
-                href={href({ dept: "none", team: undefined })}
-                active={params.dept === "none"}
+                href={href({ department: "none", team: undefined })}
+                active={params.department === "none"}
                 count={index.unassigned.length}
               >
                 미배정
@@ -196,13 +206,13 @@ export function PeopleBoard({
               rows={sorted.map((employee) => ({
                 name: employee.name,
                 position: employee.position,
-                department: departmentName(employee.department_id),
-                team: teamName(employee.team_id),
-                status: employee.employment_status,
+                department: employee.departmentName,
+                team: employee.teamName,
+                status: employee.employmentStatus,
                 email: employee.email,
                 phone: employee.phone,
-                hireDate: employee.hire_date,
-                tenure: tenureLabel(tenureMonths(employee.hire_date, today)),
+                hireDate: employee.hireDate,
+                tenure: tenureLabel(tenureMonths(employee.hireDate, today)),
               }))}
             />
           </>
@@ -230,9 +240,7 @@ export function PeopleBoard({
 
       <div className="ab-card overflow-hidden">
         <EmployeeTable
-          rows={sorted.map((employee: DirectoryEmployee) =>
-            toEmployeeRow(employee, departmentName, teamName),
-          )}
+          rows={sorted}
           today={today}
           minWidth="min-w-[1040px]"
           sort={{ key: sortKey, dir }}
