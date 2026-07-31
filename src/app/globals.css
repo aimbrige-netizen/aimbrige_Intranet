@@ -25,9 +25,10 @@
   --seed-muted: #868b94;
   --seed-line: #eaebee;
   --seed-line-strong: #dcdee3;
-  --seed-danger: #fa2314;
-  --seed-info: #009ceb;
   --seed-success: #1aa174;
+  --seed-info: #009ceb;
+  --seed-warn: #f59f0a; /* primary와 분리된 계기판 색 — 진행바 구간 구분용 */
+  --seed-danger: #fa2314;
 
   --layout-topbar: 56px;
   --layout-rail: 76px;
@@ -83,11 +84,6 @@
     @apply rounded-card border border-line bg-surface;
   }
 
-  /* 선택형 카드(옵션 뱃지): 다크 배경 + 흰 텍스트 */
-  .ab-pick-card {
-    @apply rounded-pick bg-pick text-white transition-colors duration-fast ease-standard hover:bg-[#37373b];
-  }
-
   /* 라벨-옆-인풋 밀도 높은 표 형태 폼 (결재·신청서류용) */
   .ab-form-grid {
     @apply grid grid-cols-1 overflow-hidden rounded-card border border-line bg-surface md:grid-cols-[160px_1fr];
@@ -120,6 +116,19 @@
 
   .ab-table tbody tr {
     @apply transition-colors duration-fast ease-standard hover:bg-subtle;
+  }
+
+  /*
+   * 조밀 변형. 기본 행 높이 49px는 벤치마크(32~36px)의 1.4배라
+   * 같은 화면 높이에 담기는 행 수가 그만큼 줄어든다.
+   * 스캔이 목적인 표(근태 일별, 결재함, 게시판 목록)는 이쪽을 쓴다.
+   */
+  .ab-table--compact thead th {
+    @apply px-3 py-2;
+  }
+
+  .ab-table--compact tbody td {
+    @apply px-3 py-2;
   }
 }
 

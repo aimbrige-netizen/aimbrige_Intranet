@@ -32,7 +32,7 @@ export default async function ApprovalLinesPage() {
       />
 
       {unset > 0 ? (
-        <div className="mb-4 flex gap-2.5 rounded-card border border-danger/30 bg-danger/10 px-4 py-3">
+        <div className="mb-4 flex gap-2.5 rounded-card border border-danger/30 bg-danger-light px-4 py-3">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
           <p className="text-body text-ink">
             최종 승인자가 지정되지 않은 유형이 <strong>{unset}개</strong> 있습니다.

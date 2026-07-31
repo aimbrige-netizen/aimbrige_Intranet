@@ -66,7 +66,7 @@ export function EventDetail({
               variant="ghost"
               onClick={remove}
               disabled={pending}
-              className="mr-auto !text-danger hover:!bg-danger/10"
+              className="mr-auto !text-danger hover:!bg-danger-light"
             >
               <Trash2 className="size-3.5" />
               삭제

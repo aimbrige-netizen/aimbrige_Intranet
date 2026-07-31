@@ -35,8 +35,8 @@ export default async function NewApprovalPage() {
       />
 
       {blocked.size > 0 ? (
-        <div className="mb-4 flex gap-2.5 rounded-card border border-warn/40 bg-warn/10 px-4 py-3">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn" aria-hidden />
+        <div className="mb-4 flex gap-2.5 rounded-card border border-warn/40 bg-warn-light px-4 py-3">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warn-ink" aria-hidden />
           <p className="text-body text-ink">
             최종 승인자가 지정되지 않은 유형이 {blocked.size}개 있어 기안할 수 없습니다.
             시스템 관리자가 결재라인 설정에서 지정해야 합니다.

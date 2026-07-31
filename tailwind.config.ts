@@ -44,10 +44,32 @@ const config: Config = {
         subtle: "#f7f8fa", // gray-50 / paper-contents — 옅은 면
         line: "#eaebee", // gray-200 / divider-2
         "line-strong": "#dcdee3",
+        /*
+         * 시맨틱 상태색.
+         *
+         * warn은 한때 primary와 같은 값(#ff6f0f)이었는데, 그러면 진행바에서
+         * "정상 / 48h 경고 / 52h 초과" 3구간을 색으로 나눌 수 없다.
+         * 액센트(primary)와 경고(warn)는 역할이 다르므로 분리한다 —
+         * 앰버는 브랜드색이 아니라 계기판 색이고, 면적을 넓게 쓰지 않는다.
+         */
         success: "#1aa174", // green-500
         info: "#009ceb", // blue-500
-        warn: "#ff6f0f", // 별도 경고색을 만들지 않고 primary를 쓴다(원칙 6)
+        warn: "#f59f0a", // amber — primary보다 노랑 쪽이라 나란히 놔도 구분된다
         danger: "#fa2314", // red-600
+        /*
+         * 각 상태의 옅은 면.
+         * /10 투명도 대신 solid 틴트를 쓰는 이유: 진행바 트랙이나 칩이
+         * 이미 색이 있는 면 위에 올라가면 알파 합성 결과가 배경마다 달라진다.
+         */
+        "success-light": "#e8f7f1",
+        "info-light": "#e5f5fd",
+        "warn-light": "#fef6e7",
+        "danger-light": "#feecea",
+        /* 옅은 면 위에 얹는 글자색 — 4.5:1 대비 확보용 */
+        "success-ink": "#0f7355",
+        "info-ink": "#0077b0",
+        "warn-ink": "#96590a",
+        "danger-ink": "#c4190f",
         /*
          * 캘린더 이벤트 색상 (스펙 02 · 3.4)
          * SEED는 브랜드 색을 하나만 두므로, 이벤트 구분은 브랜드가 아니라
@@ -87,6 +109,14 @@ const config: Config = {
         body: ["15px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
         "body-sm": ["14px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
         label: ["13px", { lineHeight: "1.5", fontWeight: "400", letterSpacing: "-0.02em" }],
+        /*
+         * 12px 아래는 SEED 스케일에 없지만 인트라넷에는 필요하다 —
+         * 76px 레일 라벨, 진행바 눈금 캡션, 칩 안의 보조 시각처럼
+         * "읽는 글"이 아니라 "표식"인 자리. 임의값 text-[11px]가 이미
+         * 5곳에 흩어져 있어 토큰으로 승격한다.
+         */
+        micro: ["12px", { lineHeight: "1.4", fontWeight: "400", letterSpacing: "-0.01em" }],
+        nano: ["11px", { lineHeight: "1.35", fontWeight: "400", letterSpacing: "0" }],
       },
       borderRadius: {
         // SEED §5: sm 6 / md 8 / full 9999
@@ -97,16 +127,22 @@ const config: Config = {
       },
       boxShadow: {
         /*
-         * SEED §6: 검사된 공개 컨트롤은 전부 flat(box-shadow: none)이었다.
-         * 그림자로 띄우지 않고 hairline으로 면을 나눈다.
+         * SEED §6: 면을 나누는 기본 수단은 hairline이다. 카드는 여전히 flat.
+         *
+         * 다만 "선택된 날짜가 회색 스트립 위로 튀어나온다"(R5)처럼
+         * 같은 흰색 면이 겹칠 때는 경계선만으로 층이 구분되지 않는다.
+         * 그래서 raised 한 단계만 되살린다 — 장식이 아니라 층 표시용이고,
+         * 상시 노출되는 카드에는 쓰지 않는다.
          */
         card: "none",
+        raised: "0 1px 3px rgba(33,33,36,0.08), 0 1px 2px rgba(33,33,36,0.04)",
         pop: "0 4px 16px rgba(33,33,36,0.10)",
       },
       spacing: {
         // SEED §5: 4px 그리드. 레이아웃 고정값만 별도 토큰으로.
         topbar: "56px",
         rail: "76px",
+        panel: "224px", // 모듈 사이드 패널 (2뎁스 셸)
         drawer: "248px",
       },
       transitionTimingFunction: {

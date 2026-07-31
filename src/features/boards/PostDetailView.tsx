@@ -156,7 +156,7 @@ export function PostDetailView({
                     variant="ghost"
                     onClick={removePost}
                     disabled={pending}
-                    className="!text-danger hover:!bg-danger/10"
+                    className="!text-danger hover:!bg-danger-light"
                   >
                     <Trash2 className="size-3.5" />
                     삭제
@@ -244,7 +244,7 @@ export function PostDetailView({
                           type="button"
                           onClick={() => removeComment(c.id)}
                           disabled={pending}
-                          className="ml-auto rounded-sm p-1 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="ml-auto rounded-sm p-1 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
                           aria-label="댓글 삭제"
                         >
                           <Trash2 className="size-3.5" />
@@ -300,9 +300,9 @@ export function PostDetailView({
       >
         <div className="space-y-4">
           {unread.length > 0 ? (
-            <div className="rounded-card border border-warn/40 bg-warn/10 px-4 py-3 text-body text-ink">
+            <div className="rounded-card border border-warn/40 bg-warn-light px-4 py-3 text-body text-ink">
               <p className="flex items-center gap-2 font-bold">
-                <Users className="size-4 text-warn" aria-hidden />
+                <Users className="size-4 text-warn-ink" aria-hidden />
                 미열람 {unread.length}명
               </p>
               <p className="mt-1 text-label">

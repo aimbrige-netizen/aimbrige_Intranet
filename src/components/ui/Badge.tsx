@@ -12,11 +12,11 @@ type Tone = "neutral" | "primary" | "success" | "warn" | "danger" | "info";
 const TONES: Record<Tone, string> = {
   neutral: "bg-subtle text-muted",
   primary: "bg-primary-light text-primary",
-  // warn은 별도 색을 만들지 않고 브랜드 톤을 쓴다(SEED는 amber를 두지 않음)
-  warn: "bg-primary-light text-primary",
-  success: "bg-success/10 text-success",
-  info: "bg-info/10 text-info",
-  danger: "bg-danger/10 text-danger",
+  // 상태 틴트는 solid를 쓴다 — 알파 합성은 얹히는 면마다 결과가 달라진다
+  success: "bg-success-light text-success-ink",
+  info: "bg-info-light text-info-ink",
+  warn: "bg-warn-light text-warn-ink",
+  danger: "bg-danger-light text-danger-ink",
 };
 
 export function Badge({

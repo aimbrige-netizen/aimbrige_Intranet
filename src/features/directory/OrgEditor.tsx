@@ -339,7 +339,7 @@ function IconButton({
       title={label}
       className={
         danger
-          ? "rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger"
+          ? "rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger"
           : "rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
       }
     >

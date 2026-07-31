@@ -47,7 +47,7 @@ export function DriveReauthNotice({ message }: { message: string }) {
         </div>
 
         {scopeMissing ? (
-          <div className="mx-auto max-w-lg rounded-card border border-warn/40 bg-warn/10 px-4 py-3 text-left text-label text-ink">
+          <div className="mx-auto max-w-lg rounded-card border border-warn/40 bg-warn-light px-4 py-3 text-left text-label text-ink">
             <p className="font-bold">Drive 스코프가 아직 설정되지 않았습니다</p>
             <p className="mt-1 leading-relaxed">
               시스템 관리자가 먼저 아래를 처리해야 합니다.

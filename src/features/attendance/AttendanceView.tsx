@@ -331,7 +331,7 @@ export function AttendanceView({
                               type="button"
                               onClick={() => cancel(l.id)}
                               disabled={pending}
-                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
                               aria-label="신청 취소"
                               title="신청 취소"
                             >

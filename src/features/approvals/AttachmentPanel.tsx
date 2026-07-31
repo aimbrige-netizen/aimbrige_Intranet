@@ -144,7 +144,7 @@ export function AttachmentPanel({
                   onClick={() => remove(file.id, file.file_name ?? "첨부")}
                   disabled={pending}
                   aria-label="첨부 삭제"
-                  className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                  className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
                 >
                   <Trash2 className="size-4" />
                 </button>

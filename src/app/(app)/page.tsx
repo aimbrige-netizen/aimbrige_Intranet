@@ -94,9 +94,9 @@ export default async function DashboardPage({
       {searchParams.denied === "admin_only" ? (
         <div
           role="alert"
-          className="mb-4 flex items-center gap-2 rounded-card border border-warn/40 bg-warn/10 px-4 py-3 text-body text-ink"
+          className="mb-4 flex items-center gap-2 rounded-card border border-warn/40 bg-warn-light px-4 py-3 text-body text-ink"
         >
-          <ShieldAlert className="size-4 shrink-0 text-warn" aria-hidden />
+          <ShieldAlert className="size-4 shrink-0 text-warn-ink" aria-hidden />
           시스템 관리자만 접근할 수 있는 화면입니다.
         </div>
       ) : null}

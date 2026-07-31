@@ -33,7 +33,7 @@ export default function LoginPage({
         {error ? (
           <div
             role="alert"
-            className="mb-4 flex gap-2.5 rounded-card border border-danger/30 bg-danger/10 px-4 py-3"
+            className="mb-4 flex gap-2.5 rounded-card border border-danger/30 bg-danger-light px-4 py-3"
           >
             <CircleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
             <div>

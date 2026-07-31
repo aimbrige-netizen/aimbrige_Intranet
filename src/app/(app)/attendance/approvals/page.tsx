@@ -141,7 +141,7 @@ export default async function ApprovalsPage() {
                             over
                               ? "font-bold text-danger"
                               : warn
-                                ? "font-bold text-warn"
+                                ? "font-bold text-warn-ink"
                                 : undefined,
                           )}
                         >

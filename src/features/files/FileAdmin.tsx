@@ -194,7 +194,7 @@ export function FileAdmin({
                           onClick={() => removeFolder(row)}
                           disabled={pending}
                           aria-label="연결 해제"
-                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>
@@ -259,7 +259,7 @@ export function FileAdmin({
                           onClick={() => removeDoc(row)}
                           disabled={pending}
                           aria-label="목록에서 제외"
-                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
                         >
                           <Trash2 className="size-3.5" />
                         </button>

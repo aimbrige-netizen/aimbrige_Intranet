@@ -277,7 +277,7 @@ export function AdminAttendance({
                               r.weeklyHours > WEEKLY_LIMIT_HOURS
                                 ? "font-bold text-danger"
                                 : r.weeklyHours >= 48
-                                  ? "font-bold text-warn"
+                                  ? "font-bold text-warn-ink"
                                   : undefined
                             }
                           >

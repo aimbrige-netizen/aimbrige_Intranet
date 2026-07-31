@@ -250,7 +250,7 @@ export default async function ApprovalDetailPage({
                           className={cn(
                             "mt-1 whitespace-pre-wrap rounded-card px-2.5 py-1.5 text-label",
                             step.status === "rejected"
-                              ? "bg-danger/10 text-danger"
+                              ? "bg-danger-light text-danger-ink"
                               : "bg-canvas text-ink",
                           )}
                         >

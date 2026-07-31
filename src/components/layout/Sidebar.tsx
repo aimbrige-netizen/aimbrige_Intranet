@@ -117,7 +117,7 @@ export function Sidebar({
                   )}
                 >
                   <Star
-                    className="size-[18px] shrink-0 fill-primary text-primary"
+                    className="size-[18px] shrink-0 fill-warn text-warn"
                     aria-hidden
                   />
                   <span
@@ -270,7 +270,7 @@ function NavRow({
               </>
             ) : (
               <>
-                <Star className="size-4 text-primary" />
+                <Star className="size-4 text-warn" />
                 즐겨찾기 추가
               </>
             )}

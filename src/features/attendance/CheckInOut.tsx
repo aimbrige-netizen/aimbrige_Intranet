@@ -143,7 +143,7 @@ export function CheckInOut({
       </div>
 
       {warning ? (
-        <p className="flex items-start gap-1.5 rounded-card bg-warn/10 px-3 py-2 text-label text-primary">
+        <p className="flex items-start gap-1.5 rounded-card bg-warn-light px-3 py-2 text-label text-primary">
           <MapPinOff className="mt-0.5 size-3.5 shrink-0" aria-hidden />
           {warning}
         </p>

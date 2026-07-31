@@ -124,7 +124,7 @@ export function ApprovalForm({
   return (
     <div className="space-y-5">
       {line.blocked ? (
-        <div className="flex gap-2.5 rounded-card border border-danger/30 bg-danger/10 px-4 py-3">
+        <div className="flex gap-2.5 rounded-card border border-danger/30 bg-danger-light px-4 py-3">
           <TriangleAlert className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
           <div className="text-body text-ink">
             <p className="font-bold text-danger">최종 승인자 미지정</p>
@@ -281,7 +281,7 @@ export function ApprovalForm({
                           }
                           disabled={pending || items.length === 1}
                           aria-label={`항목 ${index + 1} 삭제`}
-                          className="shrink-0 rounded-sm p-2 text-muted transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-40"
+                          className="shrink-0 rounded-sm p-2 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-40"
                         >
                           <Trash2 className="size-4" />
                         </button>
