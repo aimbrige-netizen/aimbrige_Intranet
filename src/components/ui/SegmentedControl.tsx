@@ -100,6 +100,14 @@ export function SegmentedControl<T extends string>({
           );
         }
 
+        /*
+         * onClick을 조건부로 붙인다.
+         * 이 모듈에는 "use client"가 없어서 서버 컴포넌트에서도 렌더되는데,
+         * 그때 DOM 요소에 함수 prop이 있으면 Next가 통째로 막는다
+         * ("Event handlers cannot be passed to Client Component props").
+         * href가 있어도 disabled면 이 분기로 떨어지므로, 화살표 함수를
+         * 항상 만들면 서버 렌더 화면 전체가 죽는다.
+         */
         return (
           <button
             key={option.value}
@@ -107,7 +115,7 @@ export function SegmentedControl<T extends string>({
             role="tab"
             aria-selected={selected}
             disabled={option.disabled}
-            onClick={() => onChange?.(option.value)}
+            onClick={onChange ? () => onChange(option.value) : undefined}
             className={itemClass}
           >
             {inner}

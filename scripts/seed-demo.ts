@@ -328,32 +328,49 @@ async function main() {
   }
   console.log("· 부서장·팀장 지정 완료");
 
-  // ── 5) 관리자 계정 배치 ────────────────────────────────────────────
-  // 실제 로그인 계정도 조직에 속하고 근속이 있어야 화면이 채워진다
-  if (adminEmail) {
-    const { data: admin } = await supabase
-      .from("employees")
-      .select("id, hire_date, department_id")
-      .eq("email", adminEmail)
-      .maybeSingle();
+  // ── 5) 실제 로그인 계정 배치 ───────────────────────────────────────
+  /*
+   * SEED_ADMIN_EMAIL만 챙기면 안 된다. 실제로 로그인하는 계정이 그것과
+   * 다를 수 있고(구글 계정이 여러 개면 흔하다), 부서·팀이 비어 있으면
+   *  - 조직도의 "내 부서/내 팀"이 disabled로 떨어지고
+   *  - manages_employee()가 false라 승인 대상이 0명이 되고
+   *  - hire_date가 오늘이면 연차가 0일로 나온다.
+   * auth_user_id가 연결된 계정 전부를 대상으로 한다.
+   */
+  const { data: linked } = await supabase
+    .from("employees")
+    .select("id, email, hire_date, department_id, team_id, position")
+    .or(
+      adminEmail
+        ? `auth_user_id.not.is.null,email.eq.${adminEmail}`
+        : "auth_user_id.not.is.null",
+    );
 
-    if (admin) {
-      const backdated = addDays(TODAY, -900); // 약 2년 6개월 → 연차 16일
-      await supabase
-        .from("employees")
-        .update({
-          department_id: deptIds.get("경영지원본부"),
-          team_id: teamIds.get("인사총무팀"),
-          position: admin.department_id ? undefined : "대표",
-          hire_date: backdated,
-        })
-        .eq("id", admin.id);
-      empIds.set("__admin__", admin.id);
+  const backdated = addDays(TODAY, -900); // 약 2년 6개월 → 연차 15일
+  for (const account of linked ?? []) {
+    // 최근 2주 안에 찍힌 입사일은 세팅 중 생긴 자리표시로 보고 소급한다.
+    // 실제 입사일이 들어 있으면 건드리지 않는다.
+    const placeholderHire =
+      !account.hire_date || (account.hire_date as string) > addDays(TODAY, -14);
+
+    const patch: Record<string, unknown> = {};
+    if (!account.department_id) patch.department_id = deptIds.get("경영지원본부");
+    if (!account.team_id) patch.team_id = teamIds.get("인사총무팀");
+    if (!account.position) patch.position = "대표";
+    if (placeholderHire) patch.hire_date = backdated;
+
+    if (Object.keys(patch).length > 0) {
+      await supabase.from("employees").update(patch).eq("id", account.id);
       console.log(
-        `· 관리자(${adminEmail}) 배치 — 입사일을 ${backdated}로 조정(근속 없이는 연차가 0)`,
+        `· 로그인 계정 배치: ${account.email} — ${Object.keys(patch).join(", ")}` +
+          (patch.hire_date ? ` (입사일 ${backdated})` : ""),
       );
     }
+    empIds.set(`__account__${account.email}`, account.id as string);
   }
+  // 결재 최종승인자로 쓸 대표 계정 하나
+  const primary = (linked ?? [])[0];
+  if (primary) empIds.set("__admin__", primary.id as string);
 
   const allIds = Array.from(empIds.values());
 
