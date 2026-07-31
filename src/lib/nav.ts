@@ -3,6 +3,7 @@ import {
   Building2,
   Calendar,
   CalendarOff,
+  ClipboardCheck,
   ClipboardList,
   Clock,
   FileCheck,
@@ -275,7 +276,7 @@ export const NAV_MODULES: NavModule[] = [
     href: "/worklog",
     icon: NotebookPen,
     ready: true,
-    prefixes: ["/worklog", "/todos", "/goals"],
+    prefixes: ["/worklog", "/todos", "/goals", "/reviews", "/admin/reviews"],
     sections: [
       {
         key: "main",
@@ -293,8 +294,28 @@ export const NAV_MODULES: NavModule[] = [
             icon: ListChecks,
           },
           { key: "work-goals", label: "목표", href: "/goals", icon: Target },
+          /*
+           * 평가를 레일에 따로 올리지 않고 업무 안에 둔다. 반기 평가는
+           * 업무일지·목표·프로젝트를 근거로 쓰는 화면이라(스펙 12 · 5장)
+           * 같은 축이고, 레일을 11칸으로 늘리면 76px에서 글자가 뭉개진다.
+           */
+          {
+            key: "work-reviews",
+            label: "평가",
+            href: "/reviews",
+            icon: ClipboardCheck,
+            prefixes: ["/reviews"],
+          },
         ],
       },
+      adminSection([
+        {
+          key: "admin-reviews",
+          label: "평가 사이클 관리",
+          href: "/admin/reviews",
+          icon: ClipboardList,
+        },
+      ]),
     ],
   },
   {
