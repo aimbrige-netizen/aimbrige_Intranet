@@ -39,7 +39,7 @@ export default async function ApprovalsLayout({
               ? {
                   id: oldest.document.id,
                   title: oldest.document.title,
-                  createdAt: oldest.document.created_at,
+                  waitingSince: oldest.arrivedAt,
                 }
               : null
           }

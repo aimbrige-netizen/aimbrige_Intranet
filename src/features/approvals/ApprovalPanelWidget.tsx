@@ -19,7 +19,8 @@ export function ApprovalPanelWidget({
   showInbox: boolean;
   pendingCount: number;
   buckets: { fresh: number; aging: number; late: number };
-  oldest: { id: string; title: string; createdAt: string } | null;
+  /** waitingSince = 결재선에 올라온 시각. 문서 생성 시각으로 재면 임시저장 기간까지 대기로 잡힌다 */
+  oldest: { id: string; title: string; waitingSince: string } | null;
   myPendingCount: number;
 }) {
   return (
@@ -54,7 +55,7 @@ export function ApprovalPanelWidget({
                 {oldest.title}
               </span>
               <span className="block text-nano tabular-nums text-muted">
-                {elapsedLabel(oldest.createdAt)} 대기 · 가장 오래된 문서
+                {elapsedLabel(oldest.waitingSince)} 대기 · 가장 오래된 문서
               </span>
             </Link>
           ) : (

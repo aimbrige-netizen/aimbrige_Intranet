@@ -14,7 +14,7 @@ import {
   TableToolbar,
   ToolbarSearch,
 } from "@/components/ui/TableToolbar";
-import { TableEmptyRow } from "@/components/ui/EmptyState";
+import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { ApprovalStepBar } from "@/features/approvals/ApprovalStepStrip";
 import { ApprovalInbox } from "@/features/approvals/ApprovalInbox";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -24,6 +24,7 @@ import {
   getMyDocumentStats,
   getMyDocuments,
   getMyPendingApprovals,
+  type DocumentListRow,
 } from "@/features/approvals/data";
 import {
   DOCUMENT_STATUS_LABELS,
@@ -38,6 +39,7 @@ import {
   elapsedDays,
   elapsedLabel,
   stepLabel,
+  waitLabel,
 } from "@/features/approvals/format";
 import { todayYmd } from "@/features/calendar/date";
 import {
@@ -125,10 +127,11 @@ export default async function ApprovalsPage({
 
   const range = periodRangeArgs(period);
 
-  const [stats, docs] = await Promise.all([
+  const [stats, list] = await Promise.all([
     getMyDocumentStats(me.id, range, periodRangeArgs(previous)),
     getMyDocuments(me.id, { ...range, status, q }),
   ]);
+  const docs = list.rows;
 
   /** 기간은 lib/period가, 나머지 조건은 extra가 유지한다 */
   const linkFor = (patch: {
@@ -154,11 +157,41 @@ export default async function ApprovalsPage({
 
   const done = stats.byStatus.approved + stats.byStatus.completed;
   const delta = stats.total - stats.previousTotal;
+  /*
+   * 증감은 '기간 총 기안 건수'의 변화라 요약 밴드 전체에 걸린다. 예전에는 평균
+   * 소요 카드의 delta 칩으로 붙어 있었는데, 그 카드는 이 기간에 결재가 끝난
+   * 문서가 없으면 state="empty"가 되고 StatCard는 그때 delta를 그리지 않는다 —
+   * 결재 실적이 없다는 이유로 기안 건수 증감까지 사라졌다. 진행 현황 카드
+   * 헤더로 옮겨 두면 0건인 달에도 남는다.
+   * previousTotal이 0이면 직전 기간 집계가 실패했을 때와 구분되지 않으므로
+   * (data.ts) 그때는 아예 말하지 않는다.
+   */
+  const deltaLabel =
+    view === "all" || stats.unavailable || stats.previousTotal === 0
+      ? null
+      : `${previous.label} 대비 ${delta > 0 ? "+" : ""}${delta}건`;
+  /** 0건이면 분모(/0건)도 유형별 0/0 격자도 뜻이 없다 */
+  const hasDocs = !stats.unavailable && stats.total > 0;
+  const denominator = hasDocs ? stats.total : undefined;
 
   return (
     <>
       <PageHeader
         title="내가 올린 문서"
+        /*
+         * 기준을 한 줄로 밝힌다. 관리자 대시보드가 같은 함수로 같은 숫자를 내는데,
+         * 여기만 무엇을 재는지 말하지 않으면 두 화면이 다른 것을 센다고 읽힌다.
+         * 카드 sub은 한 줄로 잘리므로(StatCard) 규칙은 여기서 한 번만 말한다.
+         *
+         * 목록만 옛 기준으로 떨어지는 경우가 있다(뷰 조회 실패). 요약 밴드는
+         * 따로 성공할 수 있어 그때 아무 경고도 뜨지 않으므로, 선언을 사실에
+         * 맞춰 바꾼다 — 표와 요약 밴드가 다른 기준이라는 것을 여기서 말한다.
+         */
+        description={
+          list.basis === "submitted"
+            ? "기간은 상신한 시각, 소요는 결재가 끝난 시각으로 셉니다 · 임시저장은 만든 시각"
+            : "아래 표만 문서를 만든 시각으로 잘렸습니다 — 요약 밴드(상신한 시각)와 기준이 다릅니다"
+        }
         meta={meta}
         toolbar={
           <PeriodNavigator
@@ -192,50 +225,69 @@ export default async function ApprovalsPage({
         }
       />
 
-      {/* 요약 밴드 — 모든 숫자에 분모를 붙인다 */}
+      {/*
+        요약 밴드 — 모든 숫자에 분모를 붙인다.
+        집계를 못 불러오면(마이그레이션 26 미적용 등) 카드마다 state="empty"로
+        떨어진다. 0건으로 그리면 사용자가 그 0을 사실로 믿는다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="진행중"
           value={stats.byStatus.pending}
           unit="건"
-          denominator={stats.total}
+          denominator={denominator}
           denominatorUnit="건"
           tone="informative"
           icon={Hourglass}
           max={stats.total || 1}
           meterValue={stats.byStatus.pending}
+          state={stats.unavailable ? "empty" : "ok"}
           sub={
-            stats.byStatus.pending > 0
-              ? `가장 오래된 문서 ${stats.oldestPendingDays}일 경과`
-              : "결재 대기 문서 없음"
+            stats.unavailable
+              ? "집계를 불러오지 못했습니다"
+              : stats.pendingNow > 0
+                ? /*
+                     큰 숫자는 기간 안, 이 줄은 기간과 무관한 '지금' 값이다.
+                     모집단이 다르므로 "지금"을 붙여 어느 쪽을 센 건지 밝힌다.
+                   */
+                  `지금 진행중 ${stats.pendingNow}건 · 최장 ${stats.oldestPendingDays}일 대기`
+                : "결재 대기 문서 없음"
           }
         />
         <StatCard
           label="승인·시행완료"
           value={done}
           unit="건"
-          denominator={stats.total}
+          denominator={denominator}
           denominatorUnit="건"
           tone="positive"
           icon={FileCheck}
           max={stats.total || 1}
           meterValue={done}
-          sub={`시행완료 ${stats.byStatus.completed}건 포함`}
+          state={stats.unavailable ? "empty" : "ok"}
+          sub={
+            stats.unavailable
+              ? "집계를 불러오지 못했습니다"
+              : `시행완료 ${stats.byStatus.completed}건 포함`
+          }
         />
         <StatCard
           label="반려"
           value={stats.byStatus.rejected}
           unit="건"
-          denominator={stats.total}
+          denominator={denominator}
           denominatorUnit="건"
           tone={stats.byStatus.rejected > 0 ? "critical" : "neutral"}
           icon={FileClock}
           max={stats.total || 1}
           meterValue={stats.byStatus.rejected}
+          state={stats.unavailable ? "empty" : "ok"}
           sub={
-            stats.byStatus.rejected > 0
-              ? "사유를 확인하고 다시 기안할 수 있습니다"
-              : "반려된 문서 없음"
+            stats.unavailable
+              ? "집계를 불러오지 못했습니다"
+              : stats.byStatus.rejected > 0
+                ? "사유를 확인하고 다시 기안할 수 있습니다"
+                : "반려된 문서 없음"
           }
         />
         <StatCard
@@ -244,19 +296,16 @@ export default async function ApprovalsPage({
           unit={stats.avgDecisionDays === null ? undefined : "일"}
           tone="neutral"
           icon={Timer}
-          state={stats.avgDecisionDays === null ? "empty" : "ok"}
-          sub={
-            stats.avgDecisionDays === null
-              ? "결재가 끝난 문서가 생기면 계산됩니다"
-              : `결재 완료 ${stats.decidedCount}건 기준`
+          state={
+            stats.unavailable || stats.avgDecisionDays === null ? "empty" : "ok"
           }
-          delta={
-            view === "all" || stats.previousTotal === 0
-              ? undefined
-              : {
-                  label: `${delta > 0 ? "+" : ""}${delta}건`,
-                  direction: delta > 0 ? "up" : delta < 0 ? "down" : "flat",
-                }
+          sub={
+            stats.unavailable
+              ? "집계를 불러오지 못했습니다"
+              : stats.avgDecisionDays === null
+                ? "이 기간에 결재가 끝난 문서가 없습니다"
+                : /* 상신부터 마지막 승인·반려까지. 시행완료를 누른 시각이 아니다 */
+                  `상신 → 결재까지 · 이 기간 ${stats.decidedCount}건 기준`
           }
         />
       </div>
@@ -265,58 +314,97 @@ export default async function ApprovalsPage({
       <Card className="mb-5">
         <CardHeader
           title="결재 진행 현황"
-          description={`${period.label} 기안 ${stats.total}건`}
+          description={
+            stats.unavailable
+              ? "집계를 불러오지 못했습니다"
+              : [`${period.label} 기안 ${stats.total}건`, deltaLabel]
+                  .filter(Boolean)
+                  .join(" · ")
+          }
           density="compact"
         />
         <CardBody density="compact">
-          <Meter
-            max={stats.total || 1}
-            segments={[
-              { value: done, tone: "positive", label: "승인·시행완료" },
-              { value: stats.byStatus.pending, tone: "informative", label: "진행중" },
-              { value: stats.byStatus.rejected, tone: "critical", label: "반려" },
-            ]}
-            valueLabel={`${done + stats.byStatus.pending + stats.byStatus.rejected} / ${stats.total}건`}
-            size="lg"
-          />
-          <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-            <Legend tone="bg-success" label="승인·시행완료" value={done} />
-            <Legend
-              tone="bg-info"
-              label="진행중"
-              value={stats.byStatus.pending}
+          {stats.unavailable ? (
+            <EmptyState
+              compact
+              icon={FileCheck}
+              title="집계를 불러오지 못했습니다"
+              description="아래 목록은 그대로 볼 수 있습니다. 잠시 후 다시 시도해 주세요."
             />
-            <Legend
-              tone="bg-danger"
-              label="반려"
-              value={stats.byStatus.rejected}
+          ) : /*
+               0건이면 미터도 유형별 줄도 전부 0/0이 된다. NaN은 나지 않지만
+               화면 절반이 뜻 없는 격자가 되므로 상태 구성 자체를 그리지 않는다.
+             */
+          stats.total === 0 ? (
+            <EmptyState
+              compact
+              icon={FileCheck}
+              title="이 기간에 기안한 문서가 없습니다"
+              description="문서를 올리면 상태 구성과 유형 분포가 여기에 쌓입니다."
             />
-          </div>
+          ) : (
+            <>
+              <Meter
+                max={stats.total}
+                segments={[
+                  { value: done, tone: "positive", label: "승인·시행완료" },
+                  {
+                    value: stats.byStatus.pending,
+                    tone: "informative",
+                    label: "진행중",
+                  },
+                  {
+                    value: stats.byStatus.rejected,
+                    tone: "critical",
+                    label: "반려",
+                  },
+                ]}
+                valueLabel={`${done + stats.byStatus.pending + stats.byStatus.rejected} / ${stats.total}건`}
+                size="lg"
+              />
+              <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
+                <Legend tone="bg-success" label="승인·시행완료" value={done} />
+                <Legend
+                  tone="bg-info"
+                  label="진행중"
+                  value={stats.byStatus.pending}
+                />
+                <Legend
+                  tone="bg-danger"
+                  label="반려"
+                  value={stats.byStatus.rejected}
+                />
+              </div>
 
-          <div className="mt-4 grid gap-x-6 gap-y-2 border-t border-line pt-3 md:grid-cols-2">
-            {DOCUMENT_TYPES.map((type) => {
-              const TypeIcon = DOCUMENT_TYPE_META[type].icon;
-              const count = stats.byType[type];
-              return (
-                <div key={type} className="flex items-center gap-2">
-                  <TypeIcon className="size-3.5 shrink-0 text-muted" aria-hidden />
-                  <span className="w-24 shrink-0 truncate text-label text-ink">
-                    {DOCUMENT_TYPE_META[type].short}
-                  </span>
-                  <MiniMeter
-                    value={count}
-                    max={stats.total || 1}
-                    tone={count > 0 ? "informative" : "neutral"}
-                    className="flex-1"
-                    aria-label={`${DOCUMENT_TYPE_META[type].label} ${count}건`}
-                  />
-                  <span className="w-12 shrink-0 text-right text-label tabular-nums text-muted">
-                    {count}/{stats.total}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+              <div className="mt-4 grid gap-x-6 gap-y-2 border-t border-line pt-3 md:grid-cols-2">
+                {DOCUMENT_TYPES.map((type) => {
+                  const TypeIcon = DOCUMENT_TYPE_META[type].icon;
+                  const count = stats.byType[type];
+                  return (
+                    <div key={type} className="flex items-center gap-2">
+                      <TypeIcon
+                        className="size-3.5 shrink-0 text-muted"
+                        aria-hidden
+                      />
+                      <span className="w-24 shrink-0 truncate text-label text-ink">
+                        {DOCUMENT_TYPE_META[type].short}
+                      </span>
+                      <MiniMeter
+                        value={count}
+                        max={stats.total}
+                        tone={count > 0 ? "informative" : "neutral"}
+                        className="flex-1"
+                        aria-label={`${DOCUMENT_TYPE_META[type].label} ${count}건`}
+                      />
+                      <span className="w-12 shrink-0 text-right text-label tabular-nums text-muted">
+                        {count}/{stats.total}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </CardBody>
       </Card>
 
@@ -342,10 +430,11 @@ export default async function ApprovalsPage({
           }
           filters={
             <>
+              {/* 집계를 못 불러왔으면 건수를 아예 그리지 않는다 — 0으로 적으면 거짓말이다 */}
               <FilterChip
                 href={linkFor({ status: null })}
                 active={!status}
-                count={stats.total}
+                count={stats.unavailable ? undefined : stats.total}
               >
                 전체
               </FilterChip>
@@ -354,7 +443,7 @@ export default async function ApprovalsPage({
                   key={value}
                   href={linkFor({ status: value })}
                   active={status === value}
-                  count={stats.byStatus[value]}
+                  count={stats.unavailable ? undefined : stats.byStatus[value]}
                 >
                   {DOCUMENT_STATUS_LABELS[value]}
                 </FilterChip>
@@ -417,7 +506,7 @@ export default async function ApprovalsPage({
                       doc.form_data,
                     );
                     const TypeIcon = typeMeta.icon;
-                    const days = elapsedDays(doc.created_at);
+                    const timing = docTiming(doc);
 
                     return (
                       <tr key={doc.id}>
@@ -473,13 +562,14 @@ export default async function ApprovalsPage({
                         </td>
                         <td className="whitespace-nowrap tabular-nums">
                           <span className="block text-ink">
-                            {formatDate(doc.created_at)}
+                            {/* 요약 밴드와 같은 기준 시각 — 표만 created_at으로 두면 두 숫자가 갈린다 */}
+                            {formatDate(doc.period?.effective_at ?? doc.created_at)}
                           </span>
-                          <span className="block text-nano text-muted">
-                            {doc.status === "pending"
-                              ? `${days}일 경과`
-                              : `소요 ${elapsedLabel(doc.created_at, new Date(doc.updated_at).getTime())}`}
-                          </span>
+                          {timing ? (
+                            <span className="block text-nano text-muted">
+                              {timing}
+                            </span>
+                          ) : null}
                         </td>
                       </tr>
                     );
@@ -527,7 +617,8 @@ async function InboxView({
         .join(" · ") || null,
     highlight: documentHighlight(row.document.document_type, row.document.form_data),
     waitingDays: row.waitingDays,
-    createdAt: formatDate(row.document.created_at),
+    // 결재선에 올라온 날 — 기안자가 임시저장을 만든 날이 아니다
+    arrivedAt: formatDate(row.arrivedAt),
     steps: Array.from({ length: row.totalSteps }, (_, i) => {
       const order = i + 1;
       return {
@@ -631,7 +722,7 @@ async function InboxView({
                 {oldest.document.title}
               </Link>{" "}
               <span className="tabular-nums">
-                ({elapsedLabel(oldest.document.created_at)} 경과)
+                ({elapsedLabel(oldest.arrivedAt)} 경과)
               </span>
             </p>
           ) : null}
@@ -659,6 +750,28 @@ function Legend({
       <span className="tabular-nums text-ink">{value}건</span>
     </span>
   );
+}
+
+/**
+ * 기안일 아래 한 줄.
+ *
+ * 예전에는 결재가 끝난 문서에 `소요 = updated_at - created_at`을 찍었다.
+ * touch_updated_at 트리거가 모든 UPDATE마다 updated_at을 밀기 때문에 그건
+ * '결재까지'가 아니라 '마지막으로 손댈 때까지'였고, 시행완료를 뒤늦게 누른
+ * 문서일수록 길어졌다 — 요약 밴드가 고친 바로 그 문제다. 이제 상신·결재 시각
+ * (approval_document_periods)으로 잰다.
+ *
+ * 시각을 못 들고 온 행은 지어내지 않고 줄을 접는다.
+ */
+function docTiming(doc: DocumentListRow): string | null {
+  if (doc.status === "draft") return "상신 전";
+
+  const submitted = doc.period?.submitted_at;
+  if (!submitted) return null;
+  if (doc.status === "pending") return `${elapsedDays(submitted)}일 경과`;
+
+  const decided = doc.period?.decided_at;
+  return decided ? `결재까지 ${waitLabel(submitted, decided)}` : null;
 }
 
 /** 목록 행의 단계 상태 — 결재선이 1단계인 문서(기안자가 팀장)도 그대로 그린다 */

@@ -27,7 +27,8 @@ export interface InboxRow {
   highlight: DocumentHighlight | null;
   /** 서버에서 계산해 넘긴 경과일 — 클라이언트가 다시 계산하면 시각이 어긋난다 */
   waitingDays: number;
-  createdAt: string;
+  /** 결재선에 올라온 날(상신일). 경과일과 같은 시각에서 나온다 */
+  arrivedAt: string;
   steps: StripStep[];
 }
 
@@ -268,7 +269,7 @@ export function ApprovalInbox({ rows }: { rows: InboxRow[] }) {
                       <td className="whitespace-nowrap tabular-nums">
                         <WaitingCell days={row.waitingDays} />
                         <span className="block text-nano text-muted">
-                          {row.createdAt}
+                          {row.arrivedAt}
                         </span>
                       </td>
                     </tr>

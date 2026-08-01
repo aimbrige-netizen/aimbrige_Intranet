@@ -553,6 +553,29 @@ async function main() {
       `통과 ${adminPassed}/${guarded.length}개`,
     );
 
+    /*
+     * approval_activity_core()는 가드가 없는 집계 본문이다(마이그레이션 26).
+     * 안전 장치가 "아무에게도 EXECUTE를 남기지 않는다" 하나뿐이라, grant가
+     * 되살아나면 위의 approval_activity() 가드가 통째로 무의미해진다 —
+     * p_requester=null이면 전사, 남의 uuid를 넣으면 그 사람의 개인 통계다.
+     * 그래서 '관리자조차 직접 호출할 수 없어야 한다'로 확인한다.
+     */
+    let coreBlocked = 0;
+    const coreArgs = {
+      p_from_ts: "2001-03-01T00:00:00+09:00",
+      p_to_ts: "2001-04-01T00:00:00+09:00",
+      p_requester: null,
+    };
+    for (const user of [memberUser, managerUser, adminUser]) {
+      const res = await user.sb.rpc("approval_activity_core", coreArgs);
+      if (res.error) coreBlocked += 1;
+    }
+    check(
+      "★ approval_activity_core()는 PostgREST로 노출되지 않는다 — 일반직원·팀장·관리자 모두 호출 불가",
+      coreBlocked === 3,
+      `막힌 역할 ${coreBlocked}/3 — revoke가 anon·authenticated까지 걸렸는지 확인할 것`,
+    );
+
     const pureHelper = await memberUser.sb.rpc("leave_year_of", {
       p_hire_date: "2023-05-01",
       p_as_of: today,

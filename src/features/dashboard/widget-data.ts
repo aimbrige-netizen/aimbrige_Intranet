@@ -48,6 +48,7 @@ export interface PendingApprovalItem {
   id: string;
   title: string;
   requester: string;
+  /** 상신 시각(결재선에 올라온 시각) — 문서를 만든 시각이 아니다 */
   requestedAt: string;
 }
 
@@ -104,19 +105,22 @@ export async function getApprovalWorkload(
   });
   rows.forEach((row) => inProgressIds.add(row.document.id));
 
-  const oldest = rows.reduce<number | null>((acc, row) => {
-    const days = Math.floor(
-      (Date.now() - new Date(row.document.created_at).getTime()) / 86_400_000,
-    );
-    return acc === null || days > acc ? days : acc;
-  }, null);
+  /*
+   * 경과일은 getMyPendingApprovals()가 결재선에 올라온 시각으로 이미 계산해 둔다.
+   * 여기서 document.created_at으로 다시 세면 임시저장으로 묵혀 둔 기간까지
+   * 대기로 잡혀, 같은 문서가 홈 위젯과 결재함에서 다른 일수로 보인다.
+   */
+  const oldest = rows.reduce<number | null>(
+    (acc, row) => (acc === null || row.waitingDays > acc ? row.waitingDays : acc),
+    null,
+  );
 
   return {
     items: rows.slice(0, 5).map((row) => ({
       id: row.document.id,
       title: row.document.title,
       requester: row.document.requester?.name ?? "-",
-      requestedAt: row.document.created_at,
+      requestedAt: row.arrivedAt,
     })),
     myTurn: rows.length,
     inProgress: inProgressIds.size,
