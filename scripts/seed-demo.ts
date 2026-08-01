@@ -1152,17 +1152,36 @@ async function seedApprovals(empIds: Map<string, string>) {
         status: doc.status,
         current_step: Math.min(doc.approvedSteps + 1, 2),
       })
-      .select("id")
+      // created_at을 되받아야 단계의 처리 시각을 DB 시계 기준으로 잡을 수 있다
+      .select("id, created_at")
       .single();
     if (error) fail(`결재 문서 생성 실패(${doc.title}): ${error.message}`);
 
+    /*
+     * processed_at을 new Date()(이 스크립트를 돌리는 PC 시계)로 쓰면 안 된다.
+     * approval_steps.created_at은 DB의 now()라, PC 시계가 조금이라도 뒤처져 있으면
+     * "결재된 시각이 상신 시각보다 앞선" 행이 만들어진다. 실제로 0.23초 앞섰다.
+     *
+     * 그러면 소요일이 음수가 되어 집계(approval_activity_core)의 days >= 0 필터에
+     * 걸려 평균에서 빠진다 — 화면에는 표에 '결재까지 방금'이 뜨는데 카드는
+     * '결재가 끝난 문서가 없습니다'로 나오는, 같은 화면 안에서 두 값이 어긋나는
+     * 상태가 된다.
+     *
+     * 운영 경로(process_approval_step)는 processed_at도 DB now()라 이 문제가 없다.
+     * 여기서는 상신 시각 뒤로 확실히 떨어지도록 단계마다 시간을 벌려 둔다 —
+     * 데모 데이터의 '평균 결재 소요'가 0이 아닌 그럴듯한 값이 되는 효과도 있다.
+     */
+    const submittedAt = new Date(created.created_at).getTime();
     const steps = [approver, finalApprover].map((approverId, index) => ({
       document_id: created.id,
       step_order: index + 1,
       approver_id: approverId,
       status: index < doc.approvedSteps ? "approved" : "pending",
       processed_at:
-        index < doc.approvedSteps ? new Date().toISOString() : null,
+        index < doc.approvedSteps
+          ? // 1단계는 상신 4시간 뒤, 2단계는 그 다음 날
+            new Date(submittedAt + (index + 1) * 4 * 3600_000).toISOString()
+          : null,
     }));
 
     const { error: stepError } = await supabase
