@@ -1,4 +1,4 @@
-import type { WikiNode } from "@/features/wiki/data";
+import type { WikiNode } from "@/features/wiki/tree";
 import type { ParentOption } from "@/features/wiki/WikiEditor";
 
 /**

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { classifyWikiLink } from "@/features/wiki/link";
 import { cn } from "@/lib/utils";
 
 /**
@@ -230,23 +231,19 @@ function Inline({ text }: { text: string }) {
 
 function Anchor({ label, href }: { label: string; href: string }) {
   /*
-   * "/" 로 시작한다고 다 내부가 아니다. //evil.com 은 프로토콜 상대 URL이라
-   * 브라우저가 https://evil.com 으로 읽고, /\evil.com 도 백슬래시를 /로
-   * 정규화해서 같은 곳으로 간다. 이걸 내부로 보면 "외부로 나간다"는 신호도
-   * rel=noopener도 없이 같은 탭에서 남의 사이트로 이동한다 —
-   * 전 직원이 편집하는 위키에서 피싱 링크를 심기 딱 좋은 자리다.
+   * 스킴 판정은 link.ts에 있다. 이 판정이 틀리면 피싱 링크가 그대로 살아나는데
+   * JSX 안에 있으면 렌더링 없이 확인할 수 없어서 순수 함수로 뺐다.
+   * 위험한 스킴(javascript:, data: 등)과 프로토콜 상대 URL은 링크로 만들지 않는다.
    */
-  const internal = /^\/(?![/\\])/.test(href);
-  const safeExternal = /^https?:\/\//i.test(href);
+  const kind = classifyWikiLink(href);
 
-  // 위험한 스킴(javascript:, data: 등)과 프로토콜 상대 URL은 링크로 만들지 않는다
-  if (!internal && !safeExternal) {
+  if (kind === "unsafe") {
     return <span className="text-ink">{label}</span>;
   }
 
   const className = "text-primary underline underline-offset-2";
 
-  return internal ? (
+  return kind === "internal" ? (
     <Link href={href} className={className}>
       {label}
     </Link>

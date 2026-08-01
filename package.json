@@ -15,6 +15,8 @@
     "e2e:storage": "tsx scripts/e2e-storage.ts",
     "e2e:worklog": "tsx scripts/e2e-worklog.ts",
     "e2e:reviews": "tsx scripts/e2e-reviews.ts",
+    "e2e:wiki": "tsx scripts/e2e-wiki.ts",
+    "e2e:assets": "tsx scripts/e2e-assets.ts",
     "check:mail": "tsx scripts/check-mail-format.ts"
   },
   "dependencies": {
