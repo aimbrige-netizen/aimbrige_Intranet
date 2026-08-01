@@ -202,7 +202,13 @@ export function PeopleBoard({
                 휴직·퇴사 포함
               </FilterChip>
             ) : null}
+            {/*
+              조직도는 이미 받아 둔 목록을 그대로 넘긴다 — 추가 왕복이 없다.
+              배열로 넘기는 게 핵심이다. 여기는 서버 컴포넌트라 fetchRows에
+              인라인 클로저를 물리면 RSC 직렬화가 던진다(서버 액션만 넘어간다).
+            */}
             <EmployeeExportButton
+              total={sorted.length}
               rows={sorted.map((employee) => ({
                 name: employee.name,
                 position: employee.position,

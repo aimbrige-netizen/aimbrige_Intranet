@@ -18,9 +18,16 @@ import {
 } from "@/features/audit/constants";
 import {
   AUDIT_PAGE_SIZE,
+  auditExportCap,
   getAuditActionCounts,
   listAuditLogs,
 } from "@/features/audit/data";
+import {
+  detailEntries,
+  display,
+  FIELD_LABELS,
+} from "@/features/audit/detail";
+import { exportAuditLogs } from "@/server/actions/audit";
 import { requireSystemAdmin } from "@/lib/auth/session";
 import {
   ariaSortOf,
@@ -37,9 +44,6 @@ import { addDaysYmd, todayYmd } from "@/features/calendar/date";
 import type { AuditLog } from "@/types/db";
 
 export const metadata: Metadata = { title: "감사 로그" };
-
-/** 내보내기는 페이지가 아니라 조건 전체를 담는다. 상한만 걸어 둔다 */
-const EXPORT_LIMIT = 500;
 
 /**
  * 기본 조회 구간. 없으면 전 기간이 무한히 누적돼 "최근에 무슨 일이
@@ -73,30 +77,6 @@ const ACTION_TONES: Record<
   employment_status_changed: "warn",
   role_changed: "warn",
   profile_updated: "neutral",
-};
-
-/** 감사 로그에 노출할 필드 라벨 */
-const FIELD_LABELS: Record<string, string> = {
-  name: "이름",
-  email: "이메일",
-  department_id: "부서",
-  team_id: "팀",
-  position: "직급",
-  hire_date: "입사일",
-  role_id: "역할",
-  role: "역할",
-  employment_status: "재직상태",
-  phone: "휴대폰",
-  emergency_contact: "비상연락처",
-  profile_image_url: "프로필 사진",
-  reason: "사유",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  active: "재직중",
-  leave: "휴직",
-  terminated: "퇴사",
-  not_registered: "미등록 계정",
 };
 
 const GROUP_ICONS: Record<string, LucideIcon> = {
@@ -231,9 +211,8 @@ export default async function AuditLogsPage({
     return count ?? 0;
   };
 
-  const [list, exportList, actionCounts] = await Promise.all([
+  const [list, actionCounts] = await Promise.all([
     listAuditLogs({ ...filters, limit: AUDIT_PAGE_SIZE, offset }),
-    listAuditLogs({ ...filters, limit: EXPORT_LIMIT, offset: 0 }),
     getAuditActionCounts(rangeFrom, rangeTo),
   ]);
 
@@ -265,16 +244,14 @@ export default async function AuditLogsPage({
   }
 
   const logs = list.rows;
-  const exportLogs = exportList.rows;
   const total = list.total;
 
-  // 대상(target_id)이 임직원인 경우 이름을 함께 보여준다 (내보내기도 같은 이름을 쓴다)
+  /*
+   * 대상(target_id)이 임직원인 경우 이름을 함께 보여준다.
+   * 표에 실제로 그리는 행만 본다 — 내보내기용 이름은 서버 액션이 따로 붙인다.
+   */
   const targetIds = Array.from(
-    new Set(
-      [...logs, ...exportLogs]
-        .map((log) => log.targetId)
-        .filter((id): id is string => !!id),
-    ),
+    new Set(logs.map((log) => log.targetId).filter((id): id is string => !!id)),
   );
   const targetNames = new Map<string, string>();
   if (targetIds.length > 0) {
@@ -381,15 +358,6 @@ export default async function AuditLogsPage({
   const timeHeader = searching ? null : sortableHeader("created_at", "시각");
   const actionHeader = searching ? null : sortableHeader("action", "액션");
 
-  const exportRows = exportLogs.map((log) => ({
-    at: formatDateTime(log.createdAt),
-    actor: log.actorName ?? "시스템",
-    actorEmail: log.actorEmail ?? "",
-    action: AUDIT_ACTION_LABELS[log.action] ?? log.action,
-    target: log.targetId ? (targetNames.get(log.targetId) ?? log.targetId) : "",
-    detail: detailText(log.detail),
-  }));
-
   return (
     <>
       <PageHeader
@@ -488,9 +456,10 @@ export default async function AuditLogsPage({
             targetLabel={target ? (targetNames.get(target) ?? null) : null}
             actions={
               <AuditExportButton
-                rows={exportRows}
+                fetchRows={exportAuditLogs.bind(null, filters)}
                 filename={`감사로그_${rangeFrom}_${rangeTo}`}
-                capped={exportRows.length < total}
+                total={total}
+                limit={auditExportCap(searching)}
               />
             }
           />
@@ -632,19 +601,6 @@ export default async function AuditLogsPage({
   );
 }
 
-/** before/after 키를 한 번만 정리한다 — 표 셀과 CSV가 같은 규칙을 쓴다 */
-function detailEntries(detail: AuditLog["detail"]) {
-  const before = (detail?.before ?? {}) as Record<string, unknown>;
-  const after = (detail?.after ?? {}) as Record<string, unknown>;
-  const keys = Array.from(
-    new Set([...Object.keys(before), ...Object.keys(after)]),
-  ).filter((key) => key !== "role_id" || !("role" in after));
-  const rest = Object.entries(detail ?? {}).filter(
-    ([key]) => key !== "before" && key !== "after",
-  );
-  return { before, after, keys, rest };
-}
-
 function DetailCell({ detail }: { detail: AuditLog["detail"] }) {
   if (!detail) return <span>-</span>;
   const { before, after, keys, rest } = detailEntries(detail);
@@ -677,30 +633,4 @@ function DetailCell({ detail }: { detail: AuditLog["detail"] }) {
       ))}
     </ul>
   );
-}
-
-/** CSV용 한 줄 요약 */
-function detailText(detail: AuditLog["detail"]): string {
-  if (!detail) return "";
-  const { before, after, keys, rest } = detailEntries(detail);
-
-  if (keys.length === 0) {
-    return rest
-      .map(([key, value]) => `${FIELD_LABELS[key] ?? key}: ${display(value)}`)
-      .join(" · ");
-  }
-
-  return keys
-    .map((key) => {
-      const label = FIELD_LABELS[key] ?? key;
-      const arrow = key in before ? `${display(before[key])} → ` : "";
-      return `${label}: ${arrow}${display(after[key])}`;
-    })
-    .join(" · ");
-}
-
-function display(value: unknown): string {
-  if (value === null || value === undefined || value === "") return "(없음)";
-  const text = String(value);
-  return STATUS_LABELS[text] ?? text;
 }

@@ -23,8 +23,8 @@ export type CalendarScope = "personal" | "team" | "company";
 /**
  * 일정 행에서 읽는 컬럼.
  *
- * attendee_ids는 더 이상 읽지 않는다. 참석자는 event_attendees가 진실이고
- * 배열은 RLS 호환을 위해 쓰기만 유지하는 중이다(expand-contract).
+ * 참석자는 여기 없다 — event_attendees를 따로 읽는다(getAttendeeMap).
+ * 한 행에 명단을 얹으면 응답(수락/거절/미정)까지 함께 실을 수가 없다.
  */
 const EVENT_COLUMNS = `id, title, description, start_at, end_at, all_day, visibility,
    location, owner_id, team_id, google_calendar_event_id, created_at, updated_at,
@@ -33,7 +33,7 @@ const EVENT_COLUMNS = `id, title, description, start_at, end_at, all_day, visibi
 /** 내가 참석자인 일정만 뽑을 때 — 조인 조건만 걸고 값은 쓰지 않는다 */
 const EVENT_COLUMNS_AS_ATTENDEE = `${EVENT_COLUMNS}, event_attendees!inner(employee_id)`;
 
-type EventRow = Omit<CalendarEventWithOwner, "attendee_ids">;
+type EventRow = CalendarEventWithOwner;
 
 /**
  * 캘린더 항목 조회 (스펙 3.4)

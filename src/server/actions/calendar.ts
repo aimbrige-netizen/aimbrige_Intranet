@@ -124,17 +124,9 @@ function addOneDay(ymd: string): string {
  * 매 수정마다 '미응답'으로 되돌아간다. 장소 한 글자를 고쳤을 뿐인데 열 명에게
  * 다시 답을 받아야 하는 화면이 된다. 빠진 사람만 지우고 새로 들어온 사람만 넣는다.
  *
- * attendee_ids 배열은 호출부에서 같은 값으로 계속 쓴다 — RLS가 아직 배열과
- * 테이블을 둘 다 보는 expand-contract 구간이라, 한쪽만 써 두면 배포 사이에
- * 참석자에게 일정이 안 보인다.
- */
-/**
- * 참석자 테이블 동기화.
- *
- * 실패를 삼키면 안 된다. 지금은 attendee_ids 배열과 event_attendees 테이블에
- * 이중으로 쓰는 중인데(expand-contract), 배열은 일정 insert/update와 같은
- * 문장이라 반드시 반영되고 테이블만 빠질 수 있다. 그러면 참석자는 배열 덕에
- * 일정은 보이는데 event_attendees 행이 없어 참석 여부 블록이 아예 안 뜬다.
+ * 실패를 삼키면 안 된다. 참석자는 이제 이 테이블에만 있다(마이그레이션 27이
+ * attendee_ids 배열을 지웠다). 일정은 저장됐는데 이 함수가 조용히 실패하면
+ * 초대한 사람에게 일정 자체가 안 보인다 — RLS의 열람 판정도 이 테이블을 탄다.
  * 화면이 "저장됐다"고 말하면서 절반만 저장된 상태가 가장 나쁘다.
  */
 async function syncEventAttendees(
@@ -225,7 +217,6 @@ export async function createCalendarEvent(
       all_day: values.allDay,
       visibility: values.visibility,
       location: values.location ?? null,
-      attendee_ids: attendeeIds,
       owner_id: me.id,
       team_id: values.visibility === "team" ? me.team_id : null,
     })
@@ -302,7 +293,6 @@ export async function updateCalendarEvent(
         all_day: values.allDay,
         visibility: values.visibility,
         location: values.location ?? null,
-        attendee_ids: attendeeIds,
         team_id: values.visibility === "team" ? me.team_id : null,
       },
       { count: "exact" },

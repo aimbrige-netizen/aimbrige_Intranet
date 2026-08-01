@@ -186,14 +186,7 @@ export interface CalendarEvent {
   visibility: EventVisibility;
   /** 회의 장소. 자유 입력 — 사내 회의실은 리소스 예약이 따로 있다 */
   location: string | null;
-  /**
-   * 참석자 employees.id 배열.
-   *
-   * 참석 여부(수락/거절/미정)는 event_attendees가 진실이고 이 배열은 호환용으로만
-   * 남아 있다. SELECT 정책이 아직 배열과 테이블을 둘 다 보므로 저장할 때는 양쪽에
-   * 같은 값을 쓴다 — 읽을 때는 테이블만 본다.
-   */
-  attendee_ids: string[];
+  /* 참석자는 이 행에 없다 — event_attendees(누가 + 수락/거절/미정)가 진실이다 */
   owner_id: string;
   team_id: string | null;
   google_calendar_event_id: string | null;

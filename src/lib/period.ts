@@ -249,6 +249,10 @@ export function periodHref(
 /**
  * 이미 만들어진 주소에 지금 보고 있는 구간을 얹는다.
  * 화면을 옮겨도 구간이 따라가게 하는 용도 (내 근태 → 근태 관리 등).
+ *
+ * 목적지 화면의 units에 지금 unit이 들어 있을 때만 쓴다. 없으면 파서가 조용히
+ * 기본 단위로 떨어뜨려 주소와 화면이 어긋난다. 레일·모듈 패널 링크에는 쓰지
+ * 않는다 — 목적지가 무엇일지 모르기 때문이다(lib/nav.ts의 href 규약 참조).
  */
 export function carryPeriod(
   href: string,

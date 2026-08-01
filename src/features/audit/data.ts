@@ -13,6 +13,20 @@ export const AUDIT_PAGE_SIZE = 50;
  */
 const RPC_MAX_ROWS = 200;
 
+/** 내보내기는 페이지가 아니라 조건 전체를 담는다. 상한만 걸어 둔다 */
+const EXPORT_LIMIT = 500;
+
+/**
+ * 내보내기가 실제로 가져올 수 있는 최대 행 수.
+ *
+ * 검색 중에는 RPC 경로라 함수 안의 상한이 먼저 걸린다. 버튼은 누르기 **전에**
+ * "몇 건 받는지"와 "잘렸는지"를 말해야 하므로(가져와 보고 나서 판정하면 그
+ * 왕복이 바로 없애려던 그 왕복이다) 화면도 같은 값을 읽는다.
+ */
+export function auditExportCap(searching: boolean): number {
+  return searching ? RPC_MAX_ROWS : EXPORT_LIMIT;
+}
+
 /**
  * 화면이 쓰는 한 행.
  *
@@ -49,6 +63,9 @@ export interface AuditListParams {
   limit: number;
   offset: number;
 }
+
+/** 내보내기는 목록과 같은 조건을 본다 — 페이지 창(limit·offset)만 빠진다 */
+export type AuditExportQuery = Omit<AuditListParams, "limit" | "offset">;
 
 export interface AuditListResult {
   rows: AuditLogRow[];

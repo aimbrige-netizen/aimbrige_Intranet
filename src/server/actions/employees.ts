@@ -7,6 +7,17 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { requireSystemAdmin } from "@/lib/auth/session";
 import { diffFields, writeAuditLog } from "@/lib/audit";
 import { allowedEmailDomains } from "@/lib/env";
+import { todayInSeoul } from "@/lib/utils";
+import { resolveRoleFilterId } from "@/features/employees/data";
+import {
+  applyEmployeeFilters,
+  EMPLOYEE_EXPORT_LIMIT,
+  EMPLOYEE_EXPORT_SELECT,
+  EMPLOYEE_SORT_COLUMNS,
+  type EmployeeExportQuery,
+  type EmployeeExportResult,
+} from "@/features/employees/export";
+import { tenureLabel, tenureMonths } from "@/features/directory/org";
 import type { Employee, EmploymentStatus, RoleName } from "@/types/db";
 
 export interface EmployeeActionResult {
@@ -342,4 +353,80 @@ export async function listTeamsByDepartment(
 
   const { data } = await query;
   return data ?? [];
+}
+
+/**
+ * 임직원 명부 CSV용 행 조회.
+ *
+ * 예전에는 목록 페이지가 로드될 때마다 목록(30명)과 함께 내보내기용 모수(최대
+ * 1000명, 임베드 셋)를 한 번 더 읽었다. 버튼을 아무도 누르지 않아도 매번 나가는
+ * 왕복이었다. 이제 누른 뒤에만 읽는다.
+ *
+ * 조건·정렬·상한은 목록 화면과 같은 모듈(features/employees/export)에서 온다 —
+ * 화면에 보이던 필터와 다른 CSV가 떨어지면 명부로 쓸 수 없다.
+ */
+export async function exportEmployees(
+  query: EmployeeExportQuery,
+): Promise<EmployeeExportResult> {
+  await requireSystemAdmin();
+  const supabase = createServerSupabase();
+  const today = todayInSeoul();
+
+  const roleId = await resolveRoleFilterId(query.role);
+
+  const { data, error } = await applyEmployeeFilters(
+    supabase.from("employees").select(EMPLOYEE_EXPORT_SELECT),
+    query,
+    roleId,
+  )
+    .order(EMPLOYEE_SORT_COLUMNS[query.sortKey], {
+      ascending: query.ascending,
+      nullsFirst: false,
+    })
+    // 같은 값이 여러 건이면 순서가 새로고침마다 흔들린다 — 이름으로 고정
+    .order("name", { ascending: true })
+    .range(0, EMPLOYEE_EXPORT_LIMIT - 1);
+
+  // RLS에 막힌 조회도 0행으로 끝난다. 빈 CSV로 넘기지 않는다
+  if (error) {
+    console.error("[employees] 명부 내보내기 조회 실패:", error.message);
+    return { ok: false, message: "명부를 불러오지 못했습니다." };
+  }
+
+  const rows = (data ?? []) as unknown as ExportSource[];
+
+  return {
+    ok: true,
+    rows: rows.map((employee) => ({
+      name: employee.name,
+      position: employee.position,
+      department: employee.department?.name ?? null,
+      team: employee.team?.name ?? null,
+      status: employee.employment_status,
+      email: employee.email,
+      phone: employee.phone ?? null,
+      hireDate: employee.hire_date,
+      tenure: tenureLabel(tenureMonths(employee.hire_date, today)),
+      ...(query.withAdminColumns
+        ? {
+            role: employee.role?.label ?? null,
+            hasAccount: !!employee.auth_user_id,
+          }
+        : {}),
+    })),
+  };
+}
+
+/** EMPLOYEE_EXPORT_SELECT가 돌려주는 행 모양 */
+interface ExportSource {
+  name: string;
+  email: string;
+  position: string | null;
+  phone: string | null;
+  hire_date: string | null;
+  employment_status: EmploymentStatus;
+  auth_user_id: string | null;
+  role: { label: string } | null;
+  department: { name: string } | null;
+  team: { name: string } | null;
 }
