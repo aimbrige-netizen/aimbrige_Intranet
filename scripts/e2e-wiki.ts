@@ -23,7 +23,11 @@
  */
 import { config } from "dotenv";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { classifyWikiLink } from "../src/features/wiki/link";
+import {
+  classifyWikiLink,
+  INLINE_PATTERN,
+  parseLinkToken,
+} from "../src/features/wiki/link";
 import { buildParentOptions } from "../src/features/wiki/options";
 import {
   buildWikiTree,
@@ -679,6 +683,37 @@ async function main() {
     { href: "/wiki/abc", expect: "internal", why: "/wiki/abc 는 내부 링크가 된다" },
     { href: "https://example.com", expect: "external", why: "https://example.com 은 외부 링크가 된다" },
   ];
+
+  /*
+   * 주소에 괄호가 든 링크. 화면에서 실제로 걸린 자리다 —
+   * [API 설명](https://en.wikipedia.org/wiki/API_(computing)) 이
+   * `..._(computing` 으로 잘려 404가 되고 남은 `)`가 글자로 튀어나왔다.
+   * 위키백과 주소는 사내 위키에서 흔하다.
+   */
+  const parenToken = "[API 설명](https://en.wikipedia.org/wiki/API_(computing))";
+  const parenMatch = parenToken.match(new RegExp(INLINE_PATTERN.source));
+  check(
+    "★ 주소에 든 괄호까지 링크에 포함된다 (위키백과 주소가 잘리지 않는다)",
+    parenMatch?.[0] === parenToken,
+    `잡힌 토큰: ${parenMatch?.[0] ?? "(없음)"}`,
+  );
+
+  const parenParsed = parseLinkToken(parenToken);
+  check(
+    "★ 괄호가 든 주소가 온전히 파싱된다",
+    parenParsed?.href === "https://en.wikipedia.org/wiki/API_(computing)" &&
+      parenParsed?.label === "API 설명",
+    `href: ${parenParsed?.href ?? "(파싱 실패)"}`,
+  );
+
+  // 괄호를 허용하면서 여는 괄호만 있는 깨진 입력에 빠지지 않아야 한다
+  const unbalanced = "[깨짐](https://example.com/a(b) 뒤에 글자";
+  const unbalancedMatch = unbalanced.match(new RegExp(INLINE_PATTERN.source));
+  check(
+    "여는 괄호만 있는 주소에서 무한히 먹지 않는다",
+    !unbalancedMatch || unbalancedMatch[0].length <= unbalanced.length,
+    `잡힌 토큰: ${unbalancedMatch?.[0] ?? "(없음)"}`,
+  );
 
   for (const c of linkCases) {
     const got = classifyWikiLink(c.href);

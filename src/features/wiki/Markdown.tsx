@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { classifyWikiLink } from "@/features/wiki/link";
+import {
+  classifyWikiLink,
+  INLINE_PATTERN,
+  parseLinkToken,
+} from "@/features/wiki/link";
 import { cn } from "@/lib/utils";
 
 /**
@@ -193,7 +197,8 @@ function Block({ block }: { block: Block }) {
  */
 function Inline({ text }: { text: string }) {
   const parts: React.ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*)|(`[^`]+`)|(\[[^\]]+\]\([^)\s]+\))/g;
+  // 패턴은 link.ts에 있다 — 주소의 괄호 처리를 검증할 수 있어야 해서 뺐다
+  const pattern = new RegExp(INLINE_PATTERN.source, "g");
 
   let last = 0;
   let match: RegExpExecArray | null;
@@ -218,8 +223,15 @@ function Inline({ text }: { text: string }) {
         </code>,
       );
     } else {
-      const link = token.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/)!;
-      parts.push(<Anchor key={match.index} label={link[1]} href={link[2]} />);
+      const link = parseLinkToken(token);
+      // 패턴이 잡았으면 항상 파싱되지만, 안 되면 원문을 그대로 남긴다
+      parts.push(
+        link ? (
+          <Anchor key={match.index} label={link.label} href={link.href} />
+        ) : (
+          token
+        ),
+      );
     }
 
     last = match.index + token.length;

@@ -948,6 +948,53 @@ async function main() {
       afterLowerGrant?.granted === 100000 && afterLowerGrant?.used === 30000,
       `granted=${afterLowerGrant?.granted} used=${afterLowerGrant?.used}`,
     );
+
+    /*
+     * 앱이 실제로 쓰는 select 문자열을 그대로 쏴 본다.
+     *
+     * 위 검증들은 테이블을 컬럼 목록으로만 조회해서 PostgREST 임베드를 한 번도
+     * 안 탔다. 그래서 welfare_point_requests가 employees를 employee_id와
+     * processed_by 두 갈래로 참조해 `employees!inner(name)`이
+     *   Could not embed because more than one relationship was found
+     * 로 죽는 걸, 51건이 전부 통과하는 동안 아무도 못 잡았다. 화면을 열어보고서야
+     * 나왔다. 조회 계층의 문자열은 조회 계층대로 찔러야 한다.
+     */
+    console.log("\n[11] 앱 조회 계층의 임베드 (features/assets/data.ts와 같은 select)");
+
+    const loanSelect = await memberUser.sb
+      .from("asset_loans")
+      .select(
+        "id, asset_id, employee_id, requested_at, loaned_at, expected_return_date, return_requested_at, returned_at, rejected_at, note, assets!asset_id(name, asset_type), employees!employee_id(name)",
+      )
+      .limit(1);
+    check(
+      "★ 대여 목록 임베드가 모호하지 않다 (getLoans)",
+      !loanSelect.error,
+      loanSelect.error?.message ?? "",
+    );
+
+    const requestSelect = await memberUser.sb
+      .from("welfare_point_requests")
+      .select(
+        "id, employee_id, year, amount, purpose, status, requested_at, processed_at, processed_by, reject_reason, employees:employee_id(name)",
+      )
+      .limit(1);
+    check(
+      "★ 복지포인트 신청 임베드가 모호하지 않다 (getWelfareRequests)",
+      !requestSelect.error,
+      requestSelect.error?.message ?? "",
+    );
+
+    // 고치기 전 형태가 여전히 죽는지도 본다 — 함정이 사라진 게 아님을 남겨둔다
+    const ambiguous = await memberUser.sb
+      .from("welfare_point_requests")
+      .select("id, employees!inner(name)")
+      .limit(1);
+    check(
+      "테이블 이름만 적은 임베드는 여전히 거부된다",
+      Boolean(ambiguous.error),
+      ambiguous.error ? "" : "모호한 임베드가 통과했다 — FK 구성이 바뀌었는지 확인 필요",
+    );
   } finally {
     console.log("\n[정리]");
 

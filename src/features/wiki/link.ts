@@ -34,3 +34,33 @@ export function classifyWikiLink(href: string): WikiLinkKind {
   if (/^https?:\/\//i.test(href)) return "external";
   return "unsafe";
 }
+
+/**
+ * `[라벨](주소)` 의 주소 부분.
+ *
+ * 괄호가 한 겹 들어간 주소를 허용한다. 처음엔 `[^)\s]+`로 첫 닫는 괄호까지만
+ * 잡았는데, 그러면
+ *   [API 설명](https://en.wikipedia.org/wiki/API_(computing))
+ * 가 `..._(computing` 으로 잘려 404가 되고 남은 `)`는 글자로 튀어나온다.
+ * 위키백과 주소는 사내 위키에서 흔하다.
+ *
+ * 두 갈래가 첫 글자에서 갈리므로(`[^()\s]`는 `(`를 배제, 다른 쪽은 `(`로 시작)
+ * 백트래킹이 갈라지지 않는다 — 입력 길이에 선형이다.
+ */
+const LINK = String.raw`\[[^\]]+\]\((?:[^()\s]|\([^()\s]*\))+\)`;
+
+/** 굵게 · 인라인코드 · 링크를 한 번에 훑는 패턴 (Markdown.tsx의 Inline에서 쓴다) */
+export const INLINE_PATTERN = new RegExp(
+  String.raw`(\*\*[^*]+\*\*)|(` + "`[^`]+`" + String.raw`)|(${LINK})`,
+  "g",
+);
+
+/** 링크 토큰 하나에서 라벨과 주소를 꺼낸다 */
+export function parseLinkToken(
+  token: string,
+): { label: string; href: string } | null {
+  const m = token.match(
+    new RegExp(String.raw`^\[([^\]]+)\]\(((?:[^()\s]|\([^()\s]*\))+)\)$`),
+  );
+  return m ? { label: m[1], href: m[2] } : null;
+}

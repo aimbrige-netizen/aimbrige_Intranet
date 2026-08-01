@@ -54,7 +54,10 @@ export async function getLoans(options: {
   let query = supabase
     .from("asset_loans")
     .select(
-      `${LOAN_COLUMNS}, assets!inner(name, asset_type), employees!inner(name)`,
+      // 여기도 FK를 명시한다. 지금은 asset_loans가 employees를 한 갈래로만
+      // 참조해서 테이블 이름만 적어도 되지만, 나중에 승인자 컬럼 하나만 붙어도
+      // 조회 전체가 "more than one relationship"으로 죽는다.
+      `${LOAN_COLUMNS}, assets!asset_id(name, asset_type), employees!employee_id(name)`,
     )
     .order("requested_at", { ascending: false })
     .limit(options.limit ?? 200);
@@ -134,9 +137,16 @@ export async function getWelfareRequests(options: {
 }): Promise<LoadResult<(WelfareRequest & { employee_name: string })[]>> {
   const supabase = createServerSupabase();
 
+  /*
+   * 임베드를 컬럼으로 지정한다(employees!inner가 아니라 employees:employee_id).
+   * welfare_point_requests는 employees를 employee_id와 processed_by 두 갈래로
+   * 참조해서, 테이블 이름만 적으면 PostgREST가 어느 쪽인지 정하지 못하고
+   *   Could not embed because more than one relationship was found
+   * 로 조회 전체가 실패한다. 신청자 이름이 필요한 것이므로 employee_id다.
+   */
   let query = supabase
     .from("welfare_point_requests")
-    .select(`${REQUEST_COLUMNS}, employees!inner(name)`)
+    .select(`${REQUEST_COLUMNS}, employees:employee_id(name)`)
     .order("requested_at", { ascending: false })
     .limit(300);
 
