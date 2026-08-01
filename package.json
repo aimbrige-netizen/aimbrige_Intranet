@@ -17,6 +17,7 @@
     "e2e:reviews": "tsx scripts/e2e-reviews.ts",
     "e2e:wiki": "tsx scripts/e2e-wiki.ts",
     "e2e:assets": "tsx scripts/e2e-assets.ts",
+    "e2e:community": "tsx scripts/e2e-community.ts",
     "check:mail": "tsx scripts/check-mail-format.ts"
   },
   "dependencies": {

@@ -47,7 +47,14 @@ npm run check:mail              # 9건
 
 ---
 
-## 1-1. ⏳ 마이그레이션 24 — 아직 실행 전입니다 (스펙 16 동호회)
+## 1-1. ✅ 마이그레이션 24 — 실행·검증 완료 (스펙 16 동호회)
+
+e2e 65건 통과, 기존 e2e 188건 회귀 없음, 화면 조작 확인 완료.
+데모 동호회 4개(보관 1개)·가입 13건·글 4건이 들어가 있습니다.
+
+<details><summary>실행 전 주의사항이었던 내용 (기록용)</summary>
+
+
 
 `supabase/migrations/20260731000024_community.sql`을 **코드 배포와 같은 시점에**
 실행해야 합니다. 이 마이그레이션은 `boards`에 `description`·`created_by`·
@@ -66,6 +73,11 @@ boards.description does not exist`). 이 줄이 보이면 마이그레이션 미
 
 실행 뒤 `npm run seed:demo`를 한 번 더 돌리면 데모 동호회 4개(보관 1개)와
 가입 명단·글이 들어갑니다.
+
+</details>
+
+> ⚠️ `npm run seed:demo`가 **부서장·팀장을 데모 직원으로 덮어씁니다.**
+> 실제 지정을 마치신 뒤에는 시딩을 다시 돌리지 마세요.
 
 ---
 
@@ -137,21 +149,37 @@ API 키가 없어서 지금 넣으면 **조용히 실패하는 코드만 남습�
 
 ## 4. 다음 작업 전에 알아두셔야 할 함정
 
-### 4-0. employees를 두 갈래로 참조하는 테이블의 임베드
-PostgREST에서 `employees!inner(name)`처럼 **테이블 이름만** 적으면,
-그 테이블이 employees를 두 컬럼으로 참조할 때 조회 전체가 죽습니다.
+### 4-0. PostgREST 임베드에 테이블 이름만 적지 마세요
+`employees!inner(name)`처럼 **테이블 이름만** 적으면 조회 전체가 죽습니다.
 
     Could not embed because more than one relationship was found
 
-실제로 `/welfare`와 `/admin/welfare`가 이것 때문에
+관계가 둘 이상으로 늘어나는 경로가 **두 가지**입니다.
+
+**(1) 컬럼이 둘일 때.** `/welfare`와 `/admin/welfare`가 이것 때문에
 "복지포인트 정보를 불러오지 못했습니다"만 띄우고 있었습니다
 (`welfare_point_requests`가 `employee_id`와 `processed_by` 둘 다 갖고 있어서).
 e2e 54건이 전부 통과하는 동안 못 잡았고 화면을 눌러보고서야 나왔습니다 —
 검증들이 테이블을 컬럼 목록으로만 조회해서 임베드를 안 탔기 때문입니다.
 
-**새 테이블에 `created_by`·`approved_by`·`processed_by` 같은 컬럼을 추가할 때는
-그 테이블을 읽는 select의 임베드를 반드시 `employees!컬럼명(...)` 형태로
-바꿔야 합니다.** 지금 코드베이스는 전부 그 형태로 맞춰져 있습니다.
+**(2) 조인 테이블이 생겼을 때 — 컬럼이 하나여도 걸립니다.**
+스펙 16에서 `community_members(board_id, employee_id)` 복합 PK 테이블이 생기자,
+`boards`가 `employees`를 `created_by` **하나로만** 참조하는데도 모호해졌습니다.
+PostgREST가 순수 조인 테이블을 보고 `boards ↔ employees` **다대다 관계를 한 벌 더
+추론**하기 때문입니다.
+
+```
+후보 2개:
+  many-to-one   boards_created_by_fkey using boards(created_by)
+  many-to-many  community_members using ...board_id_fkey / ...employee_id_fkey
+```
+
+**결론: 컬럼이 하나뿐이라도 임베드에는 항상 FK를 명시하세요**
+(`employees!boards_created_by_fkey(...)` 또는 `employees!컬럼명(...)`).
+"지금은 하나니까 괜찮다"는 판단이 조인 테이블 하나에 무너집니다.
+지금 코드베이스는 전부 명시 형태로 맞춰져 있고,
+`scripts/e2e-community.ts` [7]절이 이 관계 후보가 **정확히 둘**인지 감시합니다 —
+`archived_by` 같은 컬럼이 하나 더 붙으면 거기서 먼저 터집니다.
 
 ### 4-1. 스펙 08은 `employees` 컬럼 권한을 반드시 확인해야 합니다
 `employees` 테이블은 RLS가 `select using(true)`로 열려 있고, 실제 방어선은
