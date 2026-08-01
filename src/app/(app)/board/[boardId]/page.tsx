@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Eye, FilePlus2, PenLine, Plus, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -25,6 +25,7 @@ import {
   relativeTime,
   type BoardRange,
 } from "@/features/boards/format";
+import { BOARD_TYPE_LABELS } from "@/features/boards/types";
 import { parsePeriod, periodHref } from "@/lib/period";
 import { formatDate } from "@/lib/utils";
 
@@ -56,6 +57,13 @@ export default async function BoardPage({
 
   const board = await getBoard(params.boardId);
   if (!board) notFound();
+
+  /*
+   * 동호회는 가입 여부·멤버 목록이 함께 있어야 하는 화면이라 /community로
+   * 분리돼 있다. 여기로 들어온 링크는 죽이지 않고 그쪽으로 넘긴다 —
+   * 사내 문서에 남은 /board/{id} 참조가 끊기면 안 된다.
+   */
+  if (board.board_type === "community") redirect(`/community/${board.id}`);
 
   const isNotice = board.board_type === "notice";
   // 공지 게시판은 팀장 이상만 작성 (스펙 3.2)
@@ -110,7 +118,7 @@ export default async function BoardPage({
         title={board.name}
         meta={
           <>
-            <span>{isNotice ? "공지 게시판" : "자유게시판"}</span>
+            <span>{BOARD_TYPE_LABELS[board.board_type]}</span>
             <span>·</span>
             <span>전체 {overview.total}건</span>
             {overview.unread > 0 ? (
@@ -275,6 +283,7 @@ export default async function BoardPage({
 
       <PostList
         board={board}
+        basePath={`/board/${board.id}`}
         posts={posts}
         total={total}
         pageSize={BOARD_PAGE_SIZE}

@@ -2,12 +2,20 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PostEditor } from "@/features/boards/PostEditor";
-import { requireSessionEmployee } from "@/lib/auth/session";
 import { getBoard, getPostDetail } from "@/features/boards/data";
+import { requireSessionEmployee } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "게시글 수정" };
 
-export default async function EditPostPage({
+/**
+ * 동호회 게시글 수정 (스펙 05 · 3.3의 규칙 그대로)
+ *
+ * 가입 여부를 다시 묻지 않는다. "쓸 수 있는가"와 "고칠 수 있는가"는 다른
+ * 규칙이라, 탈퇴했거나 동호회가 보관된 뒤에도 작성자는 자기 글의 오타를
+ * 고칠 수 있어야 한다(마이그레이션 24가 posts_update의 WITH CHECK에
+ * can_post_to_board()를 얹지 않은 것과 같은 이유).
+ */
+export default async function EditCommunityPostPage({
   params,
 }: {
   params: { boardId: string; postId: string };
@@ -18,28 +26,21 @@ export default async function EditPostPage({
     getBoard(params.boardId),
     getPostDetail(params.postId, me.id),
   ]);
-  if (!board || !post) notFound();
-
-  /*
-   * 어긋난 URL이면 PostEditor에 엉뚱한 board가 넘어간다 —
-   * /board/<공지 게시판>/<동호회 글>/edit은 isNotice=true가 되면서 카테고리·
-   * 고정 필드가 열리고, 저장하면 그 값이 동호회 글에 박힌다.
-   */
+  if (!board || board.board_type !== "community" || !post) notFound();
   if (post.board_id !== board.id) notFound();
 
-  if (board.board_type === "community") {
-    redirect(`/community/${board.id}/${post.id}/edit`);
-  }
+  const basePath = `/community/${board.id}`;
 
-  // 작성자 본인 또는 관리자만 (스펙 3.3)
   if (post.author_id !== me.id && !me.isSystemAdmin) {
-    redirect(`/board/${board.id}/${post.id}`);
+    redirect(`${basePath}/${post.id}`);
   }
 
   return (
     <>
       <PageHeader
         title="게시글 수정"
+        backHref={`${basePath}/${post.id}`}
+        backLabel="글로 돌아가기"
         meta={
           <>
             <span>{board.name}</span>
@@ -51,7 +52,7 @@ export default async function EditPostPage({
 
       <PostEditor
         board={board}
-        basePath={`/board/${board.id}`}
+        basePath={basePath}
         post={post}
         attachments={post.attachments}
         authUserId={me.auth_user_id}

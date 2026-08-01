@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { PostDetailView } from "@/features/boards/PostDetailView";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { getBoard, getPostDetail, getReadStatus } from "@/features/boards/data";
@@ -19,6 +19,18 @@ export default async function PostPage({
     getPostDetail(params.postId, me.id),
   ]);
   if (!board || !post) notFound();
+
+  /*
+   * URL의 boardId와 글이 실제로 붙어 있는 게시판이 어긋나면 아래 판정이 전부
+   * 엉뚱한 보드를 본다 — /board/<자유게시판>/<동호회 글>은 community
+   * 리다이렉트를 피해 가입 여부를 묻지 않은 채 댓글창까지 그려 준다.
+   */
+  if (post.board_id !== board.id) notFound();
+
+  // 동호회 글은 /community 쪽에서 본다 — 링크는 살려 두고 넘긴다
+  if (board.board_type === "community") {
+    redirect(`/community/${board.id}/${post.id}`);
+  }
 
   /*
    * 조회수는 글이 실제로 존재하고 볼 수 있다고 확인된 뒤에 올린다.
@@ -46,6 +58,7 @@ export default async function PostPage({
   return (
     <PostDetailView
       post={post}
+      basePath={`/board/${board.id}`}
       currentEmployeeId={me.id}
       isSystemAdmin={me.isSystemAdmin}
       readStatus={readStatus}

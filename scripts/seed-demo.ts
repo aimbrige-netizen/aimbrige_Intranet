@@ -383,6 +383,9 @@ async function main() {
   // ── 8) 공지·게시글 ────────────────────────────────────────────────
   await seedPosts(empIds);
 
+  // ── 8-1) 동호회 · 가입 명단 (스펙 16) ──────────────────────────────
+  await seedCommunities(empIds);
+
   // ── 9) 결재 문서 ──────────────────────────────────────────────────
   await seedApprovals(empIds);
 
@@ -852,7 +855,8 @@ async function seedPosts(empIds: Map<string, string>) {
   }
 
   const notice = boards.find((b) => b.board_type === "notice") ?? boards[0];
-  const free = boards.find((b) => b.board_type !== "notice") ?? boards[0];
+  // "notice가 아닌 것"으로 고르면 동호회(community)가 자유게시판 자리에 들어온다
+  const free = boards.find((b) => b.board_type === "discussion") ?? boards[0];
   const author = empIds.get("jhkim") ?? empIds.get("__admin__")!;
   const author2 = empIds.get("sylee") ?? author;
 
@@ -912,6 +916,166 @@ async function seedPosts(empIds: Map<string, string>) {
   const { error } = await supabase.from("posts").insert(posts);
   if (error) fail(`게시글 생성 실패: ${error.message}`);
   console.log(`· 게시글 ${posts.length}건`);
+}
+
+/**
+ * 동호회와 가입 명단 (스펙 16).
+ *
+ * 시딩하지 않으면 /community는 빈 상태 카드 하나, /admin/community는 빈 표
+ * 하나뿐이라 이 모듈에서 판단할 것이 아무것도 화면에 없다 — 가입 인원수,
+ * '가입중' 배지, 멤버 명단의 개설자 배지, 보관 안내가 전부 데이터에 붙어 있다.
+ * 보관본을 하나 넣는 이유도 같다. 보관은 관리 화면에서만 만들 수 있어서,
+ * 넣어 두지 않으면 그 상태의 화면을 직접 보관해 보기 전에는 볼 수 없다.
+ *
+ * boards INSERT는 service_role로 나가므로 current_employee_id()가 없다.
+ * created_by를 직접 넣어야 마이그레이션 24의 자동 가입 트리거가 개설자를
+ * 첫 회원으로 넣어 준다(비워 두면 회원 0명짜리 동호회가 된다).
+ */
+async function seedCommunities(empIds: Map<string, string>) {
+  const { count: existing } = await supabase
+    .from("boards")
+    .select("id", { count: "exact", head: true })
+    .eq("board_type", "community");
+  if ((existing ?? 0) > 0) {
+    console.log("· 동호회 — 이미 있어 건너뜀");
+    return;
+  }
+
+  const specs = [
+    {
+      name: "러닝크루",
+      description:
+        "매주 수요일 저녁 한강을 함께 뜁니다. 5km부터 시작하니 초보도 환영합니다.",
+      owner: "eskang",
+      members: ["dwjung", "jwlim", "hwseo"],
+      archived: false,
+      posts: [
+        {
+          author: "eskang",
+          title: "이번 주 수요일 코스 안내",
+          content: "여의나루역 2번 출구 19:00 집합입니다. 5km 가볍게 돕니다.",
+        },
+        {
+          author: "jwlim",
+          title: "러닝화 추천 부탁드립니다",
+          content: "무릎이 약한 편인데 쿠션 좋은 모델 써보신 분 계신가요?",
+        },
+      ],
+    },
+    {
+      name: "보드게임 모임",
+      description: "격주 금요일 점심시간에 회의실에서 짧게 한 판씩 합니다.",
+      owner: "dwjung",
+      members: ["hjchoi", "thyoon"],
+      archived: false,
+      posts: [
+        {
+          author: "dwjung",
+          title: "이번 주 금요일 스플렌더 하실 분",
+          content: "12:30부터 3층 회의실입니다. 네 자리 남았습니다.",
+        },
+      ],
+    },
+    {
+      name: "사진 동호회",
+      description: "출사 일정과 사진을 나눕니다. 장비는 상관없습니다.",
+      owner: "sylee",
+      members: ["arshin", "sboh", "mjpark"],
+      archived: false,
+      posts: [],
+    },
+    {
+      /*
+       * 보관된 동호회. 글이 남아 있어야 "삭제가 아니라 보관인 이유"
+       * (deleteBoard가 글 있는 게시판을 거부한다)가 화면에서 드러난다.
+       */
+      name: "주식 스터디",
+      description: "종목 이야기를 나누던 모임입니다.",
+      owner: "sboh",
+      members: ["hwseo"],
+      archived: true,
+      posts: [
+        {
+          author: "sboh",
+          title: "다음 모임 일정",
+          content: "다음 주 화요일 저녁으로 옮깁니다.",
+        },
+      ],
+    },
+  ];
+
+  let boardCount = 0;
+  let archivedCount = 0;
+  // 개설자 자동 가입까지 세야 화면의 "회원 N명"과 숫자가 맞는다
+  let memberCount = 0;
+  let postCount = 0;
+
+  for (let index = 0; index < specs.length; index += 1) {
+    const spec = specs[index];
+    const ownerId = empIds.get(spec.owner);
+    if (!ownerId) continue;
+
+    const { data: created, error } = await supabase
+      .from("boards")
+      .insert({
+        name: spec.name,
+        board_type: "community",
+        department_id: null,
+        description: spec.description,
+        created_by: ownerId,
+        sort_order: index,
+        // 보관 시각은 "언제 내렸는지"가 남는 자리다 — 그럴듯한 과거로 둔다
+        archived_at: spec.archived ? `${addDays(TODAY, -21)}T09:00:00+09:00` : null,
+      })
+      .select("id")
+      .single();
+    if (error) fail(`동호회 생성 실패(${spec.name}): ${error.message}`);
+    boardCount += 1;
+    if (spec.archived) archivedCount += 1;
+    memberCount += 1;
+
+    // 개설자는 자동 가입 트리거가 이미 넣었다 — 나머지만 추가한다
+    const rows = spec.members
+      .map((slug) => empIds.get(slug))
+      .filter((id): id is string => !!id && id !== ownerId)
+      .map((id) => ({ board_id: created.id, employee_id: id }));
+
+    if (rows.length > 0) {
+      const { error: memberError } = await supabase
+        .from("community_members")
+        .upsert(rows, {
+          onConflict: "board_id,employee_id",
+          ignoreDuplicates: true,
+        });
+      if (memberError) {
+        fail(`동호회 가입 생성 실패(${spec.name}): ${memberError.message}`);
+      }
+      memberCount += rows.length;
+    }
+
+    const posts = spec.posts.map((post) => ({
+      board_id: created.id,
+      title: post.title,
+      content: post.content,
+      // 카테고리·고정은 공지 타입 전용이다
+      category: null,
+      is_pinned: false,
+      // 회원이 아닌 사람이 쓴 글은 만들지 않는다 — 없으면 개설자 이름으로
+      author_id: empIds.get(post.author) ?? ownerId,
+    }));
+
+    if (posts.length > 0) {
+      const { error: postError } = await supabase.from("posts").insert(posts);
+      if (postError) {
+        fail(`동호회 게시글 생성 실패(${spec.name}): ${postError.message}`);
+      }
+      postCount += posts.length;
+    }
+  }
+
+  console.log(
+    `· 동호회 ${boardCount}개(보관 ${archivedCount}개) · 가입 ${memberCount}건 · 글 ${postCount}건`,
+  );
 }
 
 async function seedApprovals(empIds: Map<string, string>) {

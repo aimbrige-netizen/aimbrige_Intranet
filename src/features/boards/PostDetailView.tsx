@@ -65,14 +65,27 @@ function PostText({ text, className }: { text: string; className?: string }) {
 /** 게시글 상세 (스펙 3.3) */
 export function PostDetailView({
   post,
+  basePath,
   currentEmployeeId,
   isSystemAdmin,
   readStatus,
+  canEngage = true,
+  engageHint,
 }: {
   post: PostDetail;
+  /** 수정·삭제 후 돌아갈 뿌리 경로 (/board/:id 또는 /community/:id) */
+  basePath: string;
   currentEmployeeId: string;
   isSystemAdmin: boolean;
   readStatus: ReadStatusRow[];
+  /**
+   * 댓글·반응을 남길 수 있는지. 동호회 글은 가입자만이고 보관되면 아무도
+   * 남길 수 없다(마이그레이션 24의 can_comment_on_post와 같은 규칙).
+   * 서버에서 판정해 넘긴다 — 눌러도 안 되는 입력을 그리지 않기 위해서다.
+   */
+  canEngage?: boolean;
+  /** 남길 수 없을 때 그 자리에 대신 보여줄 한 줄 */
+  engageHint?: string;
 }) {
   const router = useRouter();
   const [comment, setComment] = useState("");
@@ -125,7 +138,7 @@ export function PostDetailView({
         window.alert(result.message ?? "삭제하지 못했습니다.");
         return;
       }
-      router.push(`/board/${post.board_id}`);
+      router.push(basePath);
     });
   };
 
@@ -209,7 +222,7 @@ export function PostDetailView({
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               {canEdit ? (
                 <>
-                  <Link href={`/board/${post.board_id}/${post.id}/edit`}>
+                  <Link href={`${basePath}/${post.id}/edit`}>
                     <Button size="small" variant="secondary">
                       <Pencil className="size-3.5" />
                       수정
@@ -314,28 +327,46 @@ export function PostDetailView({
             </div>
           ) : null}
 
-          {/* 이모지 반응 4종 고정 (스펙 3.3) */}
-          <div className="mt-5 flex flex-wrap gap-2 border-t border-line pt-4">
-            {post.reactions.map((reaction) => (
-              <button
-                key={reaction.emoji}
-                type="button"
-                onClick={() => react(reaction.emoji)}
-                disabled={pending}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body transition-colors disabled:opacity-50",
-                  reaction.mine
-                    ? "border-primary bg-primary-light text-primary"
-                    : "border-line text-muted hover:bg-canvas",
-                )}
-                aria-pressed={reaction.mine}
-              >
-                <span aria-hidden>{reaction.emoji}</span>
-                {reaction.count > 0 ? (
+          {/*
+            이모지 반응 4종 고정 (스펙 3.3).
+            남길 수 없는 상태에서는 버튼 대신 집계만 보여준다 — 눌러도 안 되는
+            버튼을 두지 않는 것이 이 프로젝트의 규약이고, 그렇다고 이미 달린
+            반응까지 감추면 "아무도 반응하지 않은 글"로 보인다.
+          */}
+          <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line pt-4">
+            {post.reactions.map((reaction) =>
+              canEngage ? (
+                <button
+                  key={reaction.emoji}
+                  type="button"
+                  onClick={() => react(reaction.emoji)}
+                  disabled={pending}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body transition-colors disabled:opacity-50",
+                    reaction.mine
+                      ? "border-primary bg-primary-light text-primary"
+                      : "border-line text-muted hover:bg-canvas",
+                  )}
+                  aria-pressed={reaction.mine}
+                >
+                  <span aria-hidden>{reaction.emoji}</span>
+                  {reaction.count > 0 ? (
+                    <span className="tabular-nums">{reaction.count}</span>
+                  ) : null}
+                </button>
+              ) : reaction.count > 0 ? (
+                <span
+                  key={reaction.emoji}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-line px-3 py-1 text-body text-muted"
+                >
+                  <span aria-hidden>{reaction.emoji}</span>
                   <span className="tabular-nums">{reaction.count}</span>
-                ) : null}
-              </button>
-            ))}
+                </span>
+              ) : null,
+            )}
+            {!canEngage && engageHint ? (
+              <span className="text-caption">{engageHint}</span>
+            ) : null}
           </div>
         </CardBody>
       </Card>
@@ -395,28 +426,34 @@ export function PostDetailView({
             </ul>
           )}
 
-          <div className="mt-4 border-t border-line pt-4">
-            <Textarea
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              disabled={pending}
-              placeholder="댓글을 입력하세요"
-              className="min-h-20"
-              aria-label="댓글 입력"
-            />
-            {error ? (
-              <p className="mt-1 text-label text-danger">{error}</p>
-            ) : null}
-            <div className="mt-2 flex justify-end">
-              <Button
-                onClick={submitComment}
-                disabled={pending || !comment.trim()}
-              >
-                <Send className="size-3.5" />
-                {pending ? "등록 중…" : "댓글 등록"}
-              </Button>
+          {canEngage ? (
+            <div className="mt-4 border-t border-line pt-4">
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                disabled={pending}
+                placeholder="댓글을 입력하세요"
+                className="min-h-20"
+                aria-label="댓글 입력"
+              />
+              {error ? (
+                <p className="mt-1 text-label text-danger">{error}</p>
+              ) : null}
+              <div className="mt-2 flex justify-end">
+                <Button
+                  onClick={submitComment}
+                  disabled={pending || !comment.trim()}
+                >
+                  <Send className="size-3.5" />
+                  {pending ? "등록 중…" : "댓글 등록"}
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : engageHint ? (
+            <p className="mt-4 border-t border-line pt-4 text-caption">
+              {engageHint}
+            </p>
+          ) : null}
         </CardBody>
       </Card>
 

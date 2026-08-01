@@ -5,6 +5,8 @@ import { addDaysYmd, todayYmd, toSeoulYmd, weekdayOf } from "@/features/calendar
 import type {
   Board,
   BoardWithDepartment,
+  CommunityMember,
+  CommunitySummary,
   PostDetail,
   PostListItem,
   ReactionEmoji,
@@ -52,14 +54,24 @@ async function readCountsOf(
   }));
 }
 
-/** 게시판 목록 (스펙 3.1) */
+/** 게시판·동호회에 공통으로 쓰는 boards 컬럼 목록 */
+const BOARD_COLUMNS =
+  "id, name, board_type, department_id, sort_order, created_at, description, created_by, archived_at";
+
+/**
+ * 게시판 목록 (스펙 3.1)
+ *
+ * 동호회는 여기서 제외한다. 이 함수 하나가 게시판 모듈의 사이드 패널·인덱스
+ * 리다이렉트·관리 화면의 유일한 출처라, 걸러내지 않으면 board_type 알파벳순
+ * (community < discussion < notice)에 따라 /board 인덱스가 남의 동호회로
+ * 떨어진다. 동호회 목록은 getCommunities()가 따로 낸다.
+ */
 export async function getBoards(): Promise<BoardWithDepartment[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("boards")
-    .select(
-      "id, name, board_type, department_id, sort_order, created_at, department:departments!department_id(id, name)",
-    )
+    .select(`${BOARD_COLUMNS}, department:departments!department_id(id, name)`)
+    .neq("board_type", "community")
     .order("board_type")
     .order("sort_order")
     .order("name");
@@ -71,14 +83,84 @@ export async function getBoards(): Promise<BoardWithDepartment[]> {
   return (data ?? []) as never;
 }
 
+/**
+ * 보드 한 건. 동호회 상세도 이 함수를 쓰므로 타입 필터를 걸지 않는다.
+ *
+ * 조회 실패를 반드시 로그로 남긴다. 이 함수의 null은 화면에서 404가 되는데,
+ * BOARD_COLUMNS가 마이그레이션 24의 새 컬럼(description·created_by·archived_at)을
+ * 요구하므로 마이그레이션 전에는 모든 게시판 URL이 "없는 글"로 보인다 —
+ * 로그가 없으면 원인이 스키마라는 걸 화면에서도 서버에서도 알 수 없다.
+ */
 export async function getBoard(id: string): Promise<Board | null> {
   const supabase = createServerSupabase();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("boards")
-    .select("id, name, board_type, department_id, sort_order, created_at")
+    .select(BOARD_COLUMNS)
     .eq("id", id)
     .maybeSingle<Board>();
+
+  if (error) {
+    console.error("[boards] 게시판 조회 실패:", error.message);
+    return null;
+  }
   return data ?? null;
+}
+
+/**
+ * 동호회 목록 (스펙 16 · 3.1)
+ * 보관된 동호회는 기본적으로 감춘다 — 관리 화면만 includeArchived로 함께 본다.
+ */
+export async function getCommunities(
+  includeArchived = false,
+): Promise<CommunitySummary[]> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase.rpc("list_communities", {
+    p_include_archived: includeArchived,
+  });
+
+  if (error) {
+    console.error("[boards] 동호회 목록 조회 실패:", error.message);
+    return [];
+  }
+  return ((data ?? []) as CommunitySummary[]).map((row) => ({
+    ...row,
+    member_count: Number(row.member_count),
+    post_count: Number(row.post_count),
+  }));
+}
+
+/** 동호회 멤버 명단 — 개설자가 맨 위 (스펙 16 · 3.2) */
+export async function getCommunityMembers(
+  boardId: string,
+): Promise<CommunityMember[]> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase.rpc("community_member_list", {
+    p_board_id: boardId,
+  });
+
+  if (error) {
+    console.error("[boards] 동호회 멤버 조회 실패:", error.message);
+    return [];
+  }
+  return (data ?? []) as CommunityMember[];
+}
+
+/**
+ * 내가 이 동호회 멤버인지.
+ * PK 조회라 임베드가 없다 — boards→employees 임베드의 FK 모호성 문제를 피한다.
+ */
+export async function isCommunityMember(
+  boardId: string,
+  employeeId: string,
+): Promise<boolean> {
+  const supabase = createServerSupabase();
+  const { data } = await supabase
+    .from("community_members")
+    .select("board_id")
+    .eq("board_id", boardId)
+    .eq("employee_id", employeeId)
+    .maybeSingle();
+  return !!data;
 }
 
 export interface PostQuery {
@@ -370,7 +452,7 @@ export async function getPostDetail(
       `id, board_id, title, content, category, is_pinned, author_id, view_count,
        created_at, updated_at,
        author:employees!author_id(id, name, position, profile_image_url),
-       board:boards!board_id(id, name, board_type, department_id, sort_order, created_at),
+       board:boards!board_id(${BOARD_COLUMNS}),
        comments:comments(
          id, post_id, author_id, content, created_at, updated_at,
          author:employees!author_id(id, name, profile_image_url)

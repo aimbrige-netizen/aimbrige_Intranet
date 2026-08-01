@@ -393,14 +393,46 @@ export const NAV_MODULES: NavModule[] = [
     href: "/board",
     icon: Megaphone,
     ready: true,
-    prefixes: ["/board", "/admin/boards"],
+    // 동호회는 별도 모듈이 아니라 "가입이 필요한 게시판"이다(스펙 16 · 1장).
+    // 새 모듈로 떼면 레일이 한 칸 늘고 게시판/동호회가 서로 남이 된다.
+    prefixes: ["/board", "/admin/boards", "/community", "/admin/community"],
     sections: [
+      {
+        key: "main",
+        items: [
+          {
+            /*
+             * prefixes를 두지 않는다. /board/:id에는 이미 board/layout.tsx가
+             * 꽂아 준 게시판 항목이 활성으로 서 있어서, 여기까지 활성이 되면
+             * 한 패널에서 두 곳이 동시에 강조된다. /board는 첫 게시판으로
+             * 리다이렉트하는 입구라 정확히 그 경로에서만 활성이면 된다.
+             */
+            key: "board-list",
+            label: "게시판",
+            href: "/board",
+            icon: Megaphone,
+          },
+          {
+            key: "community",
+            label: "동호회",
+            href: "/community",
+            icon: UsersRound,
+            prefixes: ["/community"],
+          },
+        ],
+      },
       adminSection([
         {
           key: "admin-boards",
           label: "게시판 관리",
           href: "/admin/boards",
           icon: Settings,
+        },
+        {
+          key: "admin-community",
+          label: "동호회 관리",
+          href: "/admin/community",
+          icon: UsersRound,
         },
       ]),
     ],

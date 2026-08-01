@@ -12,6 +12,8 @@ export interface BoardActionResult {
   fieldErrors?: Record<string, string>;
   message?: string;
   postId?: string;
+  /** 동호회 개설 결과 — 만든 보드로 바로 이동시킨다 */
+  boardId?: string;
 }
 
 export interface AttachmentActionResult {
@@ -19,6 +21,34 @@ export interface AttachmentActionResult {
   message?: string;
   /** 등록에 성공한 행 — 화면이 새로고침 없이 목록에 붙일 수 있게 돌려준다 */
   attachment?: PostAttachment;
+}
+
+/**
+ * 글이 붙은 보드 화면을 다시 만든다.
+ *
+ * 같은 posts 행이 /board/[boardId]와 /community/[boardId] 두 라우트에 걸쳐
+ * 있어서, 액션마다 보드 타입을 다시 조회해 경로를 고르면 질의만 늘고 한쪽을
+ * 빠뜨리기 쉽다. 존재하지 않는 경로의 revalidate는 무해하므로 둘 다 친다.
+ */
+function revalidateBoardPaths(boardId: string, postId?: string): void {
+  for (const base of ["/board", "/community"]) {
+    revalidatePath(`${base}/${boardId}`);
+    if (postId) revalidatePath(`${base}/${boardId}/${postId}`);
+  }
+}
+
+/**
+ * 글 수가 바뀌었을 때 함께 다시 만들어야 하는 목록들.
+ *
+ * 동호회 카드의 "글 N건"과 /admin/community 표의 글 수가 같은 값을 보여주는데,
+ * 관리 화면은 그 숫자로 [삭제] 버튼의 렌더 여부까지 정한다(글 0건일 때만).
+ * 캐시가 남으면 이미 글이 생긴 동호회에 삭제 버튼이 그대로 보이고, 누르면
+ * deleteBoard가 거절한다 — 눌러도 안 되는 버튼을 두지 않는 규약이 화면에서만 깨진다.
+ */
+function revalidatePostCountViews(): void {
+  revalidatePath("/board");
+  revalidatePath("/community");
+  revalidatePath("/admin/community");
 }
 
 function toFieldErrors(error: z.ZodError): Record<string, string> {
@@ -60,9 +90,9 @@ export async function createPost(input: unknown): Promise<BoardActionResult> {
 
   const { data: board } = await supabase
     .from("boards")
-    .select("board_type")
+    .select("board_type, archived_at")
     .eq("id", v.boardId)
-    .maybeSingle<{ board_type: string }>();
+    .maybeSingle<{ board_type: string; archived_at: string | null }>();
 
   if (!board) return { ok: false, message: "게시판을 찾을 수 없습니다." };
 
@@ -71,6 +101,27 @@ export async function createPost(input: unknown): Promise<BoardActionResult> {
       ok: false,
       message: "공지 게시판은 팀장/매니저 이상만 작성할 수 있습니다.",
     };
+  }
+
+  /*
+   * 동호회는 가입자만 쓴다 (스펙 16 · 3.2). RLS의 can_post_to_board()가
+   * 최종 관문이지만, 여기서 걸러내지 않으면 사용자에게 RLS 위반의 날것
+   * 메시지("new row violates row-level security policy…")가 그대로 노출된다.
+   * 관리자 우회는 두지 않는다 — 마이그레이션 24가 일부러 뺀 것과 같은 규칙이다.
+   */
+  if (board.board_type === "community") {
+    if (board.archived_at) {
+      return { ok: false, message: "보관된 동호회에는 글을 쓸 수 없습니다." };
+    }
+    const { data: membership } = await supabase
+      .from("community_members")
+      .select("board_id")
+      .eq("board_id", v.boardId)
+      .eq("employee_id", me.id)
+      .maybeSingle();
+    if (!membership) {
+      return { ok: false, message: "가입한 회원만 글을 쓸 수 있습니다." };
+    }
   }
 
   const { data, error } = await supabase
@@ -89,8 +140,8 @@ export async function createPost(input: unknown): Promise<BoardActionResult> {
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath("/board");
-  revalidatePath(`/board/${v.boardId}`);
+  revalidatePostCountViews();
+  revalidateBoardPaths(v.boardId);
   revalidatePath("/");
   return { ok: true, postId: data.id };
 }
@@ -107,14 +158,38 @@ export async function updatePost(
   const v = parsed.data;
 
   const supabase = createServerSupabase();
+
+  /*
+   * 카테고리·고정은 공지 타입에서만 의미가 있다(createPost와 같은 규칙).
+   * 입력의 boardId를 믿지 않고 글에 적힌 board_id로 타입을 다시 묻는다 —
+   * 서버 액션은 임의의 값을 받는 진입점이라, 동호회 글에 boardId만 공지
+   * 게시판으로 적어 보내면 그 글이 고정글이 되어 목록 맨 위에 박힌다.
+   * 옮기기 기능은 없으므로(posts_guard_board_id) board_id 자체는 건드리지 않는다.
+   */
+  const { data: post } = await supabase
+    .from("posts")
+    .select("board_id")
+    .eq("id", postId)
+    .maybeSingle<{ board_id: string }>();
+
+  if (!post) return { ok: false, message: "게시글을 찾을 수 없습니다." };
+
+  const { data: board } = await supabase
+    .from("boards")
+    .select("board_type")
+    .eq("id", post.board_id)
+    .maybeSingle<{ board_type: string }>();
+
+  const isNotice = board?.board_type === "notice";
+
   const { error, count } = await supabase
     .from("posts")
     .update(
       {
         title: v.title,
         content: v.content,
-        category: v.category ?? null,
-        is_pinned: v.isPinned,
+        category: isNotice ? (v.category ?? null) : null,
+        is_pinned: isNotice ? v.isPinned : false,
       },
       { count: "exact" },
     )
@@ -125,8 +200,7 @@ export async function updatePost(
     return { ok: false, message: "수정 권한이 없습니다(작성자 본인만 가능)." };
   }
 
-  revalidatePath(`/board/${v.boardId}`);
-  revalidatePath(`/board/${v.boardId}/${postId}`);
+  revalidateBoardPaths(post.board_id, postId);
   return { ok: true, postId };
 }
 
@@ -165,8 +239,8 @@ export async function deletePost(
     }
   }
 
-  revalidatePath("/board");
-  revalidatePath(`/board/${boardId}`);
+  revalidatePostCountViews();
+  revalidateBoardPaths(boardId);
   return { ok: true };
 }
 
@@ -256,7 +330,7 @@ export async function registerPostAttachment(
     };
   }
 
-  revalidatePath(`/board/${boardId}/${postId}`);
+  revalidateBoardPaths(boardId, postId);
   return { ok: true, attachment: data };
 }
 
@@ -297,7 +371,7 @@ export async function removePostAttachment(
     }
   }
 
-  revalidatePath(`/board/${boardId}/${postId}`);
+  revalidateBoardPaths(boardId, postId);
   return { ok: true };
 }
 
@@ -340,7 +414,7 @@ export async function createComment(
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath(`/board/${boardId}/${parsed.data.postId}`);
+  revalidateBoardPaths(boardId, parsed.data.postId);
   return { ok: true };
 }
 
@@ -362,7 +436,7 @@ export async function deleteComment(
     return { ok: false, message: "삭제 권한이 없습니다." };
   }
 
-  revalidatePath(`/board/${boardId}/${postId}`);
+  revalidateBoardPaths(boardId, postId);
   return { ok: true };
 }
 
@@ -401,7 +475,7 @@ export async function toggleReaction(
 
   if (error) return { ok: false, message: error.message };
 
-  revalidatePath(`/board/${boardId}/${postId}`);
+  revalidateBoardPaths(boardId, postId);
   return { ok: true };
 }
 
@@ -468,5 +542,160 @@ export async function deleteBoard(id: string): Promise<BoardActionResult> {
 
   revalidatePath("/admin/boards");
   revalidatePath("/board");
+  // 동호회 관리 화면도 이 액션을 재사용한다(글 0건일 때만 삭제가 열린다)
+  revalidatePath("/admin/community");
+  revalidatePath("/community");
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------
+// 동호회 (스펙 16)
+//
+// 동호회는 board_type='community'인 boards 행이라 새 액션 파일을 만들지 않고
+// 게시판 모듈을 여기서 넓힌다. 개설·보관은 전부 SECURITY DEFINER 함수를
+// 거친다 — 보드 INSERT와 개설자 가입은 한 트랜잭션이어야 하고(멤버 0명짜리
+// 유령 동호회 방지), 보관은 관리자 판정을 DB 쪽에 두는 편이 안전하다.
+// ---------------------------------------------------------------------
+
+const communitySchema = z.object({
+  name: z.string().trim().min(1, "동호회 이름을 입력하세요.").max(60),
+  description: z
+    .string()
+    .trim()
+    .max(500, "소개는 500자 이내로 입력하세요.")
+    .transform((v) => (v === "" ? null : v))
+    .nullable()
+    .optional(),
+});
+
+/**
+ * 동호회 개설 — 전 임직원 (스펙 16 · 3.1)
+ *
+ * boards INSERT를 직접 하지 않는다. RPC가 이름 검증·중복 확인·개설자 자동
+ * 가입까지 한 트랜잭션으로 처리하고, 실패 메시지도 사용자에게 그대로
+ * 보여줄 문장으로 던진다.
+ */
+export async function createCommunity(
+  input: unknown,
+): Promise<BoardActionResult> {
+  await requireSessionEmployee();
+  const parsed = communitySchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, fieldErrors: toFieldErrors(parsed.error) };
+  }
+  const v = parsed.data;
+
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase.rpc("create_community", {
+    p_name: v.name,
+    p_description: v.description ?? null,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/community");
+  revalidatePath("/admin/community");
+  return { ok: true, boardId: data as string };
+}
+
+/** 가입 (스펙 16 · 3.2) — 보관된 동호회는 RLS가 막는다 */
+export async function joinCommunity(
+  boardId: string,
+): Promise<BoardActionResult> {
+  const me = await requireSessionEmployee();
+
+  const supabase = createServerSupabase();
+  // RLS에 막힌 INSERT는 42501로 떨어지지만, .select()로 실제 행을 확인해야
+  // "성공했다고 표시됐는데 가입은 안 된" 상태가 생기지 않는다.
+  const { data, error } = await supabase
+    .from("community_members")
+    .insert({ board_id: boardId, employee_id: me.id })
+    .select("board_id")
+    .maybeSingle();
+
+  if (error) {
+    return {
+      ok: false,
+      message:
+        error.code === "23505"
+          ? "이미 가입한 동호회입니다."
+          : error.code === "42501"
+            ? "보관된 동호회에는 가입할 수 없습니다."
+            : error.message,
+    };
+  }
+  if (!data) return { ok: false, message: "가입하지 못했습니다." };
+
+  revalidatePath("/community");
+  revalidatePath(`/community/${boardId}`);
+  return { ok: true, boardId };
+}
+
+/**
+ * 탈퇴 (스펙 16 · 3.2)
+ *
+ * 보관된 동호회에서도 나갈 수 있다 — 가입과 같은 잣대로 막으면 이미 가입한
+ * 사람이 영영 못 나간다(마이그레이션 24의 community_members_delete와 같은 규칙).
+ * RLS에 막힌 DELETE는 오류가 아니라 0행으로 끝나므로 count로 확인한다.
+ */
+export async function leaveCommunity(
+  boardId: string,
+): Promise<BoardActionResult> {
+  const me = await requireSessionEmployee();
+
+  const supabase = createServerSupabase();
+  const { error, count } = await supabase
+    .from("community_members")
+    .delete({ count: "exact" })
+    .eq("board_id", boardId)
+    .eq("employee_id", me.id);
+
+  if (error) return { ok: false, message: error.message };
+  if (count === 0) return { ok: false, message: "탈퇴하지 못했습니다." };
+
+  revalidatePath("/community");
+  revalidatePath(`/community/${boardId}`);
+  return { ok: true, boardId };
+}
+
+/**
+ * 보관 (스펙 16 · 3.3) — 시스템 관리자 전용.
+ * 삭제가 아니라 보관인 이유는 deleteBoard()가 글 있는 게시판을 거부하기 때문이다.
+ * 글은 남고 목록에서만 사라지므로 기존 글 URL은 계속 살아 있다.
+ */
+export async function archiveCommunity(
+  boardId: string,
+): Promise<BoardActionResult> {
+  await requireSystemAdmin();
+
+  const supabase = createServerSupabase();
+  const { error } = await supabase.rpc("archive_community", {
+    p_board_id: boardId,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/community");
+  revalidatePath(`/community/${boardId}`);
+  revalidatePath("/admin/community");
+  return { ok: true, boardId };
+}
+
+/** 보관 해제 (스펙 16 · 3.3) — 시스템 관리자 전용 */
+export async function unarchiveCommunity(
+  boardId: string,
+): Promise<BoardActionResult> {
+  await requireSystemAdmin();
+
+  const supabase = createServerSupabase();
+  const { error } = await supabase.rpc("unarchive_community", {
+    p_board_id: boardId,
+  });
+
+  if (error) return { ok: false, message: error.message };
+
+  revalidatePath("/community");
+  revalidatePath(`/community/${boardId}`);
+  revalidatePath("/admin/community");
+  return { ok: true, boardId };
 }

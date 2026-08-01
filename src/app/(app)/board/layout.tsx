@@ -18,7 +18,8 @@ export default async function BoardLayout({
   const boards = await getBoards();
 
   const notices = boards.filter((b) => b.board_type === "notice");
-  const free = boards.filter((b) => b.board_type !== "notice");
+  // 타입을 명시적으로 좁힌다 — "notice가 아닌 것"이면 동호회까지 섞여 들어온다
+  const free = boards.filter((b) => b.board_type === "discussion");
 
   return (
     <>
@@ -38,7 +39,8 @@ export default async function BoardLayout({
           ) : null}
           {free.length > 0 ? (
             <PanelLinkList
-              title="게시판"
+              // 정적 메뉴에 "게시판" 항목이 따로 있어 같은 이름이 두 번 나온다
+              title="자유게시판"
               items={free.map((b) => ({
                 key: b.id,
                 label: b.name,

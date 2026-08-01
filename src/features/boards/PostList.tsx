@@ -14,7 +14,12 @@ import {
 import { AvatarWithName } from "@/components/ui/Avatar";
 import { periodFields, periodHref } from "@/lib/period";
 import { cn, formatDate } from "@/lib/utils";
-import { POST_CATEGORIES, type Board, type PostListItem } from "./types";
+import {
+  POST_CATEGORIES,
+  type Board,
+  type BoardType,
+  type PostListItem,
+} from "./types";
 import { BOARD_DEFAULT_RANGE, type BoardRange } from "./format";
 
 export interface PostListFilters {
@@ -34,6 +39,7 @@ export interface PostListFilters {
  */
 export function PostList({
   board,
+  basePath,
   posts,
   total,
   pageSize,
@@ -44,6 +50,11 @@ export function PostList({
   filters,
 }: {
   board: Board;
+  /**
+   * 목록·글 상세·글쓰기 링크의 뿌리. 같은 컴포넌트가 게시판(/board/:id)과
+   * 동호회(/community/:id) 두 라우트에서 쓰이므로 호출부가 정한다.
+   */
+  basePath: string;
   posts: PostListItem[];
   /** 현재 필터 기준 전체 건수 (페이지네이터 분모) */
   total: number;
@@ -56,7 +67,6 @@ export function PostList({
   filters: PostListFilters;
 }) {
   const isNotice = board.board_type === "notice";
-  const basePath = `/board/${board.id}`;
   const { category, q, range } = filters;
 
   /** 기간은 lib/period가, 나머지 조건은 extra가 유지한다 */
@@ -163,7 +173,8 @@ export function PostList({
               {posts.length === 0 ? (
                 <EmptyRow
                   columns={columns}
-                  isNotice={isNotice}
+                  boardType={board.board_type}
+                  archived={!!board.archived_at}
                   canWrite={canWrite}
                   filters={filters}
                   basePath={basePath}
@@ -206,7 +217,7 @@ export function PostList({
 
                     <td>
                       <Link
-                        href={`/board/${board.id}/${post.id}`}
+                        href={`${basePath}/${post.id}`}
                         className={cn(
                           "block truncate hover:underline",
                           post.isRead ? "text-muted" : "font-bold text-ink",
@@ -363,14 +374,17 @@ function CategoryChips({
  */
 function EmptyRow({
   columns,
-  isNotice,
+  boardType,
+  archived,
   canWrite,
   filters,
   basePath,
   hrefWith,
 }: {
   columns: number;
-  isNotice: boolean;
+  boardType: BoardType;
+  /** 보관된 동호회 — 가입 자체가 막혀 있어 안내 문구가 갈린다 */
+  archived: boolean;
   canWrite: boolean;
   filters: PostListFilters;
   basePath: string;
@@ -442,9 +456,13 @@ function EmptyRow({
       description={
         canWrite
           ? "첫 글을 올리면 이 자리에 제목·작성자·작성일이 쌓입니다."
-          : isNotice
+          : boardType === "notice"
             ? "공지는 팀장·매니저 이상이 작성합니다. 새 공지가 올라오면 여기에 표시됩니다."
-            : undefined
+            : boardType === "community"
+              ? archived
+                ? "보관된 동호회라 새 글을 받지 않습니다. 글이 올라온 적 없이 보관되었습니다."
+                : "글은 가입한 회원이 씁니다. 가입하면 여기에 첫 글을 올릴 수 있습니다."
+              : undefined
       }
       action={
         canWrite ? (

@@ -47,6 +47,28 @@ npm run check:mail              # 9건
 
 ---
 
+## 1-1. ⏳ 마이그레이션 24 — 아직 실행 전입니다 (스펙 16 동호회)
+
+`supabase/migrations/20260731000024_community.sql`을 **코드 배포와 같은 시점에**
+실행해야 합니다. 이 마이그레이션은 `boards`에 `description`·`created_by`·
+`archived_at` 세 컬럼을 더하는데, 게시판 화면이 그 컬럼들을 함께 조회합니다.
+
+실행 전 상태에서 코드만 올라가면 증상이 **오류 화면이 아니라 정상적인 빈
+화면·404로** 보입니다:
+
+- `/board` → "개설된 게시판이 없습니다" (조회가 통째로 실패해 빈 배열)
+- 기존 `/board/{게시판}/{글}` 링크 → 전부 404
+- `/community`, `/admin/community` → `list_communities` 함수 없음
+
+화면만 보고는 원인을 알 수 없어서, 조회 실패를 서버 로그에 남기도록
+`getBoard()`에 로그를 넣어 뒀습니다(`[boards] 게시판 조회 실패: column
+boards.description does not exist`). 이 줄이 보이면 마이그레이션 미적용입니다.
+
+실행 뒤 `npm run seed:demo`를 한 번 더 돌리면 데모 동호회 4개(보관 1개)와
+가입 명단·글이 들어갑니다.
+
+---
+
 ## 2. 결정이 필요한 것
 
 ### 2-1. 결재 최종승인자 (계속 대기 중)

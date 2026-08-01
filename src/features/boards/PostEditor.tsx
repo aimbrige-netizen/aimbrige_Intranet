@@ -17,6 +17,7 @@ import {
   uploadPostAttachment,
 } from "./PostAttachmentField";
 import {
+  BOARD_TYPE_LABELS,
   POST_CATEGORIES,
   type Board,
   type Post,
@@ -26,11 +27,14 @@ import {
 /** 글 작성·수정 (스펙 3.2) */
 export function PostEditor({
   board,
+  basePath,
   post,
   attachments = [],
   authUserId,
 }: {
   board: Board;
+  /** 저장 후 돌아갈 뿌리 경로 (/board/:id 또는 /community/:id) */
+  basePath: string;
   post?: Post;
   /** 수정 중인 글에 이미 붙어 있는 첨부 */
   attachments?: PostAttachment[];
@@ -192,7 +196,7 @@ export function PostEditor({
         return;
       }
 
-      router.push(`/board/${board.id}/${postId}`);
+      router.push(`${basePath}/${postId}`);
     });
   };
 
@@ -205,7 +209,7 @@ export function PostEditor({
               <span className="text-body text-ink">
                 {board.name}
                 <span className="ml-2 text-caption">
-                  {isNotice ? "공지" : "자유게시판"}
+                  {BOARD_TYPE_LABELS[board.board_type]}
                 </span>
               </span>
             </FormRow>
@@ -294,7 +298,7 @@ export function PostEditor({
           <p className="mr-auto text-label text-danger">{message}</p>
         ) : null}
         {createdPostId ? (
-          <Button onClick={() => router.push(`/board/${board.id}/${createdPostId}`)}>
+          <Button onClick={() => router.push(`${basePath}/${createdPostId}`)}>
             게시글 열기
           </Button>
         ) : (

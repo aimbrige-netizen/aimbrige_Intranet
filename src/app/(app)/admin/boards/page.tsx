@@ -32,7 +32,7 @@ export default async function AdminBoardsPage() {
             <span>·</span>
             <span>
               자유게시판{" "}
-              {boards.filter((b) => b.board_type !== "notice").length}개
+              {boards.filter((b) => b.board_type === "discussion").length}개
             </span>
           </>
         }

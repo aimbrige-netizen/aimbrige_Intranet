@@ -1,6 +1,10 @@
 import type { Employee } from "@/types/db";
 
-export type BoardType = "notice" | "discussion";
+/**
+ * 동호회(community)는 새 도메인이 아니라 "가입이 필요한 게시판"이다(스펙 16 · 1장).
+ * 그래서 board_type의 값 하나로 들어온다 — posts/comments/reactions는 그대로 쓴다.
+ */
+export type BoardType = "notice" | "discussion" | "community";
 
 /** 공지 카테고리 (스펙 3.1 — notice 타입에서 주로 사용) */
 export const POST_CATEGORIES = ["인사", "총무", "제품", "재무", "기타"] as const;
@@ -13,6 +17,7 @@ export type ReactionEmoji = (typeof REACTION_EMOJIS)[number];
 export const BOARD_TYPE_LABELS: Record<BoardType, string> = {
   notice: "공지",
   discussion: "자유게시판",
+  community: "동호회",
 };
 
 export interface Board {
@@ -22,6 +27,11 @@ export interface Board {
   department_id: string | null;
   sort_order: number;
   created_at: string;
+  /** 동호회 소개. 공지·자유게시판에서는 비어 있다 */
+  description: string | null;
+  created_by: string | null;
+  /** 동호회 보관 시각. null이면 운영 중 (스펙 16 · 3.3) */
+  archived_at: string | null;
 }
 
 export interface BoardWithDepartment extends Board {
@@ -119,5 +129,38 @@ export interface ReadStatusRow {
 }
 
 export function isBoardType(value: unknown): value is BoardType {
-  return value === "notice" || value === "discussion";
+  return (
+    value === "notice" || value === "discussion" || value === "community"
+  );
+}
+
+/**
+ * 동호회 카드 한 장 (list_communities RPC 반환).
+ *
+ * 멤버수·글수·내 가입 여부를 카드마다 따로 물으면 동호회 수만큼 질의가 늘어난다.
+ * RPC 한 번으로 받아 온다.
+ */
+export interface CommunitySummary {
+  id: string;
+  name: string;
+  description: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string;
+  archived_at: string | null;
+  member_count: number;
+  post_count: number;
+  is_member: boolean;
+}
+
+/** 동호회 멤버 명단 (community_member_list RPC 반환) */
+export interface CommunityMember {
+  employee_id: string;
+  employee_name: string;
+  /** position은 Postgres 예약어라 RPC가 이 이름으로 돌려준다 */
+  employee_position: string | null;
+  department_name: string | null;
+  profile_image_url: string | null;
+  joined_at: string;
+  is_owner: boolean;
 }
