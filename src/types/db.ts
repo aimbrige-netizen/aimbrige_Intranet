@@ -26,7 +26,16 @@ export type AuditAction =
   | "department_deleted"
   | "team_created"
   | "team_updated"
-  | "team_deleted";
+  | "team_deleted"
+  /*
+   * 스펙 04 — 결재. DB가 진작부터 쓰고 있던 값인데 여기에 없었다.
+   * submit_approval_draft()/submit_approval_document()(마이그레이션 13·14)와
+   * withdraw_approval_document()(13)가 audit_logs에 직접 insert한다.
+   * 라벨 조회가 `LABELS[action] ?? action`이라 지금까지 감사 화면에
+   * 원문 키가 그대로 찍혔고, 그룹 필터로는 아예 잡히지 않았다.
+   */
+  | "approval.submit"
+  | "approval.withdraw";
 
 /**
  * 대시보드 위젯 키 — 이 배열이 유일한 목록이다.

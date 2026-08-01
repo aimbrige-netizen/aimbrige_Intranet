@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { KeyRound, LogIn, ScrollText, Users } from "lucide-react";
+import { GitBranch, KeyRound, LogIn, ScrollText, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
@@ -104,6 +104,7 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   access: KeyRound,
   hr: Users,
   org: ScrollText,
+  approval: GitBranch,
 };
 
 /** 그룹별 기본 톤 — 권한 변경만 경고 축에 둔다 */
@@ -112,6 +113,7 @@ const GROUP_TONES: Record<string, StatTone> = {
   access: "warning",
   hr: "informative",
   org: "neutral",
+  approval: "neutral",
 };
 
 /** 정렬 가능한 컬럼. 행위자·대상은 임베드/조인이라 서버 정렬이 안 된다 */
@@ -430,7 +432,7 @@ export default async function AuditLogsPage({
       />
 
       {/* 요약 밴드가 곧 그룹 필터다 — 선택된 카드는 브랜드 틴트로 표시된다 */}
-      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-5">
         {AUDIT_GROUPS.map((item, index) => {
           const value = groupCounts[index];
           const active = group === item.key;

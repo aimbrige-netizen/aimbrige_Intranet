@@ -66,8 +66,12 @@ function dayStart(ymd: string): string {
   return `${ymd}T00:00:00+09:00`;
 }
 
+// FK를 명시한다(employees!actor_id). audit_logs → employees FK는 지금
+// actor_id 하나뿐이라 생략해도 붙지만, target_id에 FK가 생기는 순간
+// PostgREST가 PGRST201(관계가 둘 이상)로 실패한다 — 감사 로그 화면과
+// /admin 활동 위젯이 같이 죽는다.
 const LOG_SELECT = `id, action, target_id, detail, created_at, actor_id,
-       actor:employees(id, name, email)`;
+       actor:employees!actor_id(id, name, email)`;
 
 interface EmbeddedRow {
   id: string;
