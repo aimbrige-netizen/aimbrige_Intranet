@@ -10,6 +10,8 @@ import { publicEnv, serverEnv } from "@/lib/env";
  *  1) 로그인 콜백에서 employees.auth_user_id 링크 (본인 행을 아직 못 읽는 상태라 필요)
  *  2) audit_logs INSERT (스펙 4장 RLS 원칙: INSERT는 서버 측에서만)
  *  3) 시딩 스크립트
+ *  4) gmail_connections 읽기/쓰기 (마이그레이션 29 — RLS 정책 0개라
+ *     service role만 닿는 refresh token 금고. src/server/gmail/tokens.ts 전용)
  *
  * 절대 클라이언트 컴포넌트에서 import 하지 않는다("server-only"로 강제).
  */

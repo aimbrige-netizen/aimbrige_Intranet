@@ -22,6 +22,12 @@ import {
   trashMail,
 } from "@/server/actions/mail";
 import {
+  markGmailReadAction,
+  starGmailAction,
+  trashGmailAction,
+} from "@/server/actions/gmail-mail";
+import { isInternalMailId } from "@/features/mail/gmail-view";
+import {
   toSeoulTime,
   toSeoulYmd,
   weekdayOf,
@@ -37,6 +43,13 @@ import {
  * 의 단건 액션을 행마다 반복 호출한다(벌크 액션을 따로 두지 않는 이유:
  * RLS 0행 확인 규약(보안 3)이 단건 count 검사로 서 있고, 목록 선택은
  * 한 페이지 20건이 상한이라 반복 비용이 문제되지 않는다).
+ *
+ * ── 외부 수발신(Gmail 소스) 분기
+ * Gmail 행은 id가 uuid가 아니다(isInternalMailId — 읽기 화면과 같은 판별).
+ * 내부 액션은 uuid 검증을 전제하므로 Gmail 행에 그대로 쏘면 PostgREST
+ * 22P02로 전부 실패한다 — 행 단위로 gmail-mail.ts 액션(읽음·별표·휴지통)
+ * 으로 분기한다. Gmail 영구삭제·임시보관 삭제는 1차 미제공(안내만).
+ * 내부 메일 경로는 그대로다 — 분기 추가일 뿐 개조가 아니다.
  */
 
 export type MailboxKey = "inbox" | "sent" | "receipts" | "drafts" | "trash";
@@ -180,7 +193,13 @@ export function MailList({
         setNotice("읽음 처리할 안읽은 받은 메일이 없습니다.");
         return;
       }
-      await Promise.all(targets.map((row) => markMailRead(row.id)));
+      await Promise.all(
+        targets.map((row) =>
+          isInternalMailId(row.id)
+            ? markMailRead(row.id)
+            : markGmailReadAction(row.id),
+        ),
+      );
       settle(null);
     });
   };
@@ -198,7 +217,11 @@ export function MailList({
       }
       const next = targets.some((row) => !row.isStarred);
       const results = await Promise.all(
-        targets.map((row) => toggleMailStar(row.id, next)),
+        targets.map((row) =>
+          isInternalMailId(row.id)
+            ? toggleMailStar(row.id, next)
+            : starGmailAction(row.id, next),
+        ),
       );
       const failed = results.find((result) => !result.ok);
       settle(failed?.message ?? null);
@@ -213,6 +236,23 @@ export function MailList({
    */
   const deleteSelected = () => {
     if (selectedRows.length === 0) return;
+    /*
+     * Gmail 행이 낀 휴지통·임시보관 삭제는 서버까지 안 가고 안내만 한다 —
+     * Gmail 영구삭제는 제공하지 않고(client.ts가 일부러 안 노출), Gmail
+     * 임시보관함은 1차 읽기 전용이다. confirm을 띄운 뒤 실패시키지 않도록
+     * 확인 창보다 먼저 거른다.
+     */
+    if (
+      (box === "trash" || box === "drafts") &&
+      selectedRows.some((row) => !isInternalMailId(row.id))
+    ) {
+      setNotice(
+        box === "trash"
+          ? "Gmail 영구삭제는 제공하지 않습니다 — Gmail 웹에서 지워 주세요."
+          : "Gmail 임시보관함은 읽기 전용입니다 — 삭제는 Gmail 웹에서 해주세요.",
+      );
+      return;
+    }
     if (
       box === "trash" &&
       !window.confirm("영구삭제는 되돌릴 수 없습니다. 계속할까요?")
@@ -228,6 +268,8 @@ export function MailList({
     startTransition(async () => {
       const results = await Promise.all(
         selectedRows.map((row) => {
+          // Gmail 행(휴지통·임시보관 밖) — 휴지통 이동만 제공
+          if (!isInternalMailId(row.id)) return trashGmailAction(row.id);
           if (row.side === "draft") return deleteMailDraft(row.id);
           const side = row.side === "received" ? "received" : "sent";
           return box === "trash"
@@ -247,7 +289,9 @@ export function MailList({
         setNotice("별표는 받은 메일에만 붙일 수 있습니다.");
         return;
       }
-      const result = await toggleMailStar(row.id, !row.isStarred);
+      const result = isInternalMailId(row.id)
+        ? await toggleMailStar(row.id, !row.isStarred)
+        : await starGmailAction(row.id, !row.isStarred);
       setNotice(result.ok ? null : (result.message ?? null));
       router.refresh();
     });

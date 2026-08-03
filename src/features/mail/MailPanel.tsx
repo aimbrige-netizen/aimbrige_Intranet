@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarClock,
   ExternalLink,
@@ -17,6 +18,7 @@ import {
 } from "lucide-react";
 import { LinkButton } from "@/components/ui/Button";
 import { Meter } from "@/components/ui/Progress";
+import { disconnectGmailAction } from "@/server/actions/gmail-mail";
 import { PanelPortal } from "@/components/layout/ModulePanel";
 import {
   PANEL_EXTRA_SLOT,
@@ -88,11 +90,21 @@ const QUICK_FILTERS: {
   },
 ];
 
+/**
+ * 외부메일(Gmail) 연동 설정 가이드 문서명 — 미연동 행의 안내가 가리킨다.
+ * 실제 절차는 저장소의 GMAIL-SETUP.md(관리자용 단계별 가이드)다. 외부
+ * URL을 걸지 않는 이유: 이전에 걸었던 Google 문서(API 키 설정)는 OAuth
+ * 클라이언트·Gmail 스코프 설정과 무관했다 — 사내 위키에 게시되면 그
+ * 주소로 <a>를 되살린다.
+ */
+const GMAIL_SETUP_DOC_NAME = "GMAIL-SETUP.md";
+
 export function MailPanel({
   email,
   unreadCount,
   usedBytes,
   quotaBytes,
+  gmail,
 }: {
   /** Gmail 새 탭 링크용 회사 계정 (기존 gmailInboxUrl 규약) */
   email: string;
@@ -100,6 +112,11 @@ export function MailPanel({
   unreadCount: number;
   usedBytes: number;
   quotaBytes: number;
+  /**
+   * 외부메일(Gmail) 연동 상태 행 — layout이 has_gmail_connection()으로
+   * 채운다. 안 넘기면(다른 호출부·과도기) 행 자체가 없다 — 기존 화면 불변.
+   */
+  gmail?: { connected: boolean; email: string | null };
 }) {
   const pathname = usePathname();
   const params = useSearchParams();
@@ -195,6 +212,8 @@ export function MailPanel({
             {formatMailSize(quotaBytes)} 중 {formatMailSize(usedBytes)} 사용
           </p>
         </div>
+        {/* 외부메일(Gmail) 연동 상태 행 — layout이 상태를 넘길 때만 그린다 */}
+        {gmail ? <GmailConnectionRow gmail={gmail} /> : null}
         {/*
           외부메일(Gmail) — Google OAuth 승인 전까지는 새 탭 링크가 자리를
           지킨다(12-mail.md 구현 결정). 연동이 열리면 어댑터로 교체.
@@ -210,6 +229,81 @@ export function MailPanel({
         </a>
       </PanelPortal>
     </>
+  );
+}
+
+/**
+ * 외부메일(Gmail) 연동 상태 행 (담당 스펙).
+ *
+ *   미연동 — "연결 안 됨 — 관리자 설정 필요" + 설정 안내 문서 링크.
+ *            임직원이 스스로 풀 수 있는 상태가 아니라 버튼이 아니라 안내다
+ *            (GoogleReauthNotice의 scope_missing과 같은 판단).
+ *   연동   — 연동 계정(google_email) + 해제 버튼. 해제는 refresh token 행
+ *            삭제인데, Google은 이미 동의한 계정의 일반 재로그인에는 refresh
+ *            token을 다시 내려주지 않는다(GMAIL-SETUP §9) — 재연동은 Google
+ *            계정 관리에서 앱 액세스 삭제 후 재로그인이라야 하고, confirm
+ *            문구가 그 절차를 정확히 알린다.
+ */
+function GmailConnectionRow({
+  gmail,
+}: {
+  gmail: { connected: boolean; email: string | null };
+}) {
+  const router = useRouter();
+  const [notice, setNotice] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  if (!gmail.connected) {
+    return (
+      <div className="mt-1 px-2 py-1">
+        <p className="flex items-center gap-2 text-label text-muted">
+          <Mail className="size-4 shrink-0" aria-hidden />
+          외부메일(Gmail) 연결 안 됨
+        </p>
+        <p className="mt-0.5 pl-6 text-nano text-muted">
+          관리자 설정 필요 — 설정 절차는 {GMAIL_SETUP_DOC_NAME} 참고
+        </p>
+      </div>
+    );
+  }
+
+  const disconnect = () => {
+    if (
+      !window.confirm(
+        "Gmail 연동을 해제할까요? 다시 연동하려면 Google 계정 관리(myaccount.google.com/connections)에서 이 앱의 액세스를 삭제한 뒤, 다시 로그인해 동의 화면을 거쳐야 합니다.",
+      )
+    ) {
+      return;
+    }
+    startTransition(async () => {
+      const result = await disconnectGmailAction();
+      if (!result.ok) {
+        setNotice(result.message ?? "연동 해제에 실패했습니다.");
+        return;
+      }
+      setNotice(null);
+      router.refresh();
+    });
+  };
+
+  return (
+    <div className="mt-1 px-2 py-1">
+      <p className="flex items-center gap-2 text-label text-ink">
+        <MailCheck className="size-4 shrink-0 text-muted" aria-hidden />
+        <span className="min-w-0 flex-1 truncate" title={gmail.email ?? undefined}>
+          {gmail.email ?? "Gmail 연동됨"}
+        </span>
+        <button
+          type="button"
+          onClick={disconnect}
+          disabled={pending}
+          className="shrink-0 rounded-sm px-1 text-nano text-muted transition-colors duration-fast ease-standard hover:bg-canvas-hover hover:text-ink disabled:opacity-50"
+        >
+          {pending ? "해제 중…" : "해제"}
+        </button>
+      </p>
+      {notice ? <p className="mt-0.5 pl-6 text-nano text-muted">{notice}</p> : null}
+    </div>
   );
 }
 

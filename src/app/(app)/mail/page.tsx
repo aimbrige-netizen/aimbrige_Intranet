@@ -11,6 +11,10 @@ import {
   type MailboxFolder,
   type MailListItem,
 } from "@/features/mail/data";
+import {
+  getGmailMailbox,
+  hasGmailConnection,
+} from "@/features/mail/gmail-source";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { toSeoulYmd } from "@/features/calendar/date";
 
@@ -30,6 +34,18 @@ const BOX_META: Record<MailboxKey, { title: string; description: string }> = {
   },
   drafts: { title: "임시보관함", description: "작성 중 저장해 둔 메일" },
   trash: { title: "휴지통", description: "삭제한 메일" },
+};
+
+/**
+ * Gmail 소스일 때의 설명 — 제목(메일함 이름)은 그대로 두고 출처만 밝힌다.
+ * 수신확인·임시보관은 Gmail에서 의미가 줄어드는 함이라 그 사정을 적는다.
+ */
+const GMAIL_BOX_DESCRIPTION: Record<MailboxKey, string> = {
+  inbox: "연동된 Gmail 받은편지함",
+  sent: "Gmail로 보낸 메일",
+  receipts: "Gmail은 수신확인을 제공하지 않습니다 — 보낸메일함과 같게 표시됩니다",
+  drafts: "Gmail 임시보관함 — 1차에서는 읽기만 지원합니다",
+  trash: "Gmail 휴지통",
 };
 
 const FILTER_LABELS: Record<MailQuickFilter, string> = {
@@ -126,21 +142,35 @@ export default async function MailPage({
    */
   const folder: MailboxFolder = box === "receipts" ? "sent" : box;
 
-  const { items } = await getMailList(me.id, folder, {
+  /*
+   * 소스 분기 — 담당 스펙의 한 점: 연동이면 Gmail, 아니면 내부 DB(현행
+   * 그대로). 두 소스가 같은 MailPage(MailListItem[])를 돌려주므로 아래
+   * toRow부터는 분기가 없다. Gmail 쪽은 실패 시 빈 페이지(소프트) —
+   * 내부 소스로 섞어 폴백하지 않는다(두 메일함은 다른 세계라 섞이면
+   * "이 목록이 어디인가"가 불명해진다).
+   */
+  const gmailConnected = await hasGmailConnection();
+  const listFilter = {
     unread: filter === "unread" || undefined,
     starred: filter === "starred" || undefined,
     sinceYmd: filter === "today" ? toSeoulYmd(new Date()) : undefined,
-  });
+  };
+  const { items } = gmailConnected
+    ? await getGmailMailbox(me.id, folder, listFilter)
+    : await getMailList(me.id, folder, listFilter);
   const rows = items.map((item) => toRow(item, box));
 
   const meta = BOX_META[box];
+  const description = gmailConnected
+    ? GMAIL_BOX_DESCRIPTION[box]
+    : meta.description;
 
   return (
     <>
       <PageHeader
         title={meta.title}
         description={
-          filter ? `${meta.description} — ${FILTER_LABELS[filter]}` : meta.description
+          filter ? `${description} — ${FILTER_LABELS[filter]}` : description
         }
       />
       <MailList box={box} filter={filter} rows={rows} />

@@ -13,7 +13,9 @@ import {
   saveMailDraft,
   sendMail,
 } from "@/server/actions/mail";
+import { sendGmailMailAction } from "@/server/actions/gmail-mail";
 import { formatMailSize } from "@/features/mail/MailList";
+import { isEmailAddress } from "@/features/mail/gmail-view";
 import type { MailAttachment } from "@/types/db";
 
 /**
@@ -40,17 +42,42 @@ export interface MailRecipientOption {
   group?: string | null;
 }
 
+/**
+ * 받는사람/참조 필드의 칩 — 임직원 자동완성 + 자유 이메일 입력 겸용
+ * (외부 수발신). 임직원 칩은 내부 발송에선 employees.id로, Gmail 발송에선
+ * option.email로 해석된다. 외부 칩은 Gmail 소스에서만 발송 가능하다.
+ */
+export type RecipientChip =
+  | { kind: "employee"; option: MailRecipientOption }
+  | { kind: "external"; email: string };
+
+/** 칩 중복 판정 키 — 임직원은 id, 외부 주소는 소문자 이메일 */
+function chipKey(chip: RecipientChip): string {
+  return chip.kind === "employee" ? chip.option.id : chip.email.toLowerCase();
+}
+
+/** Gmail 발송용 — 임직원 칩도 이메일로 해석한다 */
+function chipEmail(chip: RecipientChip): string {
+  return chip.kind === "employee" ? chip.option.email : chip.email;
+}
+
 export interface MailComposeInitial {
   /** 임시보관을 이어 쓰는 경우의 문서 id */
   draftId?: string;
   /** employees.id 배열 — 옵션에 없는 id(퇴사자 등)는 조용히 떨군다 */
   to?: string[];
   cc?: string[];
+  /** 외부 이메일 주소 프리필 — Gmail 답장·전달이 채운다 */
+  toEmails?: string[];
+  ccEmails?: string[];
   subject?: string;
   body?: string;
   /** 임시보관에 이미 등록된 첨부 — 목록·삭제만 여기서 다룬다 */
   attachments?: MailAttachment[];
 }
+
+/** 메일이 나가는 길 — 내부 DB(사내 메일) vs 연동된 Gmail(외부 수발신) */
+export type MailComposeSource = "internal" | "gmail";
 
 /** 마이그레이션 28 버킷 제약과 같은 값 — 서버에서 거절당하기 전에 안내한다 */
 const MAIL_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
@@ -76,11 +103,21 @@ export function MailComposer({
   options,
   initial,
   authUserId,
+  source = "internal",
 }: {
   options: MailRecipientOption[];
   initial?: MailComposeInitial;
   /** 스토리지 경로 1세그먼트 — 세션 임직원의 auth uid (compose 페이지가 넘긴다) */
   authUserId: string | null;
+  /**
+   * 발송 경로 — compose 페이지가 has_gmail_connection()으로 정한다.
+   * internal(기본): 현행 사내 메일 그대로. 외부 주소 칩이 섞이면 발송을
+   *   "외부 발송은 Gmail 연동 후" 안내로 거부한다(담당 스펙).
+   * gmail: 전부 이메일로 해석해 sendGmailMailAction으로 발송. 임시저장·
+   *   첨부는 1차 제외(내부 draft는 employees.id 배열이라 외부 주소를 담을
+   *   자리가 없고, Gmail 첨부 발송은 리뷰 봉합 대상).
+   */
+  source?: MailComposeSource;
 }) {
   const router = useRouter();
   const byId = useMemo(
@@ -88,16 +125,24 @@ export function MailComposer({
     [options],
   );
 
-  const [to, setTo] = useState<MailRecipientOption[]>(() =>
-    (initial?.to ?? [])
+  const [to, setTo] = useState<RecipientChip[]>(() => [
+    ...(initial?.to ?? [])
       .map((id) => byId.get(id))
-      .filter((o): o is MailRecipientOption => !!o),
-  );
-  const [cc, setCc] = useState<MailRecipientOption[]>(() =>
-    (initial?.cc ?? [])
+      .filter((o): o is MailRecipientOption => !!o)
+      .map((option): RecipientChip => ({ kind: "employee", option })),
+    ...(initial?.toEmails ?? []).map(
+      (email): RecipientChip => ({ kind: "external", email }),
+    ),
+  ]);
+  const [cc, setCc] = useState<RecipientChip[]>(() => [
+    ...(initial?.cc ?? [])
       .map((id) => byId.get(id))
-      .filter((o): o is MailRecipientOption => !!o),
-  );
+      .filter((o): o is MailRecipientOption => !!o)
+      .map((option): RecipientChip => ({ kind: "employee", option })),
+    ...(initial?.ccEmails ?? []).map(
+      (email): RecipientChip => ({ kind: "external", email }),
+    ),
+  ]);
   const [subject, setSubject] = useState(initial?.subject ?? "");
   const [body, setBody] = useState(initial?.body ?? "");
   /** 이어 쓰는 임시보관 id. 첨부가 처음 등록될 때도 여기로 승격된다 */
@@ -116,18 +161,38 @@ export function MailComposer({
   const [pending, startTransition] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  /** 받는사람↔참조 중복 선택 방지용 — 두 필드가 서로의 선택을 제외한다 */
-  const chosen = useMemo(
-    () => new Set([...to, ...cc].map((o) => o.id)),
+  /**
+   * 받는사람↔참조 중복 선택 방지용 — 두 필드가 서로의 선택을 제외한다.
+   * 칩 키(임직원 id·외부 소문자 이메일)만 걸면 같은 주소가 "임직원 칩 +
+   * 외부 주소 칩"으로 동시에 들어오는 구멍이 남는다(키가 서로 달라서) —
+   * 그래서 이메일(소문자)도 함께 건다. 임직원 칩의 이메일이 등록되면
+   * 같은 주소의 외부 칩 추가(addExternal)와 임직원 후보 노출이 함께 막힌다.
+   */
+  const chosen = useMemo(() => {
+    const keys = new Set<string>();
+    for (const chip of [...to, ...cc]) {
+      keys.add(chipKey(chip));
+      keys.add(chipEmail(chip).toLowerCase());
+    }
+    return keys;
+  }, [to, cc]);
+
+  /** 외부 주소 칩 — 내부 소스에서는 발송 거부의 근거가 된다 */
+  const externalChips = useMemo(
+    () => [...to, ...cc].filter((chip) => chip.kind === "external"),
     [to, cc],
   );
+
+  const employeeIds = (chips: RecipientChip[]) =>
+    chips.flatMap((chip) => (chip.kind === "employee" ? [chip.option.id] : []));
 
   const draftInput = (finalSubject = subject) => ({
     draftId,
     subject: finalSubject,
     body,
-    to: to.map((o) => o.id),
-    cc: cc.map((o) => o.id),
+    // 내부 draft_to/draft_cc는 employees.id 배열 — 외부 칩은 담기지 않는다
+    to: employeeIds(to),
+    cc: employeeIds(cc),
   });
 
   /**
@@ -185,13 +250,49 @@ export function MailComposer({
       return;
     }
     /*
+     * 외부 주소 칩 게이트 (담당 스펙) — 내부 DB 소스는 임직원에게만 보낼
+     * 수 있다. 칩을 조용히 떨구고 보내면 "보냈는데 못 받는" 사고가 되므로
+     * 발송 자체를 안내로 거부한다.
+     */
+    if (source !== "gmail" && externalChips.length > 0) {
+      setErrors({
+        to: "외부 주소가 섞여 있습니다 — 외부 발송은 Gmail 연동 후 가능합니다.",
+      });
+      return;
+    }
+    /*
      * 서버(send_mail RPC·zod)는 제목을 강제한다 — 다우처럼 확인만 받고
      * 빈 제목으로 보내는 대신, 확인 후 "(제목 없음)"으로 채워 보낸다.
+     * (Gmail 발송 액션도 같은 규칙을 쓴다)
      */
     let finalSubject = subject.trim();
     if (!finalSubject) {
       if (!window.confirm("제목 없이 보낼까요?")) return;
       finalSubject = "(제목 없음)";
+    }
+
+    if (source === "gmail") {
+      // Gmail 첨부 발송은 1차 제외 — 첨부 UI도 숨겼지만 방어적으로 한 번 더
+      if (files.length > 0 || saved.length > 0) {
+        setMessage("Gmail 발송은 아직 첨부를 지원하지 않습니다. 첨부를 제거해 주세요.");
+        return;
+      }
+      startTransition(async () => {
+        const result = await sendGmailMailAction({
+          subject: finalSubject,
+          body,
+          to: to.map(chipEmail),
+          cc: cc.map(chipEmail),
+        });
+        if (!result.ok) {
+          if (result.fieldErrors) setErrors(result.fieldErrors);
+          setMessage(result.message ?? "발송에 실패했습니다.");
+          return;
+        }
+        router.push("/mail?box=sent");
+        router.refresh();
+      });
+      return;
     }
 
     startTransition(async () => {
@@ -220,8 +321,8 @@ export function MailComposer({
       const result = await sendMail({
         subject: finalSubject,
         body,
-        to: to.map((o) => o.id),
-        cc: cc.map((o) => o.id),
+        to: employeeIds(to),
+        cc: employeeIds(cc),
         draftId: messageId,
       });
       if (!result.ok) {
@@ -239,6 +340,16 @@ export function MailComposer({
     setErrors({});
     setMessage(null);
     setNotice(null);
+    /*
+     * Gmail 소스의 임시저장은 1차 제외 — 내부 draft 테이블은 외부 주소를
+     * 담을 수 없고(draft_to는 employees.id 배열), Gmail drafts API 저장은
+     * 리뷰 봉합 대상이다. 조용히 내부에 저장하면 받는사람이 사라진 채
+     * 남는다 — 막고 이유를 말한다.
+     */
+    if (source === "gmail") {
+      setMessage("Gmail 연동 상태에서는 임시저장을 지원하지 않습니다. 바로 발송해 주세요.");
+      return;
+    }
     // 임시저장은 검증하지 않는다 — 반쯤 쓴 메일을 저장 못 하면 기능이 성립 안 한다
     startTransition(async () => {
       const result = await saveMailDraft(draftInput());
@@ -255,7 +366,11 @@ export function MailComposer({
         return;
       }
 
-      setNotice("임시보관함에 저장되었습니다. 이어서 편집할 수 있습니다.");
+      setNotice(
+        externalChips.length > 0
+          ? "임시보관함에 저장되었습니다 — 외부 주소는 임시저장에 담기지 않습니다."
+          : "임시보관함에 저장되었습니다. 이어서 편집할 수 있습니다.",
+      );
       router.refresh();
     });
   };
@@ -331,24 +446,28 @@ export function MailComposer({
         <FormRow label="받는사람" required htmlFor="mail-to" error={errors.to}>
           <RecipientField
             id="mail-to"
-            placeholder="이름·이메일로 임직원 검색"
+            placeholder="이름·이메일로 임직원 검색 — 외부 주소는 입력 후 Enter"
             selected={to}
             excluded={chosen}
             options={options}
-            onAdd={(o) => setTo((prev) => [...prev, o])}
-            onRemove={(id) => setTo((prev) => prev.filter((o) => o.id !== id))}
+            onAdd={(chip) => setTo((prev) => [...prev, chip])}
+            onRemove={(key) =>
+              setTo((prev) => prev.filter((chip) => chipKey(chip) !== key))
+            }
           />
         </FormRow>
 
         <FormRow label="참조" htmlFor="mail-cc" error={errors.cc}>
           <RecipientField
             id="mail-cc"
-            placeholder="참조로 받을 임직원"
+            placeholder="참조로 받을 임직원 또는 외부 주소"
             selected={cc}
             excluded={chosen}
             options={options}
-            onAdd={(o) => setCc((prev) => [...prev, o])}
-            onRemove={(id) => setCc((prev) => prev.filter((o) => o.id !== id))}
+            onAdd={(chip) => setCc((prev) => [...prev, chip])}
+            onRemove={(key) =>
+              setCc((prev) => prev.filter((chip) => chipKey(chip) !== key))
+            }
           />
         </FormRow>
 
@@ -361,6 +480,8 @@ export function MailComposer({
           />
         </FormRow>
 
+        {/* Gmail 소스는 첨부 1차 제외 — 필드를 아예 내리고 send에서 한 번 더 막는다 */}
+        {source === "gmail" ? null : (
         <FormRow
           label="첨부"
           hint="이미지·문서·압축, 건당 10MB. 보내기/임시저장 때 함께 올라갑니다."
@@ -411,6 +532,7 @@ export function MailComposer({
             ) : null}
           </div>
         </FormRow>
+        )}
 
         <FormRow label="본문" htmlFor="mail-body" error={errors.body}>
           <Textarea
@@ -465,11 +587,13 @@ function AttachmentItem({
 }
 
 /**
- * 임직원 멀티셀렉트 — 조직도 데이터 기반 자동완성.
+ * 임직원 멀티셀렉트 + 자유 이메일 입력 겸용 (외부 수발신).
  *
  * 별도 프리미티브가 없어 인풋 문법(Field CONTROL_BASE 축)을 그대로 입고
- * 칩 + 드롭다운만 얹는다. 키보드: Enter = 첫 후보 선택, 빈 입력에서
- * Backspace = 마지막 칩 제거, Escape = 후보 닫기.
+ * 칩 + 드롭다운만 얹는다. 키보드: Enter = 첫 후보 선택 · 후보가 없고
+ * 입력이 이메일 형식이면 외부 주소 칩 추가(형식 검증 — gmail-view의
+ * isEmailAddress, 서버 액션과 같은 눈금), 빈 입력에서 Backspace = 마지막
+ * 칩 제거, Escape = 후보 닫기.
  */
 function RecipientField({
   id,
@@ -482,19 +606,22 @@ function RecipientField({
 }: {
   id: string;
   placeholder: string;
-  selected: MailRecipientOption[];
-  /** 양쪽 필드(받는사람·참조)에 이미 선택된 id — 후보에서 제외 */
+  selected: RecipientChip[];
+  /** 양쪽 필드(받는사람·참조)에 이미 선택된 칩 키(id·소문자 이메일) — 후보에서 제외 */
   excluded: Set<string>;
   options: MailRecipientOption[];
-  onAdd: (option: MailRecipientOption) => void;
-  onRemove: (id: string) => void;
+  onAdd: (chip: RecipientChip) => void;
+  onRemove: (key: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const pool = options.filter((o) => !excluded.has(o.id));
+    // id 외에 이메일도 본다 — 같은 사람이 외부 주소 칩으로 이미 있으면 후보에서 제외
+    const pool = options.filter(
+      (o) => !excluded.has(o.id) && !excluded.has(o.email.toLowerCase()),
+    );
     const hit = q
       ? pool.filter(
           (o) =>
@@ -508,16 +635,31 @@ function RecipientField({
   }, [query, options, excluded]);
 
   const pick = (option: MailRecipientOption) => {
-    onAdd(option);
+    onAdd({ kind: "employee", option });
     setQuery("");
+  };
+
+  /** 이메일 형식이면 외부 주소 칩으로 — 이미 있는 주소는 조용히 입력만 비운다 */
+  const addExternal = (raw: string): boolean => {
+    const email = raw.trim();
+    if (!isEmailAddress(email)) return false;
+    if (!excluded.has(email.toLowerCase())) {
+      onAdd({ kind: "external", email });
+    }
+    setQuery("");
+    return true;
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (open && matches.length > 0) pick(matches[0]);
+      if (open && matches.length > 0) {
+        pick(matches[0]);
+      } else {
+        addExternal(query);
+      }
     } else if (e.key === "Backspace" && query === "" && selected.length > 0) {
-      onRemove(selected[selected.length - 1].id);
+      onRemove(chipKey(selected[selected.length - 1]));
     } else if (e.key === "Escape") {
       setOpen(false);
     }
@@ -531,19 +673,30 @@ function RecipientField({
           "transition-colors duration-fast ease-standard focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20",
         )}
       >
-        {selected.map((option) => (
+        {selected.map((chip) => (
           <span
-            key={option.id}
+            key={chipKey(chip)}
             className="inline-flex h-7 items-center gap-0.5 rounded-sm bg-subtle pl-2 pr-0.5 text-label text-ink"
           >
-            {option.name}
-            {option.position ? (
-              <span className="text-muted">&nbsp;{option.position}</span>
-            ) : null}
+            {chip.kind === "employee" ? (
+              <>
+                {chip.option.name}
+                {chip.option.position ? (
+                  <span className="text-muted">
+                    &nbsp;{chip.option.position}
+                  </span>
+                ) : null}
+              </>
+            ) : (
+              // 외부 주소 칩 — 이름 없이 주소 그대로(어디로 가는지가 정보다)
+              chip.email
+            )}
             <button
               type="button"
-              onClick={() => onRemove(option.id)}
-              aria-label={`${option.name} 제외`}
+              onClick={() => onRemove(chipKey(chip))}
+              aria-label={`${
+                chip.kind === "employee" ? chip.option.name : chip.email
+              } 제외`}
               className="grid size-5 place-items-center rounded-sm text-muted transition-colors duration-fast ease-standard hover:bg-line hover:text-ink"
             >
               <X className="size-3.5" aria-hidden />

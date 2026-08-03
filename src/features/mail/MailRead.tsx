@@ -20,6 +20,8 @@ import {
   trashMail,
   type MailSide,
 } from "@/server/actions/mail";
+import { trashGmailAction } from "@/server/actions/gmail-mail";
+import { isInternalMailId } from "@/features/mail/gmail-view";
 import { formatMailSize } from "@/features/mail/MailList";
 
 /**
@@ -107,8 +109,29 @@ export function MailRead({ mail }: { mail: MailReadModel | null }) {
     );
   }
 
-  /** 휴지통 밖이면 휴지통 이동, 휴지통 안이면 영구삭제 (RLS 0행 확인은 액션 몫) */
+  /**
+   * 휴지통 밖이면 휴지통 이동, 휴지통 안이면 영구삭제 (RLS 0행 확인은 액션 몫).
+   * Gmail 메일(id가 uuid 아님 — 목록과 같은 판별)은 gmail-mail.ts 액션으로
+   * 분기한다 — 내부 액션은 uuid 전제라 Gmail id에 22P02로 실패한다.
+   * Gmail 영구삭제는 제공하지 않는다(client.ts가 일부러 안 노출한 결정).
+   */
   const remove = () => {
+    if (!isInternalMailId(mail.id)) {
+      if (mail.inTrash) {
+        setNotice("Gmail 영구삭제는 제공하지 않습니다 — Gmail 웹에서 지워 주세요.");
+        return;
+      }
+      startTransition(async () => {
+        const result = await trashGmailAction(mail.id);
+        if (!result.ok) {
+          setNotice(result.message ?? "삭제하지 못했습니다.");
+          return;
+        }
+        router.push("/mail");
+        router.refresh();
+      });
+      return;
+    }
     if (
       mail.inTrash &&
       !window.confirm("영구삭제는 되돌릴 수 없습니다. 계속할까요?")

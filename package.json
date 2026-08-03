@@ -21,7 +21,8 @@
     "e2e:calendar": "tsx scripts/e2e-calendar.ts",
     "e2e:admin": "tsx scripts/e2e-admin.ts",
     "e2e:mail": "tsx scripts/e2e-mail.ts",
-    "check:mail": "tsx scripts/check-mail-format.ts"
+    "check:mail": "tsx scripts/check-mail-format.ts",
+    "check:gmail": "tsx scripts/check-gmail-mime.ts && tsx scripts/check-gmail-view.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.4",

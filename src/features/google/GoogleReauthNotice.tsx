@@ -5,7 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { createClient } from "@/lib/supabase/client";
-import { googleExtraScopes, googleHostedDomain } from "@/lib/env";
+import { googleExtraScopes, googleHostedDomain, isGmailEnabled } from "@/lib/env";
 
 /**
  * Google 연동이 끊겼을 때의 인라인 안내 (Drive · Gmail 공용)
@@ -62,6 +62,12 @@ export function GoogleReauthNotice({
         ...(googleExtraScopes ? { scopes: googleExtraScopes } : {}),
         queryParams: {
           ...(googleHostedDomain ? { hd: googleHostedDomain } : {}),
+          /*
+           * Gmail 연동은 refresh token이 필요한데 Google은 access_type=offline
+           * + 동의 화면일 때만 내려준다 — 재동의(prompt=consent) 버튼이 그
+           * 발급 창구라 여기도 로그인 버튼과 같은 게이트로 켠다.
+           */
+          ...(isGmailEnabled ? { access_type: "offline" } : {}),
           // 이미 동의한 계정은 동의 화면을 건너뛰어 새 스코프가 안 붙는다
           prompt: "consent",
         },

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { googleExtraScopes, googleHostedDomain } from "@/lib/env";
+import { googleExtraScopes, googleHostedDomain, isGmailEnabled } from "@/lib/env";
 
 /** Google 계정 로그인 버튼 — 로그인 화면에는 이 버튼 하나만 노출 (스펙 3.1) */
 export function GoogleSignInButton({ next }: { next?: string }) {
@@ -27,6 +27,13 @@ export function GoogleSignInButton({ next }: { next?: string }) {
           // hd를 설정한 경우에만 Google 계정 선택창을 해당 워크스페이스로 제한.
           // (허용 도메인이 여러 개일 땐 hd 하나로 표현할 수 없어 생략 — 서버 검증이 실제 통제선)
           ...(googleHostedDomain ? { hd: googleHostedDomain } : {}),
+          /*
+           * Gmail 연동(외부 수발신)의 전제 — access_type=offline이어야 Google이
+           * 최초 동의 때 provider_refresh_token을 내려준다(GMAIL-SETUP 부록 A).
+           * gmail 스코프를 요청하지 않는 롤아웃에서는 쓰지도 저장하지도 않을
+           * 열쇠가 세션에 실리지 않도록 끈다.
+           */
+          ...(isGmailEnabled ? { access_type: "offline" } : {}),
           prompt: "select_account",
         },
       },

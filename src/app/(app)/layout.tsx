@@ -1,7 +1,7 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { getFavorites } from "@/features/dashboard/widget-data";
-import { getUnreadMailCount } from "@/features/mail/data";
+import { getUnifiedUnreadMailCount } from "@/features/mail/gmail-source";
 
 /**
  * 로그인 이후 화면 공통 셸.
@@ -14,10 +14,15 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const me = await requireSessionEmployee();
-  // 상단바 쪽지 배지(12-mail.md) — 소프트 실패라 마이그레이션 28 전에는 0
+  /*
+   * 상단바 쪽지 배지(12-mail.md) — 소프트 실패라 마이그레이션 28 전에는 0.
+   * Gmail 연동 시에는 Gmail INBOX 안읽음 수로 전환된다(외부 수발신 —
+   * getUnifiedUnreadMailCount가 연동 여부까지 판단하고, 미연동이면 기존
+   * 내부 카운트(getUnreadMailCount) 경로 그대로다).
+   */
   const [favorites, mailUnreadCount] = await Promise.all([
     getFavorites(me.id),
-    getUnreadMailCount(me.id),
+    getUnifiedUnreadMailCount(me.id),
   ]);
 
   return (

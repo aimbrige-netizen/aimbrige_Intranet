@@ -8,6 +8,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { GoogleReauthNotice } from "@/features/google/GoogleReauthNotice";
 import { getUnreadMail, UNREAD_PREVIEW_COUNT } from "@/lib/gmail";
 import { getMailList } from "@/features/mail/data";
+import {
+  getGmailMailbox,
+  getGmailUnreadCount,
+  hasGmailConnection,
+} from "@/features/mail/gmail-source";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { gmailMessageUrl, senderName } from "@/features/mail/format";
 import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
@@ -48,6 +53,16 @@ export async function MailWidget(props: MailWidgetProps) {
    * (담당 밖 파일) 여기서 직접 얻는다.
    */
   const me = await requireSessionEmployee();
+
+  /*
+   * 외부 수발신 — Gmail 연동이면 위젯도 Gmail 안읽음으로 전환한다(담당 C).
+   * provider_token 경로(GmailMailWidget)와 달리 refresh token 계층이라
+   * 재로그인 없이도 산다. 내부 소스 경로는 아래 그대로 — 개조 아님, 분기 추가.
+   */
+  if (await hasGmailConnection()) {
+    return <GmailSourceMailWidget employeeId={me.id} />;
+  }
+
   const { items, total } = await getMailList(me.id, "inbox", {
     unread: true,
     pageSize: UNREAD_PREVIEW_COUNT,
@@ -87,6 +102,72 @@ export async function MailWidget(props: MailWidgetProps) {
                   */}
                   <span className="w-20 shrink-0 truncate text-label text-muted">
                     {mail.senderName ?? "(퇴사자)"}
+                  </span>
+                  <span className="truncate text-body-sm font-bold text-ink">
+                    {mail.subject || "(제목 없음)"}
+                  </span>
+                  <span className="ml-auto shrink-0 text-label tabular-nums text-muted">
+                    {receivedLabel(Date.parse(mail.at))}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <MailWidgetFooter />
+      </CardBody>
+    </Card>
+  );
+}
+
+/**
+ * Gmail 소스 안읽은 메일 위젯 (외부 수발신 · 담당 C).
+ *
+ * 사내 메일판과 같은 판형 — 행은 /mail/[id](Gmail 분기)로 들어간다.
+ * 헤더 건수는 INBOX 안읽음 총계(estimate), 실패는 목록 길이로 폴백(소프트).
+ * getGmailMailbox가 실패하면 빈 목록이 온다 — "모두 확인" 빈 상태로
+ * 그려질 뿐 대시보드는 죽지 않는다(내부 소스의 소프트 실패와 같은 규약).
+ */
+async function GmailSourceMailWidget({ employeeId }: { employeeId: string }) {
+  const [{ items }, unreadTotal] = await Promise.all([
+    getGmailMailbox(employeeId, "inbox", {
+      unread: true,
+      pageSize: UNREAD_PREVIEW_COUNT,
+    }),
+    getGmailUnreadCount(employeeId),
+  ]);
+  const total = unreadTotal ?? items.length;
+
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Mail className="size-4 text-muted" aria-hidden />
+            메일
+          </span>
+        }
+        description={total > 0 ? `안읽은 메일 ${total}건` : "안읽은 메일"}
+        density="widget"
+      />
+      <CardBody density="widget">
+        {items.length === 0 ? (
+          <EmptyState
+            icon={MailOpen}
+            title="받은 메일이 모두 확인됐습니다"
+            description="안읽은 메일이 없습니다."
+            compact
+          />
+        ) : (
+          <ul className="-mx-1 divide-y divide-line">
+            {items.map((mail) => (
+              <li key={mail.messageId}>
+                <Link
+                  href={`/mail/${mail.messageId}`}
+                  className="flex items-center gap-2 rounded-sm px-1 py-2 transition-colors duration-fast ease-standard hover:bg-canvas"
+                >
+                  <span className="w-20 shrink-0 truncate text-label text-muted">
+                    {mail.senderName ?? "(발신자 없음)"}
                   </span>
                   <span className="truncate text-body-sm font-bold text-ink">
                     {mail.subject || "(제목 없음)"}
