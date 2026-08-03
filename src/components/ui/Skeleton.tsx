@@ -27,6 +27,10 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
   return (
     <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
       {Array.from({ length: count }, (_, i) => (
+        /*
+         * 지표 밴드 카드는 흰 시트 위에서도 hairline 1겹을 유지한다(실화면과
+         * 동일 — 시트와 카드 면이 같은 흰색이라 이 선이 유일한 구분선).
+         */
         <div key={i} className="rounded-card border border-line bg-surface p-4">
           <Skeleton className="h-3 w-16" />
           <Skeleton className="mt-3 h-7 w-20" />
@@ -37,11 +41,18 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
   );
 }
 
-/** 표 자리 — 헤더 한 줄과 본문 몇 줄의 골격을 유지한다 */
+/**
+ * 표 자리 — 헤더 한 줄과 본문 몇 줄의 골격을 유지한다.
+ *
+ * 실화면 표는 md+ 흰 시트 위 직접 배치(카드 해체 스윕)라, 스켈레톤도
+ * md+에서 테두리를 걷어 로딩→로드 전환 때 카드가 사라지는 깜빡임을 없앤다.
+ * md 미만은 실화면과 같이 카드 면 유지. 헤더도 회색면이 아니라
+ * 실측 표 문법(투명 + 진한 밑줄)을 따른다.
+ */
 export function SkeletonTable({ rows = 5 }: { rows?: number }) {
   return (
-    <div className="overflow-hidden rounded-card border border-line bg-surface">
-      <div className="border-b border-line bg-subtle px-4 py-3">
+    <div className="overflow-hidden rounded-card border border-line bg-surface md:rounded-none md:border-0">
+      <div className="border-b border-ink-sub px-4 py-3">
         <Skeleton className="h-3 w-24" />
       </div>
       {Array.from({ length: rows }, (_, i) => (

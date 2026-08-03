@@ -308,3 +308,13 @@ PostgREST가 순수 조인 테이블을 보고 `boards ↔ employees` **다대�
 송수신·RLS 격리·수신확인 단방향·별표·휴지통 보존 구조·임시보관 승격·컬럼 가드·
 안읽음 배지 대차 대조까지 전 구간. 이제 사내 메일이 실사용 가능합니다.
 외부 Gmail 수발신 연동만 Google Cloud OAuth 승인 대기(3장 외부 서비스 참고).
+
+## 8. ✅ 마이그레이션 29 (Gmail 토큰) 적용 확인 + 마감 3건 (2026-08-03)
+
+- 마이그레이션 29 검증: 테이블 존재·service role 접근 OK, anon 완전 차단(0행),
+  has_gmail_connection()은 authenticated 전용으로 잠김 — 규약대로.
+- 마감 3건: SectionHeader 16→14/600 ink-sub(전 화면 섹션 제목 통일),
+  SkeletonTable md+ 흰 시트 문법(로딩 깜빡임 제거), /admin/files 카드 해체 스윕.
+- 최종 회귀: e2e 10종 406건 + 메일 파싱 9 + MIME 32 + 뷰 26 전부 통과, 빌드 47 라우트.
+- **구글 설정(GMAIL-SETUP.md)은 인트라넷 마무리 후 마지막에 진행하기로 함** —
+  그 전까지 /mail은 사내 메일로 완전 동작.

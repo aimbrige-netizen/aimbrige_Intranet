@@ -112,7 +112,12 @@ export function SectionHeader({
       className={cn("mb-2.5 flex items-end justify-between gap-3", className)}
     >
       <div className="min-w-0">
-        <h2 className="text-h3 text-ink">{title}</h2>
+        {/*
+          실측 섹션 제목은 14/600 rgb(51,51,51) — 결재 홈 "기안 진행 문서",
+          캘린더 패널 "내 캘린더"가 전부 이 단이다(07·09). 16px(h3)은
+          원본 콘텐츠 영역 어디에도 없는 단이라 걷어냈다. 스윕 리뷰 2건 반영.
+        */}
+        <h2 className="text-body font-semibold text-ink-sub">{title}</h2>
         {description ? (
           <p className="mt-0.5 text-caption">{description}</p>
         ) : null}

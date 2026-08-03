@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { StatCard } from "@/components/ui/StatCard";
@@ -224,15 +224,11 @@ export function FileAdmin({
         />
       </div>
 
-      <Card>
-        <CardHeader
-          title={
-            <span className="flex items-center gap-2">
-              <Users className="size-4 text-primary" aria-hidden />팀 공유폴더
-            </span>
-          }
+      {/* 흰 시트 문법(스윕 표준): md+ 카드 해체, md 미만 카드 면 유지 */}
+      <section>
+        <SectionHeader
+          title="팀 공유폴더"
           description="Drive 폴더 주소를 붙여넣으면 폴더 ID를 자동으로 추출합니다."
-          density="compact"
           action={
             <Button size="small" onClick={openFolderModal}>
               <Plus className="size-3.5" />
@@ -240,7 +236,7 @@ export function FileAdmin({
             </Button>
           }
         />
-        <CardBody density="compact" className="!p-0">
+        <div className="ab-card overflow-hidden md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[600px]">
               <thead>
@@ -308,19 +304,13 @@ export function FileAdmin({
               </tbody>
             </table>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader
-          title={
-            <span className="flex items-center gap-2">
-              <Library className="size-4 text-primary" aria-hidden />
-              사내 규정 라이브러리
-            </span>
-          }
+      <section>
+        <SectionHeader
+          title="사내 규정 라이브러리"
           description="삭제하면 목록에서만 빠지고 Drive의 실제 파일은 그대로 남습니다."
-          density="compact"
           action={
             <Button size="small" variant="secondary" onClick={openLibModal}>
               <Plus className="size-3.5" />
@@ -328,7 +318,7 @@ export function FileAdmin({
             </Button>
           }
         />
-        <CardBody density="compact" className="!p-0">
+        <div className="ab-card overflow-hidden md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[600px]">
               <thead>
@@ -391,8 +381,8 @@ export function FileAdmin({
               </tbody>
             </table>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <Modal
         open={folderOpen}
