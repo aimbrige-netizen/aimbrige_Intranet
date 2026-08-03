@@ -109,7 +109,7 @@ async function main() {
 
   const owner = await emp(OWNER);
   const guest = await emp(GUEST);
-  const outsider = await emp(OUTSIDER);
+  await emp(OUTSIDER); // 존재 검증만 — 이후 접근은 전부 outsiderUser(sb) 경유
 
   const legacyColumn = await hasAttendeeIds();
   console.log(

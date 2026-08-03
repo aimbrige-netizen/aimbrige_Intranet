@@ -1,35 +1,145 @@
-import { Mail, MailOpen } from "lucide-react";
+import Link from "next/link";
+import { Mail, MailOpen, PenLine } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Callout } from "@/components/ui/Callout";
+import { LinkButton } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { GoogleReauthNotice } from "@/features/google/GoogleReauthNotice";
 import { getUnreadMail, UNREAD_PREVIEW_COUNT } from "@/lib/gmail";
+import { getMailList } from "@/features/mail/data";
+import { requireSessionEmployee } from "@/lib/auth/session";
 import { gmailMessageUrl, senderName } from "@/features/mail/format";
 import { toSeoulTime, toSeoulYmd } from "@/features/calendar/date";
 
 /**
- * 안읽은 메일 위젯 (스펙 11 · 3.2)
+ * 안읽은 메일 위젯 — 사내 메일판 (스펙 12 · 메일 모듈 신설).
+ *
+ * Gmail 안읽음(스펙 11 · 3.2)을 보여주던 카드를 사내 메일 받은메일함의
+ * 안읽음 최근 5건(발신자·제목·시각)으로 전환한다. 행을 누르면 읽기
+ * 화면(/mail/[id])으로, 하단에 "메일쓰기"/"전체 보기"가 붙는다.
+ *
+ * Suspense는 유지한다(호출부 page.tsx 계약). 조회가 구글에서 우리 DB로
+ * 바뀌었어도, 이 카드만 따로 스트리밍되면 대시보드 본문이 메일 질의를
+ * 기다리지 않는 구조 자체는 그대로 유효하다.
+ *
+ * 기존 Gmail 경로는 삭제하지 않고 GmailMailWidget으로 보존한다 —
+ * 외부메일(Gmail) 연동은 Google OAuth 승인 후 어댑터로 복귀한다는 게
+ * 12-mail.md 구현 결정이다. 그때 USE_GMAIL_WIDGET 스위치(또는 별도
+ * 외부메일 위젯)로 되살린다.
+ */
+
+/** 외부메일(Gmail) 위젯 복귀 스위치 — OAuth 승인·어댑터 연결 전까지 false */
+const USE_GMAIL_WIDGET: boolean = false;
+
+export interface MailWidgetProps {
+  /** Gmail 딥링크·재연결 안내에 쓰던 회사 계정 — 호출부(page.tsx) 계약 유지 */
+  email: string;
+  /** 시스템 관리자인지 — Gmail 스코프 설정 안내를 볼 대상인지 (Gmail 경로 전용) */
+  canConfigure?: boolean;
+}
+
+export async function MailWidget(props: MailWidgetProps) {
+  if (USE_GMAIL_WIDGET) return <GmailMailWidget {...props} />;
+
+  /*
+   * 세션은 (app)/layout·page가 이미 조회했고 react cache로 같은 요청 안에서
+   * 재사용된다 — props로 employeeId를 새로 받으면 호출부 시그니처가 바뀌므로
+   * (담당 밖 파일) 여기서 직접 얻는다.
+   */
+  const me = await requireSessionEmployee();
+  const { items, total } = await getMailList(me.id, "inbox", {
+    unread: true,
+    pageSize: UNREAD_PREVIEW_COUNT,
+  });
+
+  return (
+    <Card>
+      <CardHeader
+        title={
+          <span className="flex items-center gap-2">
+            <Mail className="size-4 text-muted" aria-hidden />
+            메일
+          </span>
+        }
+        description={total > 0 ? `안읽은 메일 ${total}건` : "안읽은 메일"}
+        density="widget"
+      />
+      <CardBody density="widget">
+        {items.length === 0 ? (
+          <EmptyState
+            icon={MailOpen}
+            title="받은 메일이 모두 확인됐습니다"
+            description="안읽은 메일이 없습니다."
+            compact
+          />
+        ) : (
+          <ul className="-mx-1 divide-y divide-line">
+            {items.map((mail) => (
+              <li key={mail.messageId}>
+                <Link
+                  href={`/mail/${mail.messageId}`}
+                  className="flex items-center gap-2 rounded-sm px-1 py-2 transition-colors duration-fast ease-standard hover:bg-canvas"
+                >
+                  {/*
+                    발신자는 잘리더라도 폭을 확보한다(누가 보냈는지가 먼저다).
+                    제목은 남는 폭을 다 쓰고 잘린다 — Gmail판과 같은 배치.
+                  */}
+                  <span className="w-20 shrink-0 truncate text-label text-muted">
+                    {mail.senderName ?? "(퇴사자)"}
+                  </span>
+                  <span className="truncate text-body-sm font-bold text-ink">
+                    {mail.subject || "(제목 없음)"}
+                  </span>
+                  <span className="ml-auto shrink-0 text-label tabular-nums text-muted">
+                    {receivedLabel(Date.parse(mail.at))}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+        <MailWidgetFooter />
+      </CardBody>
+    </Card>
+  );
+}
+
+/**
+ * "메일쓰기"/"전체 보기" — 담당 스펙이 못박은 두 링크. 빈 상태에서도 항상
+ * 보여야 하므로 EmptyState action이 아니라 카드 하단 고정 행으로 둔다.
+ */
+function MailWidgetFooter() {
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t border-line pt-3">
+      <LinkButton href="/mail/compose" size="small" variant="secondary">
+        <PenLine className="size-3.5" aria-hidden />
+        메일쓰기
+      </LinkButton>
+      <LinkButton href="/mail" size="small" variant="ghost">
+        전체 보기
+      </LinkButton>
+    </div>
+  );
+}
+
+/**
+ * [미사용 보존] Gmail 안읽은 메일 위젯 (스펙 11 · 3.2) — 삭제 금지.
  *
  * 대시보드의 나머지 위젯은 전부 우리 DB를 읽지만 이건 구글 서버를 부른다.
- * 그래서 홈 page에서 Suspense로 감싸 이 카드만 늦게 채워지게 한다 —
+ * 그래서 홈 page에서 Suspense로 감싸 이 카드만 늦게 채워지게 했다 —
  * 안 그러면 구글이 느린 날 대시보드 전체가 그만큼 늦게 뜬다.
  *
  * 캐싱하지 않는다(스펙 3.2). 메일함은 30초 전 상태를 보여줄 바에
  * 안 보여주는 게 나은 종류의 데이터다.
  *
- * 헤더에 "Gmail 열기" 링크를 두지 않는다. 상단바 메일 아이콘이 정확히 같은
- * 주소를 열고 늘 떠 있다. 위젯 헤더의 '전체보기' 링크는 스펙 01 정리 때
- * 5개를 걷어낸 패턴이라 여기서 다시 들일 이유가 없다.
+ * 헤더에 "Gmail 열기" 링크를 두지 않는다. 외부메일 링크는 메일 패널 하단
+ * (MailPanel)이 담당한다.
  */
-export async function MailWidget({
+export async function GmailMailWidget({
   email,
   canConfigure = false,
-}: {
-  email: string;
-  /** 시스템 관리자인지 — 스코프 설정 방법을 볼 대상인지 */
-  canConfigure?: boolean;
-}) {
+}: MailWidgetProps) {
   const result = await getUnreadMail();
 
   return (
@@ -96,6 +206,7 @@ export async function MailWidget({
 /**
  * 스코프 미설정·토큰 만료는 Drive와 같은 안내를 쓴다(색과 재로그인 버튼까지).
  * 나머지 실패(네트워크·5xx)는 사용자가 할 일이 없으니 상태만 알린다.
+ * (Gmail 경로 전용 — 사내 메일 조회는 data.ts가 소프트 실패로 빈 목록을 준다)
  */
 function renderProblem(
   reason: "scope_missing" | "reauth_required" | "error",
@@ -134,6 +245,8 @@ function renderProblem(
 /**
  * 오늘 온 메일은 시각(14:32), 그 전은 날짜(07-30).
  * 메일함이 늘 그렇게 보여주고, 좁은 칸에서 "오늘 07-31 14:32"는 낭비다.
+ * 사내 메일 쪽은 ISO 문자열이라 Date.parse로 epochMs를 만들어 넘긴다
+ * (빈 문자열이면 NaN → falsy → 빈 표기).
  */
 function receivedLabel(epochMs: number): string {
   if (!epochMs) return "";
@@ -147,6 +260,7 @@ function receivedLabel(epochMs: number): string {
  *
  * 줄 수를 실제 최대치(5건)에 맞춘다. 3줄로 잡아두면 메일이 5건일 때 카드가
  * 갑자기 커지면서 아래가 밀린다 — 폴백은 자리를 잡아두려고 있는 것이다.
+ * 하단 링크 행은 데이터와 무관하게 정적이라 폴백에서도 실제 링크를 그린다.
  */
 export function MailWidgetSkeleton() {
   return (
@@ -170,6 +284,7 @@ export function MailWidgetSkeleton() {
             </li>
           ))}
         </ul>
+        <MailWidgetFooter />
       </CardBody>
     </Card>
   );

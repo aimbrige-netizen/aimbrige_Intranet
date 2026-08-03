@@ -18,6 +18,7 @@ import {
   Inbox,
   Library,
   ListChecks,
+  Mail,
   Megaphone,
   Network,
   NotebookPen,
@@ -56,8 +57,9 @@ import type { RoleName } from "@/types/db";
  * 그 안에 목표가 있는지 알 수 있으니, 뭉개진 글자 대신 한 번 더 클릭하는
  * 비용으로 바꾼 것뿐이다. 그래서 묶음을 전부 풀고 개별 모듈로 올린다.
  *
- * 다우오피스에 있고 우리에게 없는 것(메일·AI·급여·계약·경비·차량일지·설문 등)은
- * 만들지 않는다. 우리 라우트가 실제로 있는 17개만 올린다.
+ * 다우오피스에 있고 우리에게 없는 것(AI·급여·계약·경비·차량일지·설문 등)은
+ * 만들지 않는다. 우리 라우트가 실제로 있는 18개만 올린다.
+ * (메일은 12-mail.md에서 사내 메일로 신설돼 이 목록에서 빠졌다.)
  * ---------------------------------------------------------------------
  * href는 기간 파라미터(period·cursor·from·to)를 싣지 않는다.
  *
@@ -101,6 +103,14 @@ export interface NavChildSection {
   key: string;
   title?: string;
   roles?: RoleName[];
+  /**
+   * 데스크톱 ModulePanel에서 이 섹션을 그리지 않는다 — 패널 내용 전체를
+   * PanelPortal로 그리는 "포털 전용 모듈"(메일)의 앵커 섹션용. 섹션이
+   * 존재해야 hasPanel·ModulePanel 렌더 판정(패널 골격·본문 흰 시트)이
+   * 서고 모바일 드로어(Sidebar)의 하위 항목도 이 섹션이 담당하므로,
+   * 지우는 게 아니라 데스크톱 패널 렌더에서만 뺀다.
+   */
+  panelHidden?: boolean;
   items: NavChild[];
 }
 
@@ -159,6 +169,55 @@ export const NAV_MODULES: NavModule[] = [
      * 내 프로필·즐겨찾기 관리는 상단바 아바타 메뉴와 프로필 화면이 담당한다.
      * sections를 비워 두면 AppShell이 본문을 pl-rail(64px)로 당긴다.
      */
+  },
+  {
+    /*
+     * 사내 메일 (12-mail.md) — 다우 레일에서 메일은 최상단 그룹이라
+     * 홈 바로 다음, 조직도 앞에 둔다.
+     *
+     * 패널 내용(메일쓰기 버튼·메일함 트리·빠른검색·용량 게이지)은 nav가 아니라
+     * MailPanel(features/mail/MailPanel.tsx)이 포털로 그린다 — 캘린더의
+     * CalendarPanelFilters와 같은 구조다. 메일함 활성 판정이 ?box=/?filter=
+     * 쿼리 조합이라 정적 sections로는 다 표현할 수 없다.
+     *
+     * 그런데 패널 렌더 판정(hasPanel과 ModulePanel의 null 반환)은 둘 다
+     * sections·primaryAction 기반이다. 캘린더는 정적 sections가 있어서
+     * ModulePanel이 서고, 포털은 그 슬롯에 꽂힌다(CalendarPanelFilters 상단
+     * 주석). 메일도 같은 방식이 필요해서 최소 정적 섹션(받은메일함) 하나를
+     * 앵커로 둔다 — 이게 없으면 ModulePanel이 null을 반환해 포털 슬롯 자체가
+     * 없고, AppShell의 본문 들여쓰기·흰 시트도 꺼진다. 모바일 드로어의 하위
+     * 항목(Sidebar)도 이 섹션이 담당한다.
+     *
+     * primaryAction으로 앵커를 삼지 않는 이유: MailPanel이 "메일쓰기" 버튼을
+     * 16/600 예외 문법(12-mail.md 패널 1 — 모듈 공통 14/400과 다른 유일한
+     * 예외)으로 직접 그린다. primaryAction을 두면 공통 문법 버튼이 바로 위에
+     * 하나 더 생긴다.
+     *
+     * MailPanel의 "메일함" 섹션에도 받은메일함 행이 있으므로 이 앵커 섹션은
+     * panelHidden으로 데스크톱 패널 렌더에서 뺀다 — 안 그러면 포털(위)과
+     * 앵커(아래)에 같은 행이 두 번 보인다. hasPanel 판정과 모바일 드로어에는
+     * 그대로 산다(NavChildSection.panelHidden 주석 참고).
+     */
+    key: "mail",
+    label: "메일",
+    href: "/mail",
+    icon: Mail,
+    ready: true,
+    prefixes: ["/mail"],
+    sections: [
+      {
+        key: "main",
+        panelHidden: true,
+        items: [
+          {
+            key: "mail-inbox",
+            label: "받은메일함",
+            href: "/mail",
+            icon: Inbox,
+          },
+        ],
+      },
+    ],
   },
   {
     key: "directory",
@@ -813,10 +872,20 @@ export function isChildActive(
   if (item.prefixes?.some((p) => pathname.startsWith(p))) return true;
   if (pathname !== itemPath) return false;
 
-  // 쿼리로 갈리는 탭(/directory?tab=people)은 해당 파라미터까지 일치해야 한다
+  /*
+   * 쿼리로 갈리는 탭(/directory?tab=people)은 해당 파라미터까지 일치해야 한다.
+   * box·filter는 메일함/빠른검색 구분자다(12-mail.md — /mail?box=sent,
+   * /mail?filter=unread). 여기 없으면 쿼리 없는 "/mail" 항목(받은메일함)이
+   * 보낸메일함·빠른검색 화면에서도 활성으로 남는다.
+   */
   if (!itemQuery) {
     const params = new URLSearchParams(search);
-    return !params.has("tab") && !params.has("view");
+    return (
+      !params.has("tab") &&
+      !params.has("view") &&
+      !params.has("box") &&
+      !params.has("filter")
+    );
   }
 
   const want = new URLSearchParams(itemQuery);

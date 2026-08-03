@@ -425,3 +425,60 @@ export interface CalendarItem {
    */
   sourceHref?: string | null;
 }
+
+// =====================================================================
+// 스펙 12 — 사내 메일 (마이그레이션 28)
+// =====================================================================
+
+export type MailRecipientKind = "to" | "cc";
+
+/**
+ * 수신자 개인의 보관 상태. 발신자 쪽 상태(보낸메일함/휴지통/영구삭제)는
+ * mail_messages의 sender_trashed·sender_deleted_at이 맡는다 — 발신자에게는
+ * mail_recipients 행이 없기 때문이다(자기 자신에게 보낸 경우 제외).
+ */
+export type MailRecipientFolder = "inbox" | "trash";
+
+export interface MailMessage {
+  id: string;
+  /** 퇴사자 정리 시 FK가 null로 되돌린다 — 화면은 "(퇴사자)"로 그린다 */
+  sender_id: string | null;
+  subject: string;
+  body: string;
+  is_draft: boolean;
+  /** 발송 시각. 임시저장은 null (CHECK: is_draft = (sent_at is null)) */
+  sent_at: string | null;
+  sender_trashed: boolean;
+  sender_deleted_at: string | null;
+  /**
+   * 임시저장의 받는사람/참조. mail_recipients에 draft 행을 두면 안읽음
+   * 배지가 남의 임시저장을 세기 때문에 발송 전에는 여기 들고 있다가
+   * send_mail()이 수신자 행으로 옮기고 비운다.
+   */
+  draft_to: string[];
+  draft_cc: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MailRecipient {
+  message_id: string;
+  recipient_id: string;
+  kind: MailRecipientKind;
+  folder: MailRecipientFolder;
+  /** 읽은 시각 = 수신확인. 가드 트리거가 한 번 찍히면 못 되돌리게 한다 */
+  read_at: string | null;
+  starred: boolean;
+  /** 배달 시각 — 받은메일함 정렬 기준 */
+  created_at: string;
+}
+
+export interface MailAttachment {
+  id: string;
+  message_id: string;
+  /** 스토리지 경로: <auth uid>/<message id>/<파일명> */
+  path: string;
+  name: string;
+  size: number;
+  uploaded_at: string;
+}

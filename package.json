@@ -20,6 +20,7 @@
     "e2e:community": "tsx scripts/e2e-community.ts",
     "e2e:calendar": "tsx scripts/e2e-calendar.ts",
     "e2e:admin": "tsx scripts/e2e-admin.ts",
+    "e2e:mail": "tsx scripts/e2e-mail.ts",
     "check:mail": "tsx scripts/check-mail-format.ts"
   },
   "dependencies": {

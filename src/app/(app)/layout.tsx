@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/layout/AppShell";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { getFavorites } from "@/features/dashboard/widget-data";
+import { getUnreadMailCount } from "@/features/mail/data";
 
 /**
  * 로그인 이후 화면 공통 셸.
@@ -13,12 +14,17 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const me = await requireSessionEmployee();
-  const favorites = await getFavorites(me.id);
+  // 상단바 쪽지 배지(12-mail.md) — 소프트 실패라 마이그레이션 28 전에는 0
+  const [favorites, mailUnreadCount] = await Promise.all([
+    getFavorites(me.id),
+    getUnreadMailCount(me.id),
+  ]);
 
   return (
     <AppShell
       role={me.roleName}
       favorites={favorites}
+      mailUnreadCount={mailUnreadCount}
       user={{
         name: me.name,
         email: me.email,

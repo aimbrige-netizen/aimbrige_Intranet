@@ -49,11 +49,14 @@ export function AppShell({
   user,
   role,
   favorites,
+  mailUnreadCount = 0,
   children,
 }: {
   user: TopbarUser;
   role: RoleName;
   favorites: Pick<Favorite, "id" | "label" | "target_path">[];
+  /** 상단바 쪽지 배지 — (app)/layout이 getUnreadMailCount로 조회해 넘긴다 */
+  mailUnreadCount?: number;
   children: React.ReactNode;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -101,6 +104,7 @@ export function AppShell({
       <Topbar
         user={user}
         role={role}
+        mailUnreadCount={mailUnreadCount}
         onMenuClick={() => setMobileOpen(true)}
       />
 

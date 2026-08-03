@@ -20,7 +20,6 @@ import {
 import { Logo } from "@/components/brand/Logo";
 import { Avatar } from "@/components/ui/Avatar";
 import { createClient } from "@/lib/supabase/client";
-import { gmailInboxUrl } from "@/features/mail/format";
 import { resolveModule, visibleModules } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 import type { RoleName } from "@/types/db";
@@ -67,11 +66,18 @@ export function Topbar({
   user,
   role,
   notificationCount = 0,
+  mailUnreadCount = 0,
   onMenuClick,
 }: {
   user: TopbarUser;
   role: RoleName;
   notificationCount?: number;
+  /**
+   * 사내 메일 받은메일함 안읽음 수 — 쪽지 아이콘 배지 (12-mail.md).
+   * 출처는 server-only 조회 계층(data.ts getUnreadMailCount)이라
+   * (app)/layout.tsx가 조회해 AppShell을 거쳐 내려온다.
+   */
+  mailUnreadCount?: number;
   onMenuClick: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -249,19 +255,23 @@ export function Topbar({
       */}
       <div className="ml-auto flex flex-1 items-center justify-end gap-1.5">
         {/*
-          쪽지 자리 — 메일은 인트라넷 안에서 열지 않고 Gmail로 보낸다(스펙 11 · 3.1).
-          별도 인증이 없다 — 같은 구글 계정으로 이미 로그인돼 있다.
+          쪽지 자리 — 사내 메일함(/mail)으로 간다(스펙 12 — 메일 모듈 신설로
+          Gmail 새 탭 딥링크에서 전환. 외부메일 링크는 메일 패널 하단이 담당).
+          안읽음 배지는 알림 벨과 같은 문법(badge accent #ff502a = danger-ink).
         */}
-        <a
-          href={gmailInboxUrl(user.email)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={ICON_BTN}
-          aria-label="쪽지 — Gmail 새 탭으로 열기"
-          title="Gmail"
+        <Link
+          href="/mail"
+          className={cn(ICON_BTN, "relative")}
+          aria-label={`메일 — 안읽음 ${mailUnreadCount}건`}
+          title="메일"
         >
           <MessageSquare className="size-5" />
-        </a>
+          {mailUnreadCount > 0 ? (
+            <span className="absolute right-1 top-1 grid min-w-4 place-items-center rounded-full bg-danger-ink px-1 text-[10px] font-bold leading-4 text-white">
+              {mailUnreadCount > 99 ? "99+" : mailUnreadCount}
+            </span>
+          ) : null}
+        </Link>
 
         {isAdmin ? (
           <Link

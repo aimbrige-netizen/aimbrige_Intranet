@@ -114,17 +114,24 @@ export function ModulePanel({ role }: { role: RoleName }) {
         */}
         <div id={PANEL_EXTRA_SLOT} />
 
-        {sections.map((section) => (
-          <PanelSection key={section.key} title={section.title}>
-            {section.items.map((item) => (
-              <PanelLink
-                key={item.key}
-                item={item}
-                active={isChildActive(item, pathname, search)}
-              />
-            ))}
-          </PanelSection>
-        ))}
+        {/*
+          panelHidden 섹션은 여기서만 거른다 — 렌더 여부 판정(위 null 반환)과
+          hasPanel은 거르기 전 sections를 봐야 포털 전용 모듈(메일)의 패널
+          골격이 선다. 모바일 드로어(Sidebar)도 거르지 않는다.
+        */}
+        {sections
+          .filter((section) => !section.panelHidden)
+          .map((section) => (
+            <PanelSection key={section.key} title={section.title}>
+              {section.items.map((item) => (
+                <PanelLink
+                  key={item.key}
+                  item={item}
+                  active={isChildActive(item, pathname, search)}
+                />
+              ))}
+            </PanelSection>
+          ))}
       </nav>
 
       {/*
