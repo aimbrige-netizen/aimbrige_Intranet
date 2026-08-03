@@ -94,9 +94,14 @@ export default async function WikiPage({
           <ul className="space-y-2">
             {search.data.map((hit) => (
               <li key={hit.id}>
+                {/*
+                  08 흰 시트: md+에서는 결과 행의 카드 테두리가 흰 면 위
+                  흰 카드가 된다 — 테두리를 걷고 hover 면(subtle)만 남긴다.
+                  md 미만은 캔버스 위 카드 문법이라 카드 면을 유지한다.
+                */}
                 <Link
                   href={`/wiki/${hit.id}`}
-                  className="block rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas"
+                  className="block rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas md:border-0 md:bg-transparent md:hover:bg-subtle"
                 >
                   <p className="text-body-sm font-bold text-ink">{hit.title}</p>
                   <p className="mt-0.5 line-clamp-2 text-label text-muted">

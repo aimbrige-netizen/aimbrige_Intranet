@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Download, FileText, Paperclip, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Textarea } from "@/components/ui/Field";
 import { createClient } from "@/lib/supabase/client";
@@ -172,17 +172,20 @@ export function ProjectResultPanel({
         </Callout>
       ) : null}
 
-      <Card>
-        <CardHeader
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 섹션 제목 +
+        직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
+      <section>
+        <SectionHeader
           title="결과 요약"
           description={
             isCompleted
               ? "완료 처리할 때 남긴 요약입니다. 언제든 보완할 수 있습니다."
               : "완료로 바꿀 때 입력을 요청합니다. 진행 중에도 미리 적어 둘 수 있습니다."
           }
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           {canEdit ? (
             <>
               <Field
@@ -228,14 +231,13 @@ export function ProjectResultPanel({
               compact
             />
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader
+      <section>
+        <SectionHeader
           title="산출물 파일"
           description={`${files.length}건 · 건당 20MB 이하`}
-          density="compact"
           action={
             canEdit ? (
               <Button
@@ -250,7 +252,7 @@ export function ProjectResultPanel({
             ) : null
           }
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           {files.length === 0 ? (
             <EmptyState
               icon={Paperclip}
@@ -327,8 +329,8 @@ export function ProjectResultPanel({
               }}
             />
           ) : null}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </div>
   );
 }

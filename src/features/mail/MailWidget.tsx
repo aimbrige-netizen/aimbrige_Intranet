@@ -48,9 +48,9 @@ export async function MailWidget({
               }`
             : "안읽은 메일"
         }
-        density="compact"
+        density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         {!result.ok ? (
           renderProblem(result.reason, result.message, canConfigure)
         ) : result.data.length === 0 ? (
@@ -159,9 +159,9 @@ export function MailWidgetSkeleton() {
           </span>
         }
         description="안읽은 메일"
-        density="compact"
+        density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         <ul className="-mx-1 divide-y divide-line">
           {Array.from({ length: UNREAD_PREVIEW_COUNT }, (_, i) => (
             <li key={i} className="flex items-center gap-2 px-1 py-2">

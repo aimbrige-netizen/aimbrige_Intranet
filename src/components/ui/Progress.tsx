@@ -19,19 +19,41 @@ export type MeterTone =
   | "warning"
   | "critical";
 
+/*
+ * positive는 시안 축의 **accent-ink**(#00889c)다.
+ *
+ * 민트는 원본 팔레트에 없다(06-tokens-raw.md) — 지표 강조는 전부 시안이고,
+ * accent 토큰이 primary 축으로 재지정되면서 숫자(#08a7bf)와 막대(#00889c)가
+ * 색상은 같고 명도만 다른 관계가 됐다. 트랙(bg-line #eaecef) 위 대비도
+ * #00889c가 3.55:1로 h-1(4px) 막대에서 읽힌다.
+ *
+ * 범례 점을 그리는 화면들은 이 표를 그대로 가져다 쓴다(METER_FILL).
+ * 각 화면이 "bg-success" 같은 문자열을 따로 들고 있으면 여기 값을 바꾼 순간
+ * 막대와 범례가 서로 다른 색이 된다.
+ */
 const FILL: Record<MeterTone, string> = {
   brand: "bg-primary",
   neutral: "bg-muted",
-  positive: "bg-success",
+  positive: "bg-accent-ink",
   informative: "bg-info",
-  warning: "bg-warn",
+  /*
+   * warning 채움은 warn(#f0bc00)이 아니라 warn-strong(yellow-64 #b18803).
+   * warn은 트랙 대비 1.49:1이라 4px 막대의 48h 경고 구간이 사실상 안
+   * 보였다 — positive가 accent-ink(primary-64)로 내려간 것과 같은 보정이고,
+   * critical(#ee3010=red-64)과도 같은 스텝이다. METER_FILL을 쓰는 범례는
+   * 자동으로 따라온다.
+   */
+  warning: "bg-warn-strong",
   critical: "bg-danger",
 };
+
+/** 범례 스와치 색 — 반드시 Meter의 채움 색과 같은 출처여야 한다 */
+export const METER_FILL: Record<MeterTone, string> = FILL;
 
 const TEXT: Record<MeterTone, string> = {
   brand: "text-primary",
   neutral: "text-ink",
-  positive: "text-success-ink",
+  positive: "text-accent-ink",
   informative: "text-info-ink",
   warning: "text-warn-ink",
   critical: "text-danger-ink",

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Flag, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { Field, Input } from "@/components/ui/Field";
 import { Modal } from "@/components/ui/Modal";
@@ -147,15 +147,18 @@ export function ProjectMilestones({
         </Callout>
       ) : null}
 
-      <Card>
-        <CardHeader
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 섹션 제목 +
+        표 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
+      <section>
+        <SectionHeader
           title="마일스톤"
           description={
             progress.total > 0
               ? `${progress.done}/${progress.total} 완료 · 진행률 ${progress.percent}%`
               : "마일스톤을 등록하면 진행률이 계산됩니다"
           }
-          density="compact"
           action={
             canEdit ? (
               <Button size="small" onClick={() => openDraft(EMPTY_DRAFT)}>
@@ -165,7 +168,7 @@ export function ProjectMilestones({
             ) : null
           }
         />
-        <CardBody density="compact" className="!p-0">
+        <div className="ab-card md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[560px]">
               <thead>
@@ -211,7 +214,7 @@ export function ProjectMilestones({
                             onChange={() => toggle(milestone)}
                             disabled={!canEdit || pending}
                             aria-label={`${milestone.title} 완료 여부`}
-                            className="size-4 shrink-0 accent-[#ff6f0f] disabled:opacity-50"
+                            className="size-4 shrink-0 accent-primary disabled:opacity-50"
                           />
                         </td>
                         <td>
@@ -290,8 +293,8 @@ export function ProjectMilestones({
               </tbody>
             </table>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <Modal
         open={draft !== null}

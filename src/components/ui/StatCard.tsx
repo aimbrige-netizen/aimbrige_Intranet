@@ -32,12 +32,27 @@ export type StatTone =
   | "warning"
   | "critical";
 
+/**
+ * 값 색.
+ *
+ * 원본 규칙 — **총계는 먹색, 활성·잔여는 시안.** neutral(총계)은 ink,
+ * positive(살아 있는 값: 활성 인원·잔여 연차·처리 완료)는 accent로 간다.
+ * 한때 여기 민트(#44d1a5)를 썼는데 원본 팔레트 632개에 민트는 없다
+ * (06-tokens-raw.md). accent가 primary 시안으로 재지정되면서 이 자리는
+ * #08a7bf가 됐다 — 흰 배경 2.88:1로 28px 큰 글자 기준 3:1에 조금 못
+ * 미치지만, 원본 홈의 큰 숫자가 전부 이 값으로 실측돼(tailwind.config.ts
+ * accent 주석) 원본 코드값 그대로를 우선한다.
+ *
+ * 다만 "숫자가 아닌 것"에는 쓰지 않는다. 칩·라벨은 accent-ink(흰 배경
+ * 4.20:1), 진행바 채움도 accent-ink(트랙 대비 3.55:1)로 간다 — 4px
+ * 막대에서 민트는 트랙과 1.6:1이라 진행률 자체가 안 읽힌다(Progress.tsx 참고).
+ */
 const ACCENTS: Record<StatTone, { value: string; chip: string }> = {
   brand: { value: "text-primary", chip: "bg-primary-light text-primary" },
   neutral: { value: "text-ink", chip: "bg-subtle text-muted" },
   positive: {
-    value: "text-success-ink",
-    chip: "bg-success-light text-success-ink",
+    value: "text-accent",
+    chip: "bg-accent-light text-accent-ink",
   },
   informative: { value: "text-info-ink", chip: "bg-info-light text-info-ink" },
   warning: { value: "text-warn-ink", chip: "bg-warn-light text-warn-ink" },
@@ -140,7 +155,12 @@ export function StatCard({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="truncate text-label text-muted">{label}</p>
+        {/*
+          라벨 14px / 400 / rgb(155,156,158) — 실측 그대로.
+          종전 11~13px은 값(28px)과의 낙차가 너무 커서, 라벨이 각주처럼
+          읽히고 "이 숫자가 무엇인지"를 먼저 못 읽었다.
+        */}
+        <p className="truncate text-body text-muted">{label}</p>
         {Icon ? (
           <span
             className={cn(
@@ -154,9 +174,14 @@ export function StatCard({
       </div>
 
       <p className="mt-3 flex flex-wrap items-baseline gap-x-1">
+        {/*
+          값 28px / 500. 크기로 강조하고 굵기로는 강조하지 않는다 —
+          실측 표본에 700이 한 건도 없다(400 ×1824 / 500 ×37 / 600 ×5).
+          text-metric 토큰이 28px·500·행간 1.25를 함께 들고 있다.
+        */}
         <span
           className={cn(
-            "text-[28px] font-bold leading-none tabular-nums",
+            "text-metric tabular-nums",
             isPlaceholder
               ? "text-muted"
               : emphasis
@@ -232,7 +257,8 @@ function DeltaChip({ label, direction, goodDirection = "up" }: StatDelta) {
   return (
     <span
       className={cn(
-        "ml-1 inline-flex items-center gap-0.5 rounded-sm px-1 py-0.5 text-nano font-bold tabular-nums",
+        // 실측 최소 글자 크기가 12px이다. 11px(nano)은 값 옆 보조 표식이라도 쓰지 않는다.
+        "ml-1 inline-flex items-center gap-0.5 rounded-sm px-1 py-0.5 text-micro font-medium tabular-nums",
         good === null
           ? "bg-subtle text-muted"
           : good

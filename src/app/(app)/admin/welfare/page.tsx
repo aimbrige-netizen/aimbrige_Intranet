@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { StatCard } from "@/components/ui/StatCard";
@@ -83,22 +83,27 @@ export default async function AdminWelfarePage({
         />
       </div>
 
-      <Card className="mb-4">
-        <CardHeader
+      {/*
+        흰 시트 위 카드 해체(10 스윕): /admin/welfare는 복지 모듈 패널 화면이라
+        md+에서 본문이 흰 시트다 — Card 테두리가 이중선이 된다. 형제 화면
+        /welfare와 같이 SectionHeader + md-해체(md 미만은 canvas 위 카드 유지).
+      */}
+      <section className="mb-5">
+        <SectionHeader
           title="연초 일괄 지급"
           description="재직 중인 임직원 전원에게 같은 금액을 반영합니다."
         />
-        <CardBody>
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <WelfareGrantForm year={year} />
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="mb-4">
-        <CardHeader
+      <section className="mb-5">
+        <SectionHeader
           title="승인 대기"
           description={`${pending.length}건`}
         />
-        <CardBody>
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {pending.length === 0 ? (
             <p className="text-label text-muted">처리할 신청이 없습니다.</p>
           ) : (
@@ -122,44 +127,48 @@ export default async function AdminWelfarePage({
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader title="전체 신청 내역" description={`${year}년 ${requests.length}건`} />
-        <CardBody>
-          {requests.length === 0 ? (
+      <section>
+        <SectionHeader
+          title="전체 신청 내역"
+          description={`${year}년 ${requests.length}건`}
+        />
+        {requests.length === 0 ? (
+          <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
             <p className="text-label text-muted">신청 내역이 없습니다.</p>
-          ) : (
+          </div>
+        ) : (
+          /* 표는 패딩 없는 면 — /assets의 표 래퍼와 동일 */
+          <div className="ab-card overflow-hidden md:rounded-none md:border-0">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px]">
+              <table className="ab-table min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-line text-left">
-                    <th className="py-2 text-label font-bold text-muted">신청자</th>
-                    <th className="py-2 text-label font-bold text-muted">용도</th>
-                    <th className="py-2 text-right text-label font-bold text-muted">
-                      금액
-                    </th>
-                    <th className="py-2 text-label font-bold text-muted">상태</th>
-                    <th className="py-2 text-label font-bold text-muted">신청일</th>
+                  <tr>
+                    <th>신청자</th>
+                    <th>용도</th>
+                    <th className="text-right">금액</th>
+                    <th>상태</th>
+                    <th>신청일</th>
                   </tr>
                 </thead>
                 <tbody>
                   {requests.map((request) => (
-                    <tr key={request.id} className="border-b border-line last:border-0">
-                      <td className="py-2 text-body-sm text-ink">
+                    <tr key={request.id}>
+                      <td className="text-body-sm text-ink">
                         {request.employee_name}
                       </td>
-                      <td className="py-2 text-label text-muted">{request.purpose}</td>
-                      <td className="py-2 text-right text-body-sm tabular-nums text-ink">
+                      <td className="text-label text-muted">{request.purpose}</td>
+                      <td className="text-right text-body-sm tabular-nums text-ink">
                         {formatPoints(request.amount)}
                       </td>
-                      <td className="py-2">
+                      <td>
                         <Badge tone={WELFARE_STATUS_TONES[request.status]}>
                           {WELFARE_STATUS_LABELS[request.status]}
                         </Badge>
                       </td>
-                      <td className="py-2 text-label tabular-nums text-muted">
+                      <td className="text-label tabular-nums text-muted">
                         {request.requested_at.slice(0, 10)}
                       </td>
                     </tr>
@@ -167,9 +176,9 @@ export default async function AdminWelfarePage({
                 </tbody>
               </table>
             </div>
-          )}
-        </CardBody>
-      </Card>
+          </div>
+        )}
+      </section>
     </>
   );
 }

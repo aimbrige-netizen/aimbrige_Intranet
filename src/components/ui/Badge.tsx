@@ -11,12 +11,21 @@ type Tone = "neutral" | "primary" | "success" | "warn" | "danger" | "info";
 
 const TONES: Record<Tone, string> = {
   neutral: "bg-subtle text-muted",
+  // 옅은 면 위 브랜드 글자 — 06 button level2(#e2f1f5 + #08a7bf) 그대로
   primary: "bg-primary-light text-primary",
-  // 상태 틴트는 solid를 쓴다 — 알파 합성은 얹히는 면마다 결과가 달라진다
-  success: "bg-success-light text-success-ink",
-  info: "bg-info-light text-info-ink",
-  warn: "bg-warn-light text-warn-ink",
-  danger: "bg-danger-light text-danger-ink",
+  /*
+   * 상태 틴트는 solid를 쓴다 — 알파 합성은 얹히는 면마다 결과가 달라진다.
+   *
+   * 틴트 위 글자는 *-ink가 아니라 ink(#1c1c1c)다. 06-tokens-raw.md 45행
+   * chip 문법이 "틴트(각 팔레트 05) 위 글자 #1c1c1c"이고, *-ink(#d99f00 등)는
+   * 50행 status — **흰 바탕용** 글자·아이콘 색이다. 둘을 섞은
+   * bg-warn-light + text-warn-ink는 원본에 없는 조합인 데다 13px에서
+   * 2.00:1(warn)~2.70:1(danger)로 읽히지 않는다.
+   */
+  success: "bg-success-light text-ink",
+  info: "bg-info-light text-ink",
+  warn: "bg-warn-light text-ink",
+  danger: "bg-danger-light text-ink",
 };
 
 export function Badge({

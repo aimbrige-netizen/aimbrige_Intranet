@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Boxes } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -82,19 +82,24 @@ export default async function AdminAssetsPage() {
         />
       </div>
 
-      <Card className="mb-4">
-        <CardHeader title="자산 등록" />
-        <CardBody>
+      {/*
+        흰 시트 위 카드 해체(10 스윕): /admin/assets는 자산 모듈 패널 화면이라
+        md+에서 본문이 흰 시트다 — Card 테두리가 이중선이 된다. 형제 화면
+        /assets와 같이 SectionHeader + md-해체(md 미만은 canvas 위 카드 유지).
+      */}
+      <section className="mb-5">
+        <SectionHeader title="자산 등록" />
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <AssetCreateForm />
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="mb-4">
-        <CardHeader
+      <section className="mb-5">
+        <SectionHeader
           title="처리 대기"
           description="대여 신청 승인과 반납 확인"
         />
-        <CardBody>
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {todo.length === 0 ? (
             <p className="text-label text-muted">처리할 신청이 없습니다.</p>
           ) : (
@@ -127,12 +132,12 @@ export default async function AdminAssetsPage() {
               })}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card className="mb-4">
-        <CardHeader title="자산" description="수리중·폐기 표시는 여기서" />
-        <CardBody>
+      <section className="mb-5">
+        <SectionHeader title="자산" description="수리중·폐기 표시는 여기서" />
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {assets.length === 0 ? (
             <EmptyState
               icon={Boxes}
@@ -164,44 +169,50 @@ export default async function AdminAssetsPage() {
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader title="전체 대여 이력" description={`최근 ${loans.length}건`} />
-        <CardBody>
-          {loans.length === 0 ? (
+      <section>
+        <SectionHeader
+          title="전체 대여 이력"
+          description={`최근 ${loans.length}건`}
+        />
+        {loans.length === 0 ? (
+          <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
             <p className="text-label text-muted">대여 이력이 없습니다.</p>
-          ) : (
+          </div>
+        ) : (
+          /* 표는 패딩 없는 면 — /assets의 표 래퍼와 동일 */
+          <div className="ab-card overflow-hidden md:rounded-none md:border-0">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[560px]">
+              <table className="ab-table min-w-[560px]">
                 <thead>
-                  <tr className="border-b border-line text-left">
-                    <th className="py-2 text-label font-bold text-muted">자산</th>
-                    <th className="py-2 text-label font-bold text-muted">대여자</th>
-                    <th className="py-2 text-label font-bold text-muted">상태</th>
-                    <th className="py-2 text-label font-bold text-muted">신청</th>
-                    <th className="py-2 text-label font-bold text-muted">반납</th>
+                  <tr>
+                    <th>자산</th>
+                    <th>대여자</th>
+                    <th>상태</th>
+                    <th>신청</th>
+                    <th>반납</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loans.map((loan) => {
                     const stage = loanStage(loan);
                     return (
-                      <tr key={loan.id} className="border-b border-line last:border-0">
-                        <td className="py-2 text-body-sm text-ink">{loan.asset_name}</td>
-                        <td className="py-2 text-label text-muted">
+                      <tr key={loan.id}>
+                        <td className="text-body-sm text-ink">{loan.asset_name}</td>
+                        <td className="text-label text-muted">
                           {loan.employee_name}
                         </td>
-                        <td className="py-2">
+                        <td>
                           <Badge tone={LOAN_STAGE_TONES[stage]}>
                             {LOAN_STAGE_LABELS[stage]}
                           </Badge>
                         </td>
-                        <td className="py-2 text-label tabular-nums text-muted">
+                        <td className="text-label tabular-nums text-muted">
                           {loan.requested_at.slice(0, 10)}
                         </td>
-                        <td className="py-2 text-label tabular-nums text-muted">
+                        <td className="text-label tabular-nums text-muted">
                           {loan.returned_at?.slice(0, 10) ?? "—"}
                         </td>
                       </tr>
@@ -210,9 +221,9 @@ export default async function AdminAssetsPage() {
                 </tbody>
               </table>
             </div>
-          )}
-        </CardBody>
-      </Card>
+          </div>
+        )}
+      </section>
     </>
   );
 }

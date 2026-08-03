@@ -51,6 +51,11 @@ type EmployeeExportButtonProps = RowSource & {
   filename?: string;
   /** 역할·계정 연결 컬럼을 덧붙인다 (관리자 목록) */
   withAdminColumns?: boolean;
+  /**
+   * 조직도 표 위 툴바는 주소록 실측 문법(10)이 고스트 나열이라 ghost를 넘긴다.
+   * 기본은 secondary — 관리자 목록은 종전 모습 그대로 둔다.
+   */
+  variant?: "secondary" | "ghost";
 };
 
 export function EmployeeExportButton(props: EmployeeExportButtonProps) {
@@ -59,6 +64,7 @@ export function EmployeeExportButton(props: EmployeeExportButtonProps) {
     limit,
     filename = "임직원명부",
     withAdminColumns = false,
+    variant = "secondary",
   } = props;
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -117,7 +123,7 @@ export function EmployeeExportButton(props: EmployeeExportButtonProps) {
       {error ? <span className="text-label text-warn-ink">{error}</span> : null}
       <Button
         size="small"
-        variant="secondary"
+        variant={variant}
         disabled={pending}
         title={
           capped

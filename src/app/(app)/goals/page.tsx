@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { AlarmClock, CalendarClock, Target, Trophy } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
-import { Meter } from "@/components/ui/Progress";
+import { METER_FILL, Meter } from "@/components/ui/Progress";
 import { StatCard } from "@/components/ui/StatCard";
 import { MemberSelect, type MemberOption } from "@/features/worklog/MemberSelect";
 import { getTeamMembers } from "@/features/worklog/data";
@@ -196,14 +196,17 @@ export default async function GoalsPage({
       </div>
 
       {/* 카드 목록만으로는 셋의 비중이 보이지 않는다 */}
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
+        섹션 제목 + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
       {summary.total > 0 ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title="상태 분포"
             description={`전체 ${summary.total}건`}
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
             <Meter
               max={summary.total}
               segments={[
@@ -227,23 +230,23 @@ export default async function GoalsPage({
             />
             <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
               <Legend
-                swatch="bg-info"
+                swatch={METER_FILL.informative}
                 label={GOAL_STATUS_LABELS.active}
                 count={summary.active}
               />
               <Legend
-                swatch="bg-success"
+                swatch={METER_FILL.positive}
                 label={GOAL_STATUS_LABELS.completed}
                 count={summary.completed}
               />
               <Legend
-                swatch="bg-muted"
+                swatch={METER_FILL.neutral}
                 label={GOAL_STATUS_LABELS.dropped}
                 count={summary.dropped}
               />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <GoalBoard

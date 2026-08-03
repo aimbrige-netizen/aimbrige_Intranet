@@ -79,15 +79,19 @@ export default async function MyLoansPage() {
           }
         />
       ) : (
-        <div className="overflow-hidden rounded-card border border-line">
-          <table className="w-full">
+        /*
+          08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 표를 시트에
+          직접 놓고 md 미만만 카드 유지(10-modules2).
+        */
+        <div className="ab-card overflow-hidden md:rounded-none md:border-0">
+          <table className="ab-table">
             <thead>
-              <tr className="border-b border-line bg-subtle text-left">
-                <th className="px-4 py-2 text-label font-bold text-muted">자산</th>
-                <th className="px-4 py-2 text-label font-bold text-muted">상태</th>
-                <th className="px-4 py-2 text-label font-bold text-muted">신청일</th>
-                <th className="px-4 py-2 text-label font-bold text-muted">반납 예정</th>
-                <th className="px-4 py-2 text-right text-label font-bold text-muted">
+              <tr>
+                <th>자산</th>
+                <th>상태</th>
+                <th>신청일</th>
+                <th>반납 예정</th>
+                <th className="text-right">
                   <span className="sr-only">처리</span>
                 </th>
               </tr>
@@ -97,22 +101,22 @@ export default async function MyLoansPage() {
                 const stage = loanStage(loan);
                 const late = isOverdue(loan, today);
                 return (
-                  <tr key={loan.id} className="border-b border-line last:border-0">
-                    <td className="px-4 py-2.5">
+                  <tr key={loan.id}>
+                    <td>
                       <p className="text-body-sm text-ink">{loan.asset_name}</p>
                       {loan.asset_type ? (
                         <p className="text-nano text-muted">{loan.asset_type}</p>
                       ) : null}
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td>
                       <Badge tone={LOAN_STAGE_TONES[stage]}>
                         {LOAN_STAGE_LABELS[stage]}
                       </Badge>
                     </td>
-                    <td className="px-4 py-2.5 text-label tabular-nums text-muted">
+                    <td className="text-label tabular-nums text-muted">
                       {loan.requested_at.slice(0, 10)}
                     </td>
-                    <td className="px-4 py-2.5 text-label tabular-nums">
+                    <td className="text-label tabular-nums">
                       {/*
                         연체는 빨강이 아니라 warn이다. 반납이 늦은 건 챙길 일이지
                         규정 위반으로 몰 일이 아니다(디자인 시스템 원칙 4).
@@ -122,7 +126,7 @@ export default async function MyLoansPage() {
                         {late ? " 지남" : null}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5">
+                    <td>
                       <div className="flex justify-end">
                         {stage === "loaned" || stage === "return_requested" ? (
                           <ReturnRequestButton

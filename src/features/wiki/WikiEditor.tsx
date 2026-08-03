@@ -153,6 +153,11 @@ export function WikiEditor({
             className="font-mono text-micro"
           />
         ) : (
+          /*
+            흰 시트 스윕에서 이 카드는 남긴다(판단 기록): 콘텐츠 카드가 아니라
+            편집 탭의 Textarea와 같은 자리를 차지하는 "입력 틀"이라, 테두리를
+            걷으면 편집↔미리보기 전환 때 영역 경계가 사라져 토글이 고장나 보인다.
+          */
           <Card className="min-h-[28rem]">
             <CardBody>
               <Markdown text={content} />

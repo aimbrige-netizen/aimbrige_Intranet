@@ -4,7 +4,7 @@ import { useDeferredValue, useMemo, useState } from "react";
 import { CalendarClock, ExternalLink, FolderTree, Library } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
-import { Card, CardBody, SectionHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
 import {
@@ -180,9 +180,9 @@ export function LibraryList({
       />
 
       {grouped.length === 0 ? (
-        <Card>
-          <CardBody>
-            <EmptyState
+        /* md+ 흰 시트에서는 빈 상태도 카드 없이 시트에 직접 (10 스윕) */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
               icon={Library}
               title={
                 documents.length === 0
@@ -208,8 +208,7 @@ export function LibraryList({
                 )
               }
             />
-          </CardBody>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-6">
           {grouped.map(([name, items]) => (

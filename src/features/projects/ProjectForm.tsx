@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { FieldError, FormRow, Input, Select, Textarea } from "@/components/ui/Field";
 import { createProject } from "@/server/actions/projects";
 import type { OwnerOption } from "./data";
@@ -244,11 +244,15 @@ export function ProjectForm({
         </FormRow>
       </div>
 
-      <Card>
-        <CardHeader
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 섹션 제목 +
+        직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+        (위 ab-form-grid는 결재·신청서류 폼 문법이라 그대로 둔다)
+      */}
+      <section>
+        <SectionHeader
           title="초기 마일스톤"
           description="진행률은 완료한 마일스톤 수 / 전체 수로 계산합니다. 지금 비워 둬도 상세에서 언제든 추가할 수 있습니다."
-          density="compact"
           action={
             <Button
               size="xsmall"
@@ -263,7 +267,7 @@ export function ProjectForm({
             </Button>
           }
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           <ul className="space-y-2">
             {milestones.map((milestone, index) => (
               <li key={index} className="flex flex-wrap items-center gap-2">
@@ -310,8 +314,8 @@ export function ProjectForm({
             ))}
           </ul>
           <FieldError>{milestoneError}</FieldError>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center justify-end gap-3">
         <span className="text-caption">

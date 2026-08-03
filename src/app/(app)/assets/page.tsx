@@ -84,6 +84,11 @@ export default async function AssetsPage() {
           </div>
 
           <div className="space-y-5">
+            {/*
+              08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
+              섹션 제목 아래 표를 시트에 직접 놓고 md 미만만 카드 유지
+              (10-modules2 "섹션 제목 + 표 반복" 문법).
+            */}
             {Array.from(groups.entries()).map(([type, rows]) => (
               <section key={type}>
                 <h2 className="mb-2 text-body-sm font-bold text-ink">
@@ -92,28 +97,22 @@ export default async function AssetsPage() {
                     {rows.length}대
                   </span>
                 </h2>
-                <div className="overflow-hidden rounded-card border border-line">
-                  <table className="w-full">
+                <div className="ab-card overflow-hidden md:rounded-none md:border-0">
+                  <table className="ab-table">
                     <thead>
-                      <tr className="border-b border-line bg-subtle text-left">
-                        <th className="px-4 py-2 text-label font-bold text-muted">
-                          자산명
-                        </th>
-                        <th className="px-4 py-2 text-label font-bold text-muted">
-                          상태
-                        </th>
-                        <th className="px-4 py-2 text-label font-bold text-muted">
-                          사용자
-                        </th>
-                        <th className="px-4 py-2 text-right text-label font-bold text-muted">
+                      <tr>
+                        <th>자산명</th>
+                        <th>상태</th>
+                        <th>사용자</th>
+                        <th className="text-right">
                           <span className="sr-only">대여</span>
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {rows.map((asset) => (
-                        <tr key={asset.id} className="border-b border-line last:border-0">
-                          <td className="px-4 py-2.5">
+                        <tr key={asset.id}>
+                          <td>
                             <p className="text-body-sm text-ink">{asset.name}</p>
                             {asset.serial_number ? (
                               <p className="text-nano tabular-nums text-muted">
@@ -121,12 +120,12 @@ export default async function AssetsPage() {
                               </p>
                             ) : null}
                           </td>
-                          <td className="px-4 py-2.5">
+                          <td>
                             <Badge tone={ASSET_STATUS_TONES[asset.status]}>
                               {ASSET_STATUS_LABELS[asset.status]}
                             </Badge>
                           </td>
-                          <td className="px-4 py-2.5 text-label text-muted">
+                          <td className="text-label text-muted">
                             {asset.holder_name ? (
                               <>
                                 {asset.holder_name}
@@ -138,7 +137,7 @@ export default async function AssetsPage() {
                               "—"
                             )}
                           </td>
-                          <td className="px-4 py-2.5">
+                          <td>
                             <div className="flex justify-end">
                               {/*
                                 대여가능이 아니면 버튼을 아예 안 그린다.

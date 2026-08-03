@@ -255,7 +255,7 @@ export function ResourceManager({ resources }: { resources: Resource[] }) {
                 setValues((v) => ({ ...v, isActive: e.target.checked }))
               }
               disabled={pending}
-              className="size-4 accent-[#ff6f0f]"
+              className="size-4 accent-primary"
             />
             예약 가능(활성)
           </label>

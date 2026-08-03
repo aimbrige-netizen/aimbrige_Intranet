@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { FolderKanban, NotebookPen, Target, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { LinkButton } from "@/components/ui/Button";
@@ -108,13 +108,18 @@ export default async function ReviewCyclePage({
         </Callout>
       ) : null}
 
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 섹션 제목 +
+        직접 배치로 해체하고 md 미만만 카드 유지(10-modules2). 이 화면의
+        본문·참고자료 카드 전부 같은 패턴이다.
+      */}
       {isGoalPhase ? (
-        <Card>
-          <CardHeader
+        <section>
+          <SectionHeader
             title="이번 사이클 목표"
             description="등록한 목표는 제출 후 팀장이 승인합니다."
           />
-          <CardBody>
+          <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
             <GoalEditor
               cycleId={cycle.id}
               goals={goals}
@@ -125,13 +130,13 @@ export default async function ReviewCyclePage({
                   : undefined
               }
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
-            <Card>
-              <CardHeader
+          <div className="space-y-5">
+            <section>
+              <SectionHeader
                 title="목표별 자기평가"
                 description={
                   goals.length > 0
@@ -139,7 +144,7 @@ export default async function ReviewCyclePage({
                     : "이번 사이클에 등록한 목표가 없습니다."
                 }
               />
-              <CardBody>
+              <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
                 {goals.length > 0 ? (
                   <ol className="mb-4 space-y-1.5 rounded-card border border-line bg-subtle p-3">
                     {goals.map((goal, index) => (
@@ -174,22 +179,22 @@ export default async function ReviewCyclePage({
                     placeholder="목표별 달성 여부와 그렇게 판단한 근거를 적어 주세요."
                   />
                 )}
-              </CardBody>
-            </Card>
+              </div>
+            </section>
 
             {/* 팀장평가는 제출된 뒤에만 보인다 — 작성 중인 남의 글을 미리 보여줄 이유가 없다 */}
             {review?.manager_submitted_at ? (
-              <Card>
-                <CardHeader
+              <section>
+                <SectionHeader
                   title="팀장평가"
                   description={`${review.manager_submitted_at.slice(0, 10)} 제출`}
                 />
-                <CardBody>
+                <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
                   <p className="whitespace-pre-wrap text-body-sm text-ink">
                     {review.manager_review}
                   </p>
-                </CardBody>
-              </Card>
+                </div>
+              </section>
             ) : null}
           </div>
 
@@ -212,9 +217,10 @@ function ReferencePanel({
   reference: Awaited<ReturnType<typeof getReviewReference>>;
 }) {
   return (
-    <aside className="space-y-4">
-      <Card>
-        <CardHeader
+    /* 카드 해체 후 섹션 사이가 선 없이 이어지므로 간격을 한 단 넓힌다 */
+    <aside className="space-y-5">
+      <section>
+        <SectionHeader
           title={
             <span className="flex items-center gap-2">
               <NotebookPen className="size-4 text-muted" aria-hidden />
@@ -226,9 +232,8 @@ function ReferencePanel({
               ? `최근 ${reference.workLogs.length}건만 표시`
               : `${reference.workLogs.length}건`
           }
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           {reference.workLogs.length === 0 ? (
             <p className="text-label text-muted">이 기간에 기록이 없습니다.</p>
           ) : (
@@ -243,11 +248,11 @@ function ReferencePanel({
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader
+      <section>
+        <SectionHeader
           title={
             <span className="flex items-center gap-2">
               <Target className="size-4 text-muted" aria-hidden />
@@ -255,9 +260,8 @@ function ReferencePanel({
             </span>
           }
           description={`${reference.goals.length}건`}
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           {reference.goals.length === 0 ? (
             <p className="text-label text-muted">등록한 목표가 없습니다.</p>
           ) : (
@@ -274,11 +278,11 @@ function ReferencePanel({
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader
+      <section>
+        <SectionHeader
           title={
             <span className="flex items-center gap-2">
               <FolderKanban className="size-4 text-muted" aria-hidden />
@@ -286,9 +290,8 @@ function ReferencePanel({
             </span>
           }
           description={`${reference.projects.length}건`}
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           {reference.projects.length === 0 ? (
             <p className="text-label text-muted">담당한 프로젝트가 없습니다.</p>
           ) : (
@@ -307,8 +310,8 @@ function ReferencePanel({
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </aside>
   );
 }

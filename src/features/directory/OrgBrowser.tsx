@@ -12,7 +12,7 @@ import {
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Meter } from "@/components/ui/Progress";
 import { TableToolbar, ToolbarSearch } from "@/components/ui/TableToolbar";
 import { OrgEditor } from "@/features/directory/OrgEditor";
@@ -110,13 +110,17 @@ export function OrgBrowser({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardHeader
+      {/*
+        08·10 흰 시트 스윕: md+에서 .ab-card는 흰 면 위 이중 테두리다.
+        카드 헤더+바디를 섹션 제목 + 직접 배치로 바꾸고, md 미만(회청 canvas)
+        은 카드 면을 유지한다 — CalendarBoard와 같은 전환.
+      */}
+      <section>
+        <SectionHeader
           title="부서별 인원"
           description={`전체 ${index.employees.length}명 · 부서 ${index.departments.length}개 · 팀 ${index.teams.length}개`}
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-3 md:rounded-none md:border-0 md:p-0">
           {bars.length === 0 ? (
             <p className="py-3 text-caption">
               등록된 부서가 없습니다. 조직 구조가 등록되면 부서별 인원이 여기에
@@ -177,8 +181,8 @@ export function OrgBrowser({
               })}
             </div>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <TableToolbar
         className="mb-0"
@@ -197,9 +201,10 @@ export function OrgBrowser({
         }
         actions={
           <>
+            {/* 표 위 액션 툴바 = 고스트 h-8 나열 (10 주소록 실측 문법) */}
             <Button
               size="small"
-              variant="secondary"
+              variant="ghost"
               onClick={() => setOpenIds(new Set(allNodeIds))}
             >
               <ChevronsUpDown className="size-3.5" aria-hidden />
@@ -207,7 +212,7 @@ export function OrgBrowser({
             </Button>
             <Button
               size="small"
-              variant="secondary"
+              variant="ghost"
               onClick={() => setOpenIds(new Set())}
             >
               <ChevronsDownUp className="size-3.5" aria-hidden />
@@ -228,13 +233,12 @@ export function OrgBrowser({
       />
 
       {editing ? (
-        <Card>
-          <CardHeader
+        <section>
+          <SectionHeader
             title="조직 구조 편집"
             description="부서·팀의 이름, 상위 조직, 담당 매니저를 지정합니다."
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card p-3 md:rounded-none md:border-0 md:p-0">
             <OrgEditor
               departments={index.departments}
               teams={index.teams}
@@ -243,14 +247,14 @@ export function OrgBrowser({
                 name: e.name,
               }))}
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
-        <Card className="self-start">
-          <CardHeader title="조직 구조" density="compact" />
-          <CardBody density="compact" className="max-h-[640px] overflow-y-auto">
+        <section className="self-start">
+          <SectionHeader title="조직 구조" />
+          <div className="ab-card max-h-[640px] overflow-y-auto p-3 md:rounded-none md:border-0 md:p-0">
             <OrgTree
               index={index}
               companyName={companyName}
@@ -261,11 +265,11 @@ export function OrgBrowser({
               search={search}
               managerRoles={managerRoles}
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
 
-        <Card className="min-w-0">
-          <CardHeader
+        <section className="min-w-0">
+          <SectionHeader
             title={
               <span className="flex items-center gap-2">
                 {detail.kind === "company" ? (
@@ -279,7 +283,6 @@ export function OrgBrowser({
               </span>
             }
             description={detail.path}
-            density="compact"
             action={
               detail.manager ? (
                 <span className="flex items-center gap-1.5">
@@ -301,37 +304,38 @@ export function OrgBrowser({
             }
           />
 
-          <CardBody density="compact" className="border-b border-line">
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Figure
-                label="소속 인원"
-                value={detail.members.length}
-                unit="명"
-                denominator={index.employees.length}
-                denominatorUnit="명"
-              />
-              <Figure
-                label="하위 팀"
-                value={detail.teamCount}
-                unit="개"
-                denominator={index.teams.length}
-                denominatorUnit="개"
-              />
-              <Figure
-                label="하위 부서"
-                value={detail.departmentCount}
-                unit="개"
-                denominator={index.departments.length}
-                denominatorUnit="개"
-              />
-              <Figure
-                label="평균 근속"
-                value={tenureLabel(averageTenure(detail.members, today))}
-              />
-            </dl>
-          </CardBody>
+          <div className="ab-card md:rounded-none md:border-0">
+            {/* 지표 줄 padding은 표의 셀 padding(px-4=16px)과 좌측을 맞춘다 */}
+            <div className="border-b border-line px-4 py-3">
+              <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <Figure
+                  label="소속 인원"
+                  value={detail.members.length}
+                  unit="명"
+                  denominator={index.employees.length}
+                  denominatorUnit="명"
+                />
+                <Figure
+                  label="하위 팀"
+                  value={detail.teamCount}
+                  unit="개"
+                  denominator={index.teams.length}
+                  denominatorUnit="개"
+                />
+                <Figure
+                  label="하위 부서"
+                  value={detail.departmentCount}
+                  unit="개"
+                  denominator={index.departments.length}
+                  denominatorUnit="개"
+                />
+                <Figure
+                  label="평균 근속"
+                  value={tenureLabel(averageTenure(detail.members, today))}
+                />
+              </dl>
+            </div>
 
-          <CardBody density="compact" className="!p-0">
             <EmployeeTable
               rows={detail.members.map((employee) =>
                 toEmployeeRow(
@@ -347,8 +351,8 @@ export function OrgBrowser({
               emptyTitle="소속 인원이 없습니다"
               emptyDescription="이 조직에 배치된 임직원이 아직 없습니다. 인원이 배치되면 여기에 표시됩니다."
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       </div>
     </div>
   );

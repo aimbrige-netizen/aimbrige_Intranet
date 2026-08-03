@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Meter } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
 import { Textarea } from "@/components/ui/Field";
@@ -166,8 +166,12 @@ export function PostDetailView({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardBody>
+      {/*
+        08 흰 시트: md+에서는 본문 카드를 걷고 제목·메타·본문을 시트에 직접
+        놓는다(10-modules2 스윕 지침). md 미만은 캔버스 위 카드 문법이라
+        카드 면(p-4)을 유지한다 — CalendarBoard와 같은 패턴.
+      */}
+      <article className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -182,7 +186,14 @@ export function PostDetailView({
                   </Badge>
                 ) : null}
               </div>
-              <h1 className="text-h1 text-ink">{post.title}</h1>
+              {/*
+                콘텐츠 제목 20/500 (10-modules2 화면 문법). 종전 text-h1(24/600)은
+                원본에 없는 단이고 PageHeader(20/600)와도 위계가 어긋났다.
+                줄높이 30px은 06 heading-l 실측.
+              */}
+              <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+                {post.title}
+              </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <AvatarWithName
                   name={post.author?.name ?? "-"}
@@ -314,7 +325,7 @@ export function PostDetailView({
                       onClick={() => download(file.file_url)}
                       disabled={pending}
                       aria-label={`${file.file_name ?? "첨부"} 내려받기`}
-                      className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50"
+                      className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-subtle hover:text-primary disabled:opacity-50"
                     >
                       <Download className="size-4" />
                     </button>
@@ -345,7 +356,7 @@ export function PostDetailView({
                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body transition-colors disabled:opacity-50",
                     reaction.mine
                       ? "border-primary bg-primary-light text-primary"
-                      : "border-line text-muted hover:bg-canvas",
+                      : "border-line text-muted hover:bg-subtle",
                   )}
                   aria-pressed={reaction.mine}
                 >
@@ -368,11 +379,11 @@ export function PostDetailView({
               <span className="text-caption">{engageHint}</span>
             ) : null}
           </div>
-        </CardBody>
-      </Card>
+      </article>
 
-      <Card>
-        <CardHeader
+      {/* 댓글 — 흰 시트 위라 카드가 아니라 섹션 제목 + 직접 배치(08 문법) */}
+      <section>
+        <SectionHeader
           title={
             <span className="flex items-center gap-2">
               <MessageSquare className="size-4 text-primary" aria-hidden />
@@ -380,7 +391,7 @@ export function PostDetailView({
             </span>
           }
         />
-        <CardBody>
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {post.comments.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
@@ -454,8 +465,8 @@ export function PostDetailView({
               {engageHint}
             </p>
           ) : null}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       {/* 읽음 현황 (스펙 3.3 — 작성자·관리자만) */}
       <Modal

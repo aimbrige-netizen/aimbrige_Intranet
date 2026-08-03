@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { downloadCsv } from "@/lib/csv";
@@ -120,38 +120,50 @@ export function AttendanceView({
 
   return (
     <>
+      {/*
+        콘텐츠 상단 액션 툴바 (07·10 문법): h-8(32) · 13px · radius 4 ·
+        아이콘+라벨. 원본 주소록 툴바(빠른 등록/메일발송/…)는 고스트 나열이라
+        보조 신청 둘과 내보내기는 ghost로 내리고, 화면의 주요 액션 하나
+        (연차·휴가 신청)만 primary로 남긴다 — 캘린더 툴바의 '일정 추가'와
+        같은 결정.
+      */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <Button onClick={() => setModal("leave")}>
-          <CalendarPlus className="size-4" />
+        <Button size="small" onClick={() => setModal("leave")}>
+          <CalendarPlus className="size-3.5" />
           연차·휴가 신청
         </Button>
-        <Button variant="secondary" onClick={() => setModal("overtime")}>
-          <Clock className="size-4" />
+        <Button size="small" variant="ghost" onClick={() => setModal("overtime")}>
+          <Clock className="size-3.5" />
           초과근무 신청
         </Button>
-        <Button variant="secondary" onClick={() => setModal("correction")}>
-          <FilePenLine className="size-4" />
+        <Button size="small" variant="ghost" onClick={() => setModal("correction")}>
+          <FilePenLine className="size-3.5" />
           근태 수정요청
         </Button>
         <Button
+          size="small"
           variant="ghost"
           onClick={exportCsv}
           disabled={records.length === 0}
           className="ml-auto"
         >
-          <Download className="size-4" />
+          <Download className="size-3.5" />
           내보내기
         </Button>
       </div>
 
       <div className="space-y-5">
-        <Card>
-          <CardHeader
+        {/*
+          08·10 흰 시트: md+에서는 본문 전체가 흰 면이라 .ab-card 래퍼가
+          흰 면 위 이중 테두리가 된다 — 섹션 제목 + 표 직접 배치로 바꾸고,
+          md 미만(패널 없는 회청 canvas)은 카드 면을 유지한다(캘린더 패턴).
+        */}
+        <section>
+          <SectionHeader
             title={`${periodLabel} 근태 기록`}
             description={`${records.length}일`}
-            density="compact"
           />
-          <CardBody density="compact" className="!p-0">
+          <div className="ab-card md:rounded-none md:border-0">
             <div className="overflow-x-auto">
               <table className="ab-table ab-table--compact min-w-[680px]">
                 <thead>
@@ -188,13 +200,12 @@ export function AttendanceView({
                 </tbody>
               </table>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
 
-        <Card>
-          <CardHeader
+        <section>
+          <SectionHeader
             title="신청 내역"
-            density="compact"
             action={
               <SegmentedControl
                 size="small"
@@ -222,7 +233,7 @@ export function AttendanceView({
               />
             }
           />
-          <CardBody density="compact" className="!p-0">
+          <div className="ab-card md:rounded-none md:border-0">
             {tab === "leave" ? (
               <LeaveTable leaves={leaves} onCancel={cancel} pending={pending} />
             ) : tab === "overtime" ? (
@@ -256,8 +267,8 @@ export function AttendanceView({
             ) : (
               <AdjustmentList adjustments={adjustments} />
             )}
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       </div>
 
       <RequestModals

@@ -24,6 +24,14 @@ export type ChipTone =
 const CHIP_TONES: Record<ChipTone, string> = {
   neutral: "bg-subtle text-ink",
   primary: "bg-primary-light text-primary",
+  /*
+   * 상태 톤의 색 글자는 Badge(틴트 위 ink)와 달리 유지한다 — 이 칩의 문법은
+   * chip(06 L45)이 아니라 **tag-attendance**(06 L52-58)다: 옅은 면 위에
+   * 상태색 글자(출근 #00af52 · 휴가 #0d99ff · 결근 #ff502a…).
+   * 07-modules.md 근태 태그 절이 이 글자색을 톤별로 명시한다.
+   * 대비 2.5~2.7:1은 원본 코드값의 결과다 — "원본은 4.5:1을 고집하지
+   * 않는다. 코드값을 따른다."(tailwind.config.ts)
+   */
   success: "bg-success-light text-success-ink",
   info: "bg-info-light text-info-ink",
   warn: "bg-warn-light text-warn-ink",

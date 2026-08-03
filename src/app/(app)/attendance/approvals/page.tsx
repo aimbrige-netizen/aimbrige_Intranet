@@ -10,7 +10,7 @@ import {
   WEEKLY_LIMIT_HOURS,
   WEEKLY_WARN_HOURS,
 } from "@/features/attendance/constants";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { cn } from "@/lib/utils";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import {
@@ -101,14 +101,15 @@ export default async function ApprovalsPage() {
 
       <ApprovalList items={items} />
 
-      {/* 팀원 주 52시간 현황 (스펙 3.2 — "본인과 팀장 모두에게 노출") */}
+      {/* 팀원 주 52시간 현황 (스펙 3.2 — "본인과 팀장 모두에게 노출")
+          md+ 흰 시트 위 카드 이중 테두리를 걷고 섹션 제목 + 표 직접 배치(10 스윕) */}
       {teamHours.length > 0 ? (
-        <Card className="mt-5">
-          <CardHeader
+        <section className="mt-5">
+          <SectionHeader
             title="팀원 이번 주 근무시간"
             description={`정규 근무 + 승인된 초과근무 합산. ${WEEKLY_WARN_HOURS}시간 이상이면 경고, ${WEEKLY_LIMIT_HOURS}시간 초과면 위반입니다.`}
           />
-          <CardBody className="p-0">
+          <div className="ab-card md:rounded-none md:border-0">
             <div className="overflow-x-auto">
               <table className="ab-table min-w-[420px]">
                 <thead>
@@ -146,8 +147,8 @@ export default async function ApprovalsPage() {
                 </tbody>
               </table>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
     </>
   );

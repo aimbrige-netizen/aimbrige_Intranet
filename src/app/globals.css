@@ -4,35 +4,55 @@
 
 /*
  * 에임브릿지 인트라넷 전역 스타일
- * 디자인 근거: aimbridge_intranet_design_system.md v2.0 (SEED Design 기반)
+ * 디자인 근거: daou-survey/ 01~05 (실측)
  *
- * SEED 원칙:
- *  - 오렌지(#ff6f0f)는 희소하게. 주요 액션·활성 상태에만.
- *  - 콘텐츠가 주인공, 크롬은 조용하게. 그림자 대신 hairline으로 면을 나눈다.
+ * 원칙:
+ *  - 페이지 바닥은 회청(#edf0f3), 카드는 흰색. 면 구분은 배경색이 한다.
+ *  - 그림자를 쓰지 않는다. 실측에도 없다.
+ *  - 본문 14px / 400. 강조는 500, 아주 드물게 600. 700은 없다.
  *  - 모든 치수는 4px 그리드.
  *  - 다크모드는 지원하지 않는다.
  */
 
 :root {
-  /* 이름은 tailwind.config.ts의 토큰과 1:1로 맞춘다 */
-  --seed-primary: #ff6f0f;
-  --seed-primary-hover: #ff9e66;
-  --seed-primary-light: #fff5f0;
-  --seed-canvas: #f2f3f6; /* 페이지 바닥 */
+  /*
+   * 이름은 tailwind.config.ts의 토큰과 1:1로 맞춘다.
+   * --seed- 접두사는 종전 코드(accent-[color:var(--seed-primary)] 등)가
+   * 이미 참조하고 있어 유지한다. 값만 실측치로 바꾼다.
+   */
+  --seed-primary: #08a7bf; /* rgb(8,167,191) 시안 */
+  --seed-primary-hover: #3cbed7; /* 원본 hover는 밝은 쪽 */
+  --seed-primary-light: #e2f1f5;
+  --seed-accent: #08a7bf; /* 지표 강조 = primary. 민트는 원본에 없다 */
+  --seed-accent-ink: #00889c; /* primary-text-level2 */
+  --seed-canvas: #edf0f3; /* rgb(237,240,243) 페이지 바닥 */
   --seed-surface: #ffffff; /* 카드·시트 */
-  --seed-subtle: #f7f8fa; /* 표 헤더·호버 */
-  --seed-ink: #212124;
-  --seed-muted: #868b94;
-  --seed-line: #eaebee;
-  --seed-line-strong: #dcdee3;
-  --seed-success: #1aa174;
-  --seed-info: #009ceb;
-  --seed-warn: #f59f0a; /* primary와 분리된 계기판 색 — 진행바 구간 구분용 */
-  --seed-danger: #fa2314;
+  --seed-subtle: #f8f8f8; /* gray-03 — 표 헤더·호버 */
+  --seed-ink: #1c1c1c; /* rgb(28,28,28) */
+  --seed-ink-sub: #323333; /* rgb(50,51,51) */
+  --seed-muted: #969799; /* gray-52 */
+  --seed-line: #eaecef; /* rgb(234,236,239) */
+  --seed-line-strong: #dbdcdc; /* gray-10 */
+  --seed-success: #00af52; /* green-52 */
+  --seed-info: #0d99ff; /* blue-52 */
+  --seed-warn: #f0bc00; /* yellow-40 — 계기판 색. 브랜드와 무관 */
+  --seed-danger: #ee3010; /* red-64 */
 
-  --layout-topbar: 56px;
-  --layout-rail: 76px;
+  --layout-topbar: 60px;
+  --layout-rail: 64px; /* 접힌 레일 */
+  --layout-rail-wide: 200px; /* 펼친 레일 — 06 --doa-gnb-w: 200 · 08 gnb-wide */
+  --layout-panel: 260px;
+  --layout-shell: 324px; /* rail + panel */
+  --layout-shell-wide: 460px; /* rail-wide + panel */
+  --layout-utility: 64px; /* 우측 유틸바 — 08, 원본 --doa-organizer-w: 4rem */
   --layout-drawer: 248px;
+
+  /*
+   * 현재 레일 폭 — AppShell이 확장 상태(rail-wide)에 따라 인라인 스타일로
+   * 64px/200px를 갱신한다. ModulePanel의 fixed left가 left-[var(--rail-w)]로
+   * 참조해 레일과 한 몸으로 움직인다. 여기 값은 셸 밖·SSR용 기본값(접힘).
+   */
+  --rail-w: 64px;
 
   color-scheme: light;
 }
@@ -45,10 +65,21 @@
    */
   body {
     @apply bg-canvas text-ink antialiased;
-    font-size: 15px;
-    line-height: 1.5;
-    letter-spacing: -0.02em;
+    /* 원본 body-m 그대로: 14 / 18 / -.28 (06-tokens-raw.md) */
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 18px;
+    letter-spacing: -0.28px;
     -webkit-font-smoothing: antialiased;
+  }
+
+  /*
+   * 안전망. 유틸리티가 아니라 직접 스타일이나 서드파티 마크업으로 들어오는
+   * 700 이상은 여기서 600으로 접는다 — 실측 표본에 700이 한 건도 없다.
+   */
+  b,
+  strong {
+    font-weight: 600;
   }
 
   h1 {
@@ -68,7 +99,7 @@
     letter-spacing: inherit;
   }
 
-  /* 포커스 링은 브랜드 오렌지로 통일 */
+  /* 포커스 링은 브랜드 시안으로 통일 */
   :focus-visible {
     outline: 2px solid var(--seed-primary);
     outline-offset: 1px;
@@ -77,8 +108,9 @@
 
 @layer components {
   /*
-   * 카드: radius 8px + hairline. 그림자를 쓰지 않는다(SEED §6 — 검사된
-   * 공개 컨트롤은 전부 flat이었다). 면 구분은 배경 대비와 경계선으로.
+   * 카드: radius 12px + hairline, 흰 면. 그림자를 쓰지 않는다.
+   * 면 구분의 주역은 이제 경계선이 아니라 회청색 바닥(canvas)이다 —
+   * 흰 카드가 바닥 위로 떠 보이는 게 이번 변경에서 가장 크게 바뀌는 부분.
    */
   .ab-card {
     @apply rounded-card border border-line bg-surface;
@@ -89,47 +121,61 @@
     @apply grid grid-cols-1 overflow-hidden rounded-card border border-line bg-surface md:grid-cols-[160px_1fr];
   }
 
+  /*
+   * muted가 실측치 rgb(155,156,158)로 옅어졌다. 그건 "흐린 글자"(부가 정보)
+   * 자리의 색이지 구조 라벨의 색이 아니다 — 옅은 면 위에 얹으면 2.7:1까지
+   * 떨어진다. 라벨·표 헤더는 보조 먹색(ink-sub)으로 옮긴다.
+   */
   .ab-form-label {
-    @apply flex items-center border-line bg-subtle px-4 py-3 text-label font-bold text-muted md:border-b md:border-r;
+    @apply flex items-center border-line bg-subtle px-4 py-3 text-label font-bold text-ink-sub md:border-b md:border-r;
   }
 
   .ab-form-field {
     @apply border-b border-line px-4 py-3;
   }
 
-  /* 테이블: zebra 없이 hover 시에만 행 강조 */
+  /*
+   * 표 — 실측 03-approval.md
+   *   th   14px / 400, 배경 투명, 아래 1px rgb(51,51,51)(≈ ink-sub) 거의 검정
+   *   td   14px, padding 8px … 16px
+   *   행 구분선 **없음**
+   *
+   * 종전은 "회색 헤더 + 모든 행에 연회색 선"이었다. 20행짜리 표에 가로줄이
+   * 20개 그어지면 값보다 선이 먼저 읽힌다. 머리와 몸은 굵은 선 하나로 가르고,
+   * 행 구분은 hover가 맡는다 — 표가 길어져도 조용하다.
+   *
+   * 셀렉터를 :where()로 감싸 특정도를 (0,1,0)으로 낮춘다.
+   * 종전 셀렉터(.ab-table thead th)는 유틸리티보다 강해서 호출부가 정렬 하나
+   * 바꾸려면 !text-right처럼 important를 붙여야 했다. 이제 그냥 이긴다
+   * (동점이면 나중에 오는 utilities 레이어 승). 기존 !… 표기도 그대로 동작한다.
+   *
+   * 우측 padding: 실측은 `8px 0 8px 16px`(오른쪽 0)이다. 저쪽은 우측 메타 컬럼이
+   * 고정폭이라 0이어도 여백이 남지만, 우리 표는 카드 안에서 우측 정렬 숫자가
+   * 카드 모서리에 붙는다. 16px을 남기는 것만 의도적으로 다르게 간다.
+   */
   .ab-table {
-    @apply w-full border-collapse text-body-sm;
+    @apply w-full border-collapse text-body;
   }
 
-  .ab-table thead th {
-    @apply whitespace-nowrap border-b border-line bg-subtle px-4 py-3 text-left text-label font-bold text-muted;
+  .ab-table :where(thead th) {
+    @apply whitespace-nowrap border-b border-ink-sub px-4 py-2 text-left text-body font-normal text-ink;
   }
 
-  .ab-table tbody td {
-    @apply border-b border-line px-4 py-3.5 align-middle;
+  .ab-table :where(tbody td) {
+    @apply px-4 py-2 align-middle;
   }
 
-  .ab-table tbody tr:last-child td {
-    @apply border-b-0;
-  }
-
-  .ab-table tbody tr {
+  .ab-table :where(tbody tr) {
     @apply transition-colors duration-fast ease-standard hover:bg-subtle;
   }
 
   /*
-   * 조밀 변형. 기본 행 높이 49px는 벤치마크(32~36px)의 1.4배라
-   * 같은 화면 높이에 담기는 행 수가 그만큼 줄어든다.
-   * 스캔이 목적인 표(근태 일별, 결재함, 게시판 목록)는 이쪽을 쓴다.
+   * .ab-table--compact는 더 이상 규칙이 없다.
+   * 기본 행 padding이 12px에서 실측치 8px로 내려가면서 조밀 변형이 하려던 일을
+   * 기본이 하게 됐다 — 실측에도 밀도 단계는 하나뿐이다.
+   * 클래스가 아직 붙어 있는 화면들은 아무 영향이 없으므로, 마크업 정리는
+   * 각 화면을 손대는 사이클에 함께 한다(이번 사이클은 표현 계층만).
    */
-  .ab-table--compact thead th {
-    @apply px-3 py-2;
-  }
-
-  .ab-table--compact tbody td {
-    @apply px-3 py-2;
-  }
 }
 
 @layer utilities {
@@ -143,7 +189,7 @@
   }
 
   /*
-   * 76px 레일은 스크롤바가 차지하는 폭만으로도 아이콘이 눌려 보인다.
+   * 64px 레일은 스크롤바가 차지하는 폭만으로도 아이콘이 눌려 보인다.
    * 스크롤 자체는 살리고 막대만 숨긴다.
    */
   .scrollbar-none {

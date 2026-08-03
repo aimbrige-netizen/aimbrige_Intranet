@@ -107,28 +107,30 @@ export default async function WelfarePage({
               description="도서·자기계발·건강관리 등에 쓴 금액을 신청하면 여기에 쌓입니다."
             />
           ) : (
-            <div className="overflow-hidden rounded-card border border-line">
-              <table className="w-full">
+            /*
+              08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 표를
+              시트에 직접 놓고 md 미만만 카드 유지(10-modules2).
+            */
+            <div className="ab-card overflow-hidden md:rounded-none md:border-0">
+              <table className="ab-table">
                 <thead>
-                  <tr className="border-b border-line bg-subtle text-left">
-                    <th className="px-4 py-2 text-label font-bold text-muted">신청일</th>
-                    <th className="px-4 py-2 text-label font-bold text-muted">용도</th>
-                    <th className="px-4 py-2 text-right text-label font-bold text-muted">
-                      금액
-                    </th>
-                    <th className="px-4 py-2 text-label font-bold text-muted">상태</th>
-                    <th className="px-4 py-2 text-right text-label font-bold text-muted">
+                  <tr>
+                    <th>신청일</th>
+                    <th>용도</th>
+                    <th className="text-right">금액</th>
+                    <th>상태</th>
+                    <th className="text-right">
                       <span className="sr-only">처리</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
                   {requests.map((request) => (
-                    <tr key={request.id} className="border-b border-line last:border-0">
-                      <td className="px-4 py-2.5 text-label tabular-nums text-muted">
+                    <tr key={request.id}>
+                      <td className="text-label tabular-nums text-muted">
                         {request.requested_at.slice(0, 10)}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td>
                         <p className="text-body-sm text-ink">{request.purpose}</p>
                         {/* 반려 사유는 신청자가 볼 수 있어야 다음에 다시 낼 수 있다 */}
                         {request.reject_reason ? (
@@ -137,15 +139,15 @@ export default async function WelfarePage({
                           </p>
                         ) : null}
                       </td>
-                      <td className="px-4 py-2.5 text-right text-body-sm tabular-nums text-ink">
+                      <td className="text-right text-body-sm tabular-nums text-ink">
                         {formatPoints(request.amount)}
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td>
                         <Badge tone={WELFARE_STATUS_TONES[request.status]}>
                           {WELFARE_STATUS_LABELS[request.status]}
                         </Badge>
                       </td>
-                      <td className="px-4 py-2.5">
+                      <td>
                         <div className="flex justify-end">
                           {request.status === "pending" ? (
                             <WelfareCancelButton requestId={request.id} />

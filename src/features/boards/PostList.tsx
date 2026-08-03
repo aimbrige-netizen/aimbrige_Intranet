@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { MiniMeter } from "@/components/ui/Progress";
 import { Pagination } from "@/components/ui/Pagination";
+import { DataTable, Td, Th } from "@/components/ui/Table";
 import {
   FilterChip,
   TableToolbar,
@@ -141,131 +142,138 @@ export function PostList({
         }
       />
 
-      <Card className="overflow-hidden">
-        <div className="overflow-x-auto">
-          <table
-            className={cn(
-              "ab-table ab-table--compact table-fixed",
-              isNotice ? "min-w-[940px]" : "min-w-[700px]",
-            )}
-          >
-            <thead>
-              <tr>
-                <th className="w-9">
-                  <span className="sr-only">상태</span>
-                </th>
-                {isNotice ? <th className="w-20">카테고리</th> : null}
-                <th>제목</th>
-                <th className="w-14 !text-right">댓글</th>
-                {/* 열람률(대상자 중 몇 명)과 다른 숫자다 — 이건 열린 횟수 */}
-                <th
-                  className="w-14 !text-right"
-                  title="같은 사람이 같은 날 여러 번 열어도 1회로 셉니다"
+      {/*
+        08 흰 시트: md+에서는 본문 전체가 흰 면이라 카드 래퍼가 흰 면 위
+        이중 테두리가 된다 — 표를 시트에 직접 놓는다(10-modules2 "표는 카드
+        안이 아니라 흰 면 위에 그대로"). md 미만은 캔버스 위 카드 문법이
+        그대로라 카드 면을 유지한다 — CalendarBoard와 같은 패턴.
+      */}
+      <Card className="overflow-hidden md:rounded-none md:border-0">
+        <DataTable fixed minWidth={isNotice ? 940 : 700}>
+          <thead>
+            <tr>
+              <Th className="w-9">
+                <span className="sr-only">상태</span>
+              </Th>
+              {isNotice ? <Th className="w-20">카테고리</Th> : null}
+              <Th>제목</Th>
+              <Th align="right" className="w-14">
+                댓글
+              </Th>
+              {/* 열람률(대상자 중 몇 명)과 다른 숫자다 — 이건 열린 횟수 */}
+              <Th
+                align="right"
+                className="w-14"
+                title="같은 사람이 같은 날 여러 번 열어도 1회로 셉니다"
+              >
+                조회
+              </Th>
+              {isNotice ? <Th className="w-32">열람률</Th> : null}
+              <Th className="w-32">작성자</Th>
+              <Th className="w-24">작성일</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {posts.length === 0 ? (
+              <EmptyRow
+                columns={columns}
+                boardType={board.board_type}
+                archived={!!board.archived_at}
+                canWrite={canWrite}
+                filters={filters}
+                basePath={basePath}
+                hrefWith={hrefWith}
+              />
+            ) : (
+              posts.map((post, i) => (
+                <tr
+                  key={post.id}
+                  className={cn(
+                    /*
+                      행 구분선이 사라졌으므로(실측: 표는 헤더 밑줄 하나뿐)
+                      고정글 그룹의 끝은 여기서 선을 직접 긋는다.
+                      "선이 없는 표"에서 딱 한 줄 있는 선은 그 자체가 뜻이 된다.
+                    */
+                    i === lastPinned &&
+                      i < posts.length - 1 &&
+                      "[&>td]:border-b [&>td]:border-line-strong",
+                  )}
                 >
-                  조회
-                </th>
-                {isNotice ? <th className="w-32">열람률</th> : null}
-                <th className="w-32">작성자</th>
-                <th className="w-24">작성일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {posts.length === 0 ? (
-                <EmptyRow
-                  columns={columns}
-                  boardType={board.board_type}
-                  archived={!!board.archived_at}
-                  canWrite={canWrite}
-                  filters={filters}
-                  basePath={basePath}
-                  hrefWith={hrefWith}
-                />
-              ) : (
-                posts.map((post, i) => (
-                  <tr
-                    key={post.id}
-                    className={cn(
-                      i === lastPinned &&
-                        i < posts.length - 1 &&
-                        "[&>td]:border-b-line-strong",
-                    )}
-                  >
-                    <td className="text-center">
-                      {post.is_pinned ? (
-                        <Pin
-                          className="mx-auto size-3.5 text-primary"
-                          aria-label="고정"
-                        />
-                      ) : !post.isRead ? (
-                        <span
-                          className="mx-auto block size-1.5 rounded-pill bg-info"
-                          aria-label="미열람"
-                          role="img"
-                        />
-                      ) : null}
-                    </td>
-
-                    {isNotice ? (
-                      <td>
-                        {post.category ? (
-                          <Badge tone="neutral">{post.category}</Badge>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                    ) : null}
-
-                    <td>
-                      <Link
-                        href={`${basePath}/${post.id}`}
-                        className={cn(
-                          "block truncate hover:underline",
-                          post.isRead ? "text-muted" : "font-bold text-ink",
-                        )}
-                      >
-                        {post.title}
-                      </Link>
-                    </td>
-
-                    <td className="text-right tabular-nums">
-                      {post.commentCount > 0 ? (
-                        post.commentCount
-                      ) : (
-                        <span className="text-muted">-</span>
-                      )}
-                    </td>
-
-                    <td className="text-right tabular-nums">
-                      {post.view_count > 0 ? (
-                        post.view_count
-                      ) : (
-                        <span className="text-muted">-</span>
-                      )}
-                    </td>
-
-                    {isNotice ? (
-                      <td>
-                        <ReadRateCell post={post} />
-                      </td>
-                    ) : null}
-
-                    <td>
-                      <AvatarWithName
-                        name={post.author?.name ?? "-"}
-                        src={post.author?.profile_image_url}
-                        size="small"
+                  <Td align="center">
+                    {post.is_pinned ? (
+                      <Pin
+                        className="mx-auto size-3.5 text-primary"
+                        aria-label="고정"
                       />
-                    </td>
+                    ) : !post.isRead ? (
+                      <span
+                        className="mx-auto block size-1.5 rounded-pill bg-info"
+                        aria-label="미열람"
+                        role="img"
+                      />
+                    ) : null}
+                  </Td>
 
-                    <td className="whitespace-nowrap tabular-nums text-caption">
-                      {formatDate(post.created_at)}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                  {isNotice ? (
+                    <Td>
+                      {post.category ? (
+                        <Badge tone="neutral">{post.category}</Badge>
+                      ) : (
+                        <span className="text-muted">-</span>
+                      )}
+                    </Td>
+                  ) : null}
+
+                  <Td>
+                    <Link
+                      href={`${basePath}/${post.id}`}
+                      className={cn(
+                        "block truncate hover:underline",
+                        post.isRead ? "text-muted" : "font-bold text-ink",
+                      )}
+                    >
+                      {post.title}
+                    </Link>
+                  </Td>
+
+                  <Td align="right" numeric>
+                    {post.commentCount > 0 ? (
+                      post.commentCount
+                    ) : (
+                      <span className="text-muted">-</span>
+                    )}
+                  </Td>
+
+                  <Td align="right" numeric>
+                    {post.view_count > 0 ? (
+                      post.view_count
+                    ) : (
+                      <span className="text-muted">-</span>
+                    )}
+                  </Td>
+
+                  {isNotice ? (
+                    <Td>
+                      <ReadRateCell post={post} />
+                    </Td>
+                  ) : null}
+
+                  <Td>
+                    <AvatarWithName
+                      name={post.author?.name ?? "-"}
+                      src={post.author?.profile_image_url}
+                      size="small"
+                    />
+                  </Td>
+
+                  <Td numeric nowrap className="text-muted">
+                    {formatDate(post.created_at)}
+                  </Td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </DataTable>
 
         <Pagination
           page={filters.page}
@@ -464,13 +472,14 @@ function EmptyRow({
                 : "글은 가입한 회원이 씁니다. 가입하면 여기에 첫 글을 올릴 수 있습니다."
               : undefined
       }
-      action={
-        canWrite ? (
-          <LinkButton href={`${basePath}/new`} size="small" variant="secondary">
-            첫 글 쓰기
-          </LinkButton>
-        ) : undefined
-      }
+      /*
+        여기서만 cta(브랜드색 채운 버튼)를 쓴다 — 실측의 `새 글 작성하기`와
+        같은 자리다. 위쪽 세 갈래("첫 페이지로"·"검색 해제"·"전체 보기")는
+        앞세울 액션이 아니라 필터를 되돌리는 문이라 secondary로 둔다.
+        canWrite가 아니면 아무것도 렌더하지 않는다 — 눌러도 안 되는 버튼은
+        두지 않는다는 이 프로젝트의 규약.
+      */
+      cta={canWrite ? { label: "첫 글 쓰기", href: `${basePath}/new` } : undefined}
     />
   );
 }

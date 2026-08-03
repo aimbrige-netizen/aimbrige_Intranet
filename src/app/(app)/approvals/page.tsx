@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { FileCheck, FileClock, Hourglass, Inbox, Timer } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
-import { Meter, MiniMeter } from "@/components/ui/Progress";
+import { METER_FILL, Meter, MiniMeter } from "@/components/ui/Progress";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import {
@@ -15,6 +15,7 @@ import {
   ToolbarSearch,
 } from "@/components/ui/TableToolbar";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
+import { DataTable, Td, Th } from "@/components/ui/Table";
 import { ApprovalStepBar } from "@/features/approvals/ApprovalStepStrip";
 import { ApprovalInbox } from "@/features/approvals/ApprovalInbox";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -310,9 +311,14 @@ export default async function ApprovalsPage({
         />
       </div>
 
-      {/* 시각화 — 상태 구성과 유형 분포를 한 화면에서 본다 */}
-      <Card className="mb-5">
-        <CardHeader
+      {/*
+        시각화 — 상태 구성과 유형 분포를 한 화면에서 본다.
+        흰 시트 위 카드 해체(10 스윕): md+는 SectionHeader + 내용 직접 배치,
+        md 미만은 canvas 위 카드 문법이 그대로라 ab-card 면을 유지한다
+        (CalendarBoard와 같은 전환).
+      */}
+      <section className="mb-5">
+        <SectionHeader
           title="결재 진행 현황"
           description={
             stats.unavailable
@@ -321,9 +327,8 @@ export default async function ApprovalsPage({
                   .filter(Boolean)
                   .join(" · ")
           }
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {stats.unavailable ? (
             <EmptyState
               compact
@@ -363,14 +368,18 @@ export default async function ApprovalsPage({
                 size="lg"
               />
               <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-                <Legend tone="bg-success" label="승인·시행완료" value={done} />
                 <Legend
-                  tone="bg-info"
+                  tone={METER_FILL.positive}
+                  label="승인·시행완료"
+                  value={done}
+                />
+                <Legend
+                  tone={METER_FILL.informative}
                   label="진행중"
                   value={stats.byStatus.pending}
                 />
                 <Legend
-                  tone="bg-danger"
+                  tone={METER_FILL.critical}
                   label="반려"
                   value={stats.byStatus.rejected}
                 />
@@ -405,8 +414,8 @@ export default async function ApprovalsPage({
               </div>
             </>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       {/* 검색·상태 필터 — 각 필터가 몇 건인지 누르기 전에 보인다 */}
       <form action="/approvals" method="get">
@@ -454,132 +463,127 @@ export default async function ApprovalsPage({
         />
       </form>
 
-      <Card>
-        <CardBody className="!p-0">
-          <div className="overflow-x-auto">
-            <table className="ab-table ab-table--compact min-w-[860px]">
-              <thead>
-                <tr>
-                  <th className="w-24">문서유형</th>
-                  <th>제목</th>
-                  <th className="w-44">핵심값</th>
-                  <th className="w-40">결재 진행</th>
-                  <th className="w-24">상태</th>
-                  <th className="w-32">기안일</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.length === 0 ? (
-                  <TableEmptyRow
-                    colSpan={6}
-                    icon={FileCheck}
-                    title={
-                      q || status
-                        ? "조건에 맞는 문서가 없습니다"
-                        : "이 기간에 기안한 문서가 없습니다"
-                    }
-                    description="문서를 올리면 유형·핵심값·결재 진행이 이 표에 쌓입니다."
-                    action={
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <LinkButton
-                          href="/approvals/new/expense"
-                          size="small"
-                          variant="secondary"
-                        >
-                          경비청구서 기안
-                        </LinkButton>
-                        <LinkButton
-                          href="/approvals/new/business_trip"
-                          size="small"
-                          variant="secondary"
-                        >
-                          출장신청서 기안
-                        </LinkButton>
-                      </div>
-                    }
-                  />
-                ) : (
-                  docs.map((doc) => {
-                    const typeMeta = DOCUMENT_TYPE_META[doc.document_type];
-                    const highlight = documentHighlight(
-                      doc.document_type,
-                      doc.form_data,
-                    );
-                    const TypeIcon = typeMeta.icon;
-                    const timing = docTiming(doc);
+      {/* 표는 시트 위에 그대로 — md 미만만 카드 면 유지 (07 표 문법) */}
+      <div className="ab-card md:rounded-none md:border-0">
+        <DataTable minWidth={860}>
+            <thead>
+              <tr>
+                <Th className="w-24">문서유형</Th>
+                <Th>제목</Th>
+                <Th className="w-44">핵심값</Th>
+                <Th className="w-40">결재 진행</Th>
+                <Th className="w-24">상태</Th>
+                <Th className="w-32">기안일</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.length === 0 ? (
+                <TableEmptyRow
+                  colSpan={6}
+                  icon={FileCheck}
+                  title={
+                    q || status
+                      ? "조건에 맞는 문서가 없습니다"
+                      : "이 기간에 기안한 문서가 없습니다"
+                  }
+                  description="문서를 올리면 유형·핵심값·결재 진행이 이 표에 쌓입니다."
+                  /*
+                    기안 화면의 빈 상태에서 할 일은 "문서를 올린다" 하나다.
+                    가장 흔한 경비청구서를 브랜드색 버튼으로 앞세우고, 출장신청서는
+                    그 옆 secondary로 둔다 — 둘 다 채운 버튼이면 어느 쪽이 기본인지
+                    알 수 없고, 둘 다 회색이면 갈 곳이 없어 보인다.
+                  */
+                  cta={{ label: "경비청구서 기안", href: "/approvals/new/expense" }}
+                  action={
+                    <LinkButton
+                      href="/approvals/new/business_trip"
+                      size="small"
+                      variant="secondary"
+                    >
+                      출장신청서 기안
+                    </LinkButton>
+                  }
+                />
+              ) : (
+                docs.map((doc) => {
+                  const typeMeta = DOCUMENT_TYPE_META[doc.document_type];
+                  const highlight = documentHighlight(
+                    doc.document_type,
+                    doc.form_data,
+                  );
+                  const TypeIcon = typeMeta.icon;
+                  const timing = docTiming(doc);
 
-                    return (
-                      <tr key={doc.id}>
-                        <td className="whitespace-nowrap">
-                          <span className="flex items-center gap-1.5">
-                            <TypeIcon
-                              className="size-3.5 shrink-0 text-muted"
-                              aria-hidden
-                            />
-                            {typeMeta.short}
-                          </span>
-                        </td>
-                        <td>
-                          {/*
-                            임시저장은 상세(결재 진행 화면)가 아니라 작성 폼으로
-                            보낸다. 결재선도 이력도 없는 문서를 상세로 열면
-                            빈 껍데기만 보인다.
-                          */}
-                          <Link
-                            href={
-                              doc.status === "draft"
-                                ? `/approvals/new/${doc.document_type}?draft=${doc.id}`
-                                : `/approvals/${doc.id}`
-                            }
-                            className="text-ink hover:text-primary hover:underline"
-                          >
-                            {doc.title}
-                          </Link>
-                        </td>
-                        <td className="tabular-nums">
-                          {highlight ? (
-                            <>
-                              <span className="block text-body-sm text-ink">
-                                {highlight.text}
-                              </span>
-                              {highlight.sub ? (
-                                <span className="block truncate text-nano text-muted">
-                                  {highlight.sub}
-                                </span>
-                              ) : null}
-                            </>
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td>
-                          <ApprovalStepBar steps={docStepStates(doc)} />
-                        </td>
-                        <td>
-                          <Badge tone={DOCUMENT_STATUS_TONES[doc.status]}>
-                            {DOCUMENT_STATUS_LABELS[doc.status]}
-                          </Badge>
-                        </td>
-                        <td className="whitespace-nowrap tabular-nums">
-                          <span className="block text-ink">
-                            {/* 요약 밴드와 같은 기준 시각 — 표만 created_at으로 두면 두 숫자가 갈린다 */}
-                            {formatDate(doc.period?.effective_at ?? doc.created_at)}
-                          </span>
-                          {timing ? (
-                            <span className="block text-nano text-muted">
-                              {timing}
+                  return (
+                    <tr key={doc.id}>
+                      <Td nowrap>
+                        <span className="flex items-center gap-1.5">
+                          <TypeIcon
+                            className="size-3.5 shrink-0 text-muted"
+                            aria-hidden
+                          />
+                          {typeMeta.short}
+                        </span>
+                      </Td>
+                      <Td>
+                        {/*
+                          임시저장은 상세(결재 진행 화면)가 아니라 작성 폼으로
+                          보낸다. 결재선도 이력도 없는 문서를 상세로 열면
+                          빈 껍데기만 보인다.
+                        */}
+                        <Link
+                          href={
+                            doc.status === "draft"
+                              ? `/approvals/new/${doc.document_type}?draft=${doc.id}`
+                              : `/approvals/${doc.id}`
+                          }
+                          className="text-ink hover:text-primary hover:underline"
+                        >
+                          {doc.title}
+                        </Link>
+                      </Td>
+                      <Td numeric>
+                        {highlight ? (
+                          <>
+                            <span className="block text-ink">
+                              {highlight.text}
                             </span>
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardBody>
-      </Card>
+                            {highlight.sub ? (
+                              <span className="block truncate text-micro text-muted">
+                                {highlight.sub}
+                              </span>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className="text-muted">-</span>
+                        )}
+                      </Td>
+                      <Td>
+                        <ApprovalStepBar steps={docStepStates(doc)} />
+                      </Td>
+                      <Td>
+                        <Badge tone={DOCUMENT_STATUS_TONES[doc.status]}>
+                          {DOCUMENT_STATUS_LABELS[doc.status]}
+                        </Badge>
+                      </Td>
+                      <Td numeric nowrap>
+                        <span className="block text-ink">
+                          {/* 요약 밴드와 같은 기준 시각 — 표만 created_at으로 두면 두 숫자가 갈린다 */}
+                          {formatDate(doc.period?.effective_at ?? doc.created_at)}
+                        </span>
+                        {timing ? (
+                          <span className="block text-micro text-muted">
+                            {timing}
+                          </span>
+                        ) : null}
+                      </Td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </DataTable>
+      </div>
     </>
   );
 }
@@ -690,13 +694,13 @@ async function InboxView({
         />
       </div>
 
-      <Card className="mb-5">
-        <CardHeader
+      {/* 흰 시트 위 카드 해체(10 스윕) — md+는 섹션 직접 배치, md 미만은 카드 면 유지 */}
+      <section className="mb-5">
+        <SectionHeader
           title="대기 경과 분포"
           description="오래 묵은 문서가 목록 위로 오도록 오래된 순으로 정렬합니다."
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <Meter
             max={total || 1}
             segments={[
@@ -708,9 +712,21 @@ async function InboxView({
             size="lg"
           />
           <div className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1">
-            <Legend tone="bg-success" label="2일 이내" value={buckets.fresh} />
-            <Legend tone="bg-warn" label="3~6일" value={buckets.aging} />
-            <Legend tone="bg-danger" label="7일 이상" value={buckets.late} />
+            <Legend
+              tone={METER_FILL.positive}
+              label="2일 이내"
+              value={buckets.fresh}
+            />
+            <Legend
+              tone={METER_FILL.warning}
+              label="3~6일"
+              value={buckets.aging}
+            />
+            <Legend
+              tone={METER_FILL.critical}
+              label="7일 이상"
+              value={buckets.late}
+            />
           </div>
           {oldest ? (
             <p className="mt-3 border-t border-line pt-3 text-label text-muted">
@@ -726,8 +742,8 @@ async function InboxView({
               </span>
             </p>
           ) : null}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <ApprovalInbox rows={rows} />
     </>

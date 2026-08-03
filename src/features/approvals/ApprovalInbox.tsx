@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, Inbox } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import {
@@ -179,8 +178,11 @@ export function ApprovalInbox({ rows }: { rows: InboxRow[] }) {
         }
       />
 
-      <Card>
-        <CardBody className="!p-0">
+      {/*
+        흰 시트 위 카드 해체(10 스윕) — 표는 시트 위에 그대로 놓고,
+        md 미만(canvas 위 카드 문법)만 ab-card 면을 유지한다.
+      */}
+      <div className="ab-card md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[900px]">
               <thead>
@@ -278,8 +280,7 @@ export function ApprovalInbox({ rows }: { rows: InboxRow[] }) {
               </tbody>
             </table>
           </div>
-        </CardBody>
-      </Card>
+      </div>
     </>
   );
 }

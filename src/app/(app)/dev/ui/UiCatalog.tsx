@@ -27,6 +27,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { OptionCardGrid } from "@/components/ui/OptionCardGrid";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
+import { DataTable, Td, Th } from "@/components/ui/Table";
 import { SkeletonStats } from "@/components/ui/Skeleton";
 import {
   FilterChip,
@@ -319,13 +320,45 @@ export function UiCatalog() {
             }
           />
           <Card>
-            <table className="ab-table ab-table--compact">
+            {/* 표는 헤더 아래 굵은 선 하나뿐 — 행 구분선이 없다(실측 03-approval.md) */}
+            <DataTable>
               <thead>
                 <tr>
-                  <th>날짜</th>
-                  <th>출근</th>
-                  <th>퇴근</th>
-                  <th>근무시간</th>
+                  <Th>날짜</Th>
+                  <Th>출근</Th>
+                  <Th>퇴근</Th>
+                  <Th align="right">근무시간</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["2026-07-27", "09:02", "18:10", "8h 08m"],
+                  ["2026-07-28", "08:55", "19:40", "9h 45m"],
+                  ["2026-07-29", "09:10", "18:02", "7h 52m"],
+                ].map(([date, inAt, outAt, worked]) => (
+                  <tr key={date}>
+                    <Td numeric nowrap>
+                      {date}
+                    </Td>
+                    <Td numeric>{inAt}</Td>
+                    <Td numeric>{outAt}</Td>
+                    <Td align="right" numeric>
+                      {worked}
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
+          </Card>
+
+          <Card className="mt-4">
+            <DataTable>
+              <thead>
+                <tr>
+                  <Th>날짜</Th>
+                  <Th>출근</Th>
+                  <Th>퇴근</Th>
+                  <Th>근무시간</Th>
                 </tr>
               </thead>
               <tbody>
@@ -337,17 +370,18 @@ export function UiCatalog() {
                   action={<Button size="small">근태 수정요청</Button>}
                 />
               </tbody>
-            </table>
+            </DataTable>
           </Card>
 
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader title="카드 안 빈 상태" density="compact" />
               <CardBody density="compact">
+                {/* 빈 상태 CTA는 브랜드색 채운 버튼이다 — cta prop이 기본으로 그렇게 낸다 */}
                 <EmptyState
                   icon={Inbox}
                   title="대기 중인 문서가 없습니다"
-                  action={<Button size="small">기안하기</Button>}
+                  cta={{ label: "기안하기", href: "/approvals/new" }}
                   compact
                 />
               </CardBody>

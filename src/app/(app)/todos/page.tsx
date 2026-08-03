@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { AlarmClock, CalendarClock, CheckCircle2, ListChecks } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { StatCard } from "@/components/ui/StatCard";
 import { DayStrip, type StripDay } from "@/components/ui/ChipStrip";
@@ -142,20 +142,23 @@ export default async function TodosPage() {
       </div>
 
       {/* 목록만으로는 이번 주에 무엇이 몰려 있는지 보이지 않는다 */}
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
+        섹션 제목 + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
       {rows.length > 0 ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title="이번 주"
             description={`${summary.weekStart} ~ ${summary.weekEnd} · 마감과 완료`}
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
             <DayStrip
               days={weekStripDays(rows, summary, today)}
               emptyLabel="마감 없음"
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <TodoList todos={rows} today={today} />

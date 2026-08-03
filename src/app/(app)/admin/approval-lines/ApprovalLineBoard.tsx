@@ -137,7 +137,7 @@ export function ApprovalLineBoard({
                         toggleTeamReview(row.documentType, e.target.checked)
                       }
                       disabled={busy}
-                      className="size-4 accent-[#ff6f0f]"
+                      className="size-4 accent-primary"
                     />
                     1차 팀장 검토
                   </label>

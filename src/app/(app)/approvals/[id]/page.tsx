@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Paperclip } from "lucide-react";
 import { AttachmentPanel } from "@/features/approvals/AttachmentPanel";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { Avatar } from "@/components/ui/Avatar";
@@ -126,7 +126,11 @@ export default async function ApprovalDetailPage({
         결재자는 이 화면에 '처리하러' 들어온다. 예전엔 승인/반려가 본문
         세 번째 카드 안에 있어서 문서 내용과 첨부를 지나 스크롤해야 닿았다.
       */}
-      <div className="sticky top-topbar z-10 -mx-4 mb-5 border-b border-line bg-canvas px-4 py-3 md:-mx-6 md:px-6">
+      {/*
+        배경: md 미만은 canvas 본문 위라 canvas, md+는 본문이 전면 흰 시트라
+        같은 흰색(surface)으로 — 시트 위 회청 띠는 옛 문법의 잔재가 된다.
+      */}
+      <div className="sticky top-topbar z-10 -mx-4 mb-5 border-b border-line bg-canvas px-4 py-3 md:-mx-6 md:bg-surface md:px-6">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Badge tone={DOCUMENT_STATUS_TONES[doc.status]}>
             {DOCUMENT_STATUS_LABELS[doc.status]}
@@ -168,7 +172,12 @@ export default async function ApprovalDetailPage({
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        {/* 문서 캔버스 — 종이 양식처럼 중앙 제목 + 메타표 + 본문 */}
+        {/*
+          문서 캔버스 — 종이 양식처럼 중앙 제목 + 메타표 + 본문.
+          흰 시트 스윕에서도 이 테두리는 유지한다: 카드가 아니라 결재 양식의
+          "테두리 표" 바깥선이다(안쪽 ab-form-grid가 border-0으로 이 선에
+          기대고 있고, 기안 폼(new)의 ab-form-grid 테두리 유지와 같은 근거).
+        */}
         <article className="ab-card mx-auto w-full max-w-[860px]">
           <header className="border-b border-line px-6 py-7 text-center">
             <p className="text-label text-muted">{typeMeta.label}</p>
@@ -272,14 +281,19 @@ export default async function ApprovalDetailPage({
               </p>
             ) : (
               <ul className="space-y-2.5">
+                {/*
+                  의견 말풍선 — 테두리 카드(article) 안의 테두리 카드였다.
+                  이중선을 걷고 틴트 면만 남긴다(스윕: 카드 중첩 해소).
+                  반려는 면 색(danger-light)만으로도 갈린다.
+                */}
                 {comments.map((step) => (
                   <li
                     key={step.id}
                     className={cn(
-                      "rounded-card border px-4 py-3",
+                      "rounded-card px-4 py-3",
                       step.status === "rejected"
-                        ? "border-danger/30 bg-danger-light"
-                        : "border-line bg-subtle",
+                        ? "bg-danger-light"
+                        : "bg-subtle",
                     )}
                   >
                     <p className="flex flex-wrap items-center gap-x-2 text-label text-muted">
@@ -306,10 +320,14 @@ export default async function ApprovalDetailPage({
           </div>
         </article>
 
-        {/* 결재 진행 패널 — 게이지·결재선·첨부를 한 카드에 모은다 */}
+        {/*
+          결재 진행 패널 — 게이지·결재선·첨부.
+          흰 시트 위 카드 해체(10 스윕): md+는 SectionHeader + 내용 직접 배치,
+          md 미만(canvas 위 카드 문법)만 ab-card 면을 유지한다.
+        */}
         <aside className="space-y-5 xl:sticky xl:top-32 xl:self-start">
-          <Card>
-            <CardHeader
+          <section>
+            <SectionHeader
               title="결재 진행"
               description={
                 doc.status === "pending"
@@ -318,9 +336,8 @@ export default async function ApprovalDetailPage({
                     ? `${stepLabel(rejectedStep.step_order, totalSteps)}에서 중단`
                     : `${totalSteps}단계 결재 완료`
               }
-              density="compact"
             />
-            <CardBody density="compact">
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               <Meter
                 value={doneSteps}
                 max={totalSteps}
@@ -357,32 +374,31 @@ export default async function ApprovalDetailPage({
                 <MetaRow label="최종 변경" value={formatDate(doc.updated_at)} />
                 <MetaRow label="첨부" value={`${doc.attachments.length}건`} />
               </dl>
-            </CardBody>
-          </Card>
+            </div>
+          </section>
 
           {/*
             첨부는 문서 캔버스가 아니라 이 패널에 둔다.
-            좌측에 두면 첨부 0건이면서 기안자가 아닐 때 카드가 통째로 사라져
+            좌측에 두면 첨부 0건이면서 기안자가 아닐 때 섹션이 통째로 사라져
             좌우 컬럼 높이가 무너졌다.
           */}
-          <Card>
-            <CardHeader
+          <section>
+            <SectionHeader
               title="첨부파일"
               description={`${doc.attachments.length}건`}
-              density="compact"
               action={
                 <Paperclip className="size-4 text-muted" aria-hidden />
               }
             />
-            <CardBody density="compact">
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               <AttachmentPanel
                 documentId={doc.id}
                 authUserId={me.auth_user_id}
                 attachments={doc.attachments}
                 canUpload={canAttach}
               />
-            </CardBody>
-          </Card>
+            </div>
+          </section>
         </aside>
       </div>
     </>

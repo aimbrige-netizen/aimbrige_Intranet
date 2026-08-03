@@ -23,7 +23,7 @@ import { Callout } from "@/components/ui/Callout";
 import { LinkButton } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Meter, type MeterTone } from "@/components/ui/Progress";
+import { METER_FILL, Meter, type MeterTone } from "@/components/ui/Progress";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import {
@@ -480,10 +480,18 @@ function HeadcountWidget({
             {/* 조각 색과 상태를 묶어 준다. 색 없는 평문 캡션만 두면 얇은
                 조각이 휴직인지 퇴사인지 hover 없이는 알 수 없다 */}
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-              <Legend tone="bg-success" label="재직" value={headcount.active} />
-              <Legend tone="bg-warn" label="휴직" value={headcount.onLeave} />
               <Legend
-                tone="bg-muted"
+                tone={METER_FILL.positive}
+                label="재직"
+                value={headcount.active}
+              />
+              <Legend
+                tone={METER_FILL.warning}
+                label="휴직"
+                value={headcount.onLeave}
+              />
+              <Legend
+                tone={METER_FILL.neutral}
                 label="퇴사"
                 value={headcount.terminated}
               />

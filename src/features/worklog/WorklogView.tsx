@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { NotebookPen, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { DayStrip, type StripDay } from "@/components/ui/ChipStrip";
 import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
@@ -207,31 +207,35 @@ export function WorklogView({
 
   return (
     <>
+      {/*
+        08 흰 시트: md+에서는 본문 전체가 흰 면이라 .ab-card가 흰 면 위
+        이중 테두리가 된다 — 섹션 제목 + 직접 배치로 해체(10-modules2).
+        md 미만은 회청 canvas 위 카드 문법이 그대로라 카드 면을 유지한다.
+        (이 화면의 세 섹션 모두 같은 패턴 — CalendarBoard와 동일)
+      */}
       {stripDays ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title={`${periodLabel} 기록`}
             description={
               canEdit
                 ? "날짜를 누르면 그 날짜로 기록합니다"
                 : "하루에 남긴 기록 수"
             }
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
             <DayStrip days={stripDays} />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       {canEdit ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title="기록 추가"
             description={`${composerDateLabel} · 하루에 여러 건을 남길 수 있습니다`}
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
             <div className="grid gap-4 md:grid-cols-[13rem_1fr] md:items-start">
               <div className="space-y-3">
                 <Field label="날짜" htmlFor="wl-date" error={errors.logDate}>
@@ -283,17 +287,16 @@ export function WorklogView({
                 </div>
               </div>
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
-      <Card>
-        <CardHeader
+      <section>
+        <SectionHeader
           title={`${periodLabel} 업무일지`}
           description={`${logs.length}건 · 기록한 날 ${grouped.length}일`}
-          density="compact"
         />
-        <CardBody density="compact" className="!p-0">
+        <div className="ab-card md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[720px]">
               <thead>
@@ -430,7 +433,7 @@ export function WorklogView({
                                   onClick={() => startEdit(log)}
                                   disabled={pending}
                                   aria-label={`${log.log_date} 기록 수정`}
-                                  className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink disabled:opacity-50"
+                                  className="rounded-sm p-1.5 text-muted transition-colors hover:bg-line hover:text-ink disabled:opacity-50"
                                 >
                                   <Pencil className="size-3.5" />
                                 </button>
@@ -454,8 +457,8 @@ export function WorklogView({
               </tbody>
             </table>
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </>
   );
 }

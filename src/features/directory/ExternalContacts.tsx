@@ -285,9 +285,10 @@ export function ExternalContacts({
           count={`${filtered.length}건 / 전체 ${contacts.length}건`}
           actions={
             <>
+              {/* 표 위 액션 툴바 = 고스트 h-8 (10 주소록 문법). 주요 액션(추가)만 primary */}
               <Button
                 size="small"
-                variant="secondary"
+                variant="ghost"
                 disabled={filtered.length === 0}
                 title={`현재 필터에 걸린 ${filtered.length}건을 CSV로 내려받습니다`}
                 onClick={exportCsv}
@@ -308,7 +309,8 @@ export function ExternalContacts({
           }
         />
 
-        <div className="ab-card overflow-hidden">
+        {/* md+ 흰 시트 위 이중 테두리 방지 — 표를 시트에 직접 (10 스윕) */}
+        <div className="ab-card overflow-hidden md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[860px]">
               <thead>
@@ -376,7 +378,7 @@ export function ExternalContacts({
                               type="button"
                               onClick={() => openEdit(contact)}
                               aria-label={`${contact.name} 수정`}
-                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-line hover:text-ink"
                             >
                               <Pencil className="size-3.5" />
                             </button>

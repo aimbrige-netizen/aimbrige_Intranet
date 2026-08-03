@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Eye, FilePlus2, PenLine, Plus, ScrollText } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { StatCard } from "@/components/ui/StatCard";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -156,7 +156,12 @@ export default async function BoardPage({
         }
       />
 
-      {/* 요약 밴드 — 맨숫자 대신 분모와 진행바를 붙인다 */}
+      {/*
+        요약 밴드 — 맨숫자 대신 분모와 진행바를 붙인다.
+        StatCard 테두리는 유지한다(10-modules2 검토 지점): 이중 테두리는
+        "카드 안 카드"에서 생기는데, 이 밴드는 흰 시트 위 1겹이고 카드 간
+        구분이 테두리뿐이라 걷으면 네 지표가 한 덩어리로 붙는다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="전체 글"
@@ -226,19 +231,27 @@ export default async function BoardPage({
         )}
       </div>
 
-      {/* 시각화 블록 — 표만으로는 "누가 안 읽었나"가 보이지 않는다 */}
+      {/*
+        시각화 블록 — 표만으로는 "누가 안 읽었나"가 보이지 않는다.
+        흰 시트 위 카드 래퍼 제거(08) — 섹션 제목 + 내용 직접 배치.
+        CalendarBoard의 WeekdayDistribution과 같은 패턴.
+      */}
       {overview.total > 0 && (isNotice || overview.unread > 0) ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title={isNotice ? "열람 현황" : "내 미열람"}
             description={
               isNotice
                 ? `공지 ${overview.total}건 · 전원 열람 ${overview.fullyRead ?? 0}건 · 내 미열람 ${overview.unread}건`
                 : `아직 열어보지 않은 글 ${overview.unread}건`
             }
-            density="compact"
           />
-          <CardBody density="compact">
+          {/*
+            md 미만은 패널 없는 canvas 위 카드 문법 — Meter 트랙(bg-line)이
+            canvas와 사실상 동색이라 카드 면 없이는 트랙이 사라진다.
+            approvals/CalendarBoard와 같은 md-해체 래퍼.
+          */}
+          <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
             {isNotice && overview.targetTotal ? (
               <Meter
                 value={overview.readTotal ?? 0}
@@ -277,8 +290,8 @@ export default async function BoardPage({
                 이 게시판의 글은 모두 열어보셨습니다.
               </p>
             )}
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <PostList

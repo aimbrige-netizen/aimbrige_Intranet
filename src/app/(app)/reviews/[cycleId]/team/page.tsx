@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -126,9 +126,15 @@ export default async function ReviewTeamPage({
           </nav>
 
           {selected ? (
-            <div className="space-y-4">
-              <Card>
-                <CardHeader
+            /*
+              08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 섹션 제목
+              + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+              좌측 팀원 목록의 항목 카드는 유지 — 선택 상태(테두리 색)가
+              항목 테두리에 실려 있어 걷으면 "지금 누구인가"가 사라진다.
+            */
+            <div className="space-y-5">
+              <section>
+                <SectionHeader
                   title="이번 사이클 목표"
                   description={
                     selected.goals_submitted_at
@@ -136,13 +142,13 @@ export default async function ReviewTeamPage({
                       : "아직 제출하지 않았습니다."
                   }
                 />
-                <CardBody>
+                <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
                   <GoalApprovalList goals={goals} />
-                </CardBody>
-              </Card>
+                </div>
+              </section>
 
-              <Card>
-                <CardHeader
+              <section>
+                <SectionHeader
                   title="자기평가"
                   description={
                     review?.self_submitted_at
@@ -150,7 +156,7 @@ export default async function ReviewTeamPage({
                       : "아직 제출하지 않았습니다."
                   }
                 />
-                <CardBody>
+                <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
                   {/*
                     제출 전 초안은 보여주지 않는다. 쓰다 만 글을 팀장이 먼저 읽으면
                     본인이 정리해서 낼 기회를 잃는다.
@@ -164,15 +170,15 @@ export default async function ReviewTeamPage({
                       제출 후에 내용을 볼 수 있습니다.
                     </p>
                   )}
-                </CardBody>
-              </Card>
+                </div>
+              </section>
 
-              <Card>
-                <CardHeader
+              <section>
+                <SectionHeader
                   title="팀장평가"
                   description={`${selected.name} 평가 · 제출하면 이 팀원의 사이클이 완료됩니다.`}
                 />
-                <CardBody>
+                <div className="ab-card px-5 py-4 md:rounded-none md:border-0 md:p-0">
                   {/* 완료된 사이클은 쓰다가 버려지지 않게 폼 자체를 내린다 */}
                   {cycle.status === "completed" &&
                   !review?.manager_submitted_at ? (
@@ -189,8 +195,8 @@ export default async function ReviewTeamPage({
                       placeholder="목표 달성 정도와 판단 근거를 적어 주세요."
                     />
                   )}
-                </CardBody>
-              </Card>
+                </div>
+              </section>
             </div>
           ) : null}
         </div>

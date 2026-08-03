@@ -86,6 +86,14 @@ export function ToolbarSearch({
 /**
  * 필터 칩 — 건수를 달고 켜고 끄는 토글.
  * 드롭다운과 달리 "무엇을 고를 수 있고 각각 몇 건인지"가 접히지 않는다.
+ *
+ * 활성 칩은 **검정 알약**이다(실측 05-board.md). 종전에는 primary-light —
+ * 브랜드색의 옅은 틴트라서, 옆에 있는 비활성 흰 칩과 명도 차이가 거의 없었다.
+ * "지금 무엇으로 걸러 보고 있는지"는 한 화면에서 가장 자주 확인하는 상태인데
+ * 그게 가장 흐리게 그려져 있었다. 검정 면은 어떤 배경 위에서도 즉시 읽힌다.
+ *
+ * 브랜드 시안을 쓰지 않는 것도 의도다 — 시안은 "누를 것"(주요 액션) 자리이고,
+ * 칩은 "지금 상태"다. 같은 색을 쓰면 칩이 버튼처럼 보인다.
  */
 export function FilterChip({
   active,
@@ -101,24 +109,39 @@ export function FilterChip({
   children: React.ReactNode;
 }) {
   const className = cn(
-    "inline-flex items-center gap-1.5 whitespace-nowrap rounded-pill border px-3 py-1 text-label transition-colors duration-fast ease-standard",
+    // 실측 radius 20px 이상 → rounded-chip(20px), 높이 32px
+    "inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-chip border px-3.5 text-body transition-colors duration-fast ease-standard",
     active
-      ? "border-primary bg-primary-light font-bold text-primary"
-      : "border-line-strong bg-surface text-muted hover:text-ink",
+      ? "border-ink bg-ink text-white"
+      : // 비활성은 흰 면 + 연한 테두리. 글자는 muted가 아니라 보조 먹색이다 —
+        // muted(#9b9c9e)로 두면 흰 배경에서 2.7:1이라 라벨을 읽기 어렵다.
+        "border-line-strong bg-surface text-ink-sub hover:bg-subtle",
   );
 
   const inner = (
     <>
       {children}
       {count !== undefined ? (
-        <span className="tabular-nums opacity-70">{count}</span>
+        <span className={cn("tabular-nums", active ? "opacity-60" : "text-muted")}>
+          {count}
+        </span>
       ) : null}
     </>
   );
 
+  /*
+   * 링크 칩과 버튼 칩은 접근성 상태 표기가 다르다.
+   * role=link는 aria-pressed를 지원하지 않아 스크린리더가 그냥 무시한다 —
+   * 시각적으로는 검정 알약으로 또렷한 "지금 이걸로 걸러 보는 중"이
+   * 비시각 사용자에게만 사라졌다. 링크는 aria-current로 표기한다.
+   */
   if (href) {
     return (
-      <Link href={href} aria-pressed={active} className={className}>
+      <Link
+        href={href}
+        aria-current={active ? "true" : undefined}
+        className={className}
+      >
         {inner}
       </Link>
     );

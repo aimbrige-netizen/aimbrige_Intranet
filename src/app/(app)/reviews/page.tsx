@@ -79,7 +79,7 @@ export default async function ReviewsPage() {
               <li key={cycle.id}>
                 <Link
                   href={`/reviews/${cycle.id}`}
-                  className="flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas"
+                  className="flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas md:border-0 md:bg-transparent md:hover:bg-subtle"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-body-sm font-bold text-ink">

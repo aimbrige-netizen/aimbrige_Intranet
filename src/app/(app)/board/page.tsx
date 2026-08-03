@@ -4,7 +4,6 @@ import { getBoards } from "@/features/boards/data";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkButton } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
 import { Megaphone } from "lucide-react";
 
 export default async function BoardIndexPage() {
@@ -17,26 +16,28 @@ export default async function BoardIndexPage() {
   return (
     <>
       <PageHeader title="게시판" />
-      <Card>
-        <CardBody>
-          <EmptyState
-            icon={Megaphone}
-            title="개설된 게시판이 없습니다"
-            description={
-              me.isSystemAdmin
-                ? "전사 공지나 팀별 게시판을 먼저 만들어 주세요."
-                : "관리자에게 게시판 개설을 요청하세요."
-            }
-            action={
-              me.isSystemAdmin ? (
-                <LinkButton href="/admin/boards" size="small">
-                  게시판 만들기
-                </LinkButton>
-              ) : undefined
-            }
-          />
-        </CardBody>
-      </Card>
+      {/*
+        md+ 흰 시트에서는 빈 상태를 시트에 직접, md 미만은 canvas 위라
+        faint 문구가 뜨지 않게 카드 면을 유지한다 (LibraryList와 동일).
+      */}
+      <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+        <EmptyState
+          icon={Megaphone}
+          title="개설된 게시판이 없습니다"
+          description={
+            me.isSystemAdmin
+              ? "전사 공지나 팀별 게시판을 먼저 만들어 주세요."
+              : "관리자에게 게시판 개설을 요청하세요."
+          }
+          action={
+            me.isSystemAdmin ? (
+              <LinkButton href="/admin/boards" size="small">
+                게시판 만들기
+              </LinkButton>
+            ) : undefined
+          }
+        />
+      </div>
     </>
   );
 }

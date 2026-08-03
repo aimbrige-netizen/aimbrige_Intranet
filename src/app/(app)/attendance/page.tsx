@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { CalendarCheck, CalendarDays, Clock3, Timer } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -143,7 +143,12 @@ export default async function AttendancePage({
         }
       />
 
-      {/* 요약 밴드 — 분모와 임계선이 있어야 숫자가 판단 재료가 된다 */}
+      {/*
+        요약 밴드 — 분모와 임계선이 있어야 숫자가 판단 재료가 된다.
+        10 스윕 판단: StatCard의 hairline은 흰 시트 위에서 카드 면과 시트가
+        같은 흰색이라 그 1겹이 유일한 구분선이다 — 카드가 카드를 감싸는
+        이중 테두리가 아니므로 border를 걷지 않고 유지한다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="잔여 연차"
@@ -211,18 +216,21 @@ export default async function AttendancePage({
         />
       </div>
 
-      {/* 주간 스트립 — 표만으로는 한 주의 흐름이 보이지 않는다 */}
+      {/*
+        주간 스트립 — 표만으로는 한 주의 흐름이 보이지 않는다.
+        md+ 흰 시트 위 .ab-card 이중 테두리를 걷고 섹션 제목 + 직접 배치
+        (10 스윕, 기준: CalendarBoard). md 미만은 카드 면 유지.
+      */}
       {view === "week" ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title="주간 근무"
             description="정규 근무시간 09:00~18:00 · 지각 판정 09:10"
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card p-3 md:rounded-none md:border-0 md:p-0">
             <DayStrip days={week.days.map((day) => toStripDay(day, today))} />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <AttendanceView
@@ -265,7 +273,8 @@ function toStripDay(day: WeeklyDay, today: string): StripDay {
   }
 
   if (day.onLeave) {
-    chips.push({ lines: ["휴가"], tone: "primary" });
+    // 다우 tag-attendance 실측: vacation = 파랑(#0d99ff/#84c3ff) = info 톤
+    chips.push({ lines: ["휴가"], tone: "info" });
   }
 
   const isNonWorking = day.isWeekend || !!day.holidayName;

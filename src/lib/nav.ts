@@ -4,6 +4,7 @@ import {
   Building2,
   Calendar,
   CalendarOff,
+  CalendarPlus,
   ClipboardCheck,
   ClipboardList,
   Clock,
@@ -25,7 +26,6 @@ import {
   Send,
   Settings,
   Shield,
-  Star,
   Target,
   Users,
   UsersRound,
@@ -41,11 +41,23 @@ import type { RoleName } from "@/types/db";
  * (system_admin 기준 16칸), 76px 폭에서 truncate되는 "근태"와 "근태관리"는
  * 사실상 구분이 불가능했다. 게시판·파일함은 아이콘까지 중복이었다.
  *
- * 더 나쁜 건 모듈 내부 이동이었다. 담을 그릇이 없으니 각 모듈이 하위 섹션을
- * 콘텐츠 영역에 우겨넣었고, 같은 목적에 서로 다른 UI 패턴이 11가지 쓰였다.
- *
  * 이제 레일에는 모듈만 두고, 모듈 내부는 사이드 패널이 받는다.
  *
+ * ---------------------------------------------------------------------
+ * 레일 정책 — 묶지 않는다 (daou-survey/01-shell.md)
+ *
+ * 종전에는 업무(일지·할일·목표·평가)·자산·복지·파일함(+위키)·게시판(+동호회)을
+ * 한 칸에 묶어 11칸으로 줄였다. 근거는 "76px 레일에서 글자가 뭉개진다"였다.
+ * 실측한 다우오피스는 같은 문제를 정반대로 푼다 — 모듈 24개를 하나도 묶지 않고
+ * 전부 노출하고, 대신 **아이콘을 32px, 라벨을 14px로 키운 뒤 넘치면 스크롤**한다.
+ * 레일 폭은 오히려 64px로 더 좁다.
+ *
+ * 묶음은 라벨을 읽기 쉽게 만들어 주지 않는다. "업무"라는 칸을 눌러 봐야
+ * 그 안에 목표가 있는지 알 수 있으니, 뭉개진 글자 대신 한 번 더 클릭하는
+ * 비용으로 바꾼 것뿐이다. 그래서 묶음을 전부 풀고 개별 모듈로 올린다.
+ *
+ * 다우오피스에 있고 우리에게 없는 것(메일·AI·급여·계약·경비·차량일지·설문 등)은
+ * 만들지 않는다. 우리 라우트가 실제로 있는 17개만 올린다.
  * ---------------------------------------------------------------------
  * href는 기간 파라미터(period·cursor·from·to)를 싣지 않는다.
  *
@@ -63,11 +75,10 @@ import type { RoleName } from "@/types/db";
  *
  * 그리고 Sidebar의 즐겨찾기 판정이 favorites.target_path와 module.href를 문자열로
  * 그대로 비교한다 — href에 쿼리가 붙는 순간 별표가 항상 꺼지고 토글할 때마다
- * 새 경로가 쌓인다.
- *
- * 구간을 옮기고 싶은 화면쌍이 있으면 nav 전역 규칙으로 올리지 말고, 목적지가 그
- * 단위를 지원한다는 걸 확인한 뒤 화면에서 lib/period의 carryPeriod를 직접 걸어라.
- * 홈 → /attendance, /admin → /admin/audit-logs가 그렇게 하고 있다.
+ * 새 경로가 쌓인다. (묶음을 풀면서도 기존 모듈 href는 하나도 바꾸지 않았다.
+ * /worklog·/assets처럼 묶음 대표였던 주소가 그대로 개별 모듈의 주소가 됐고,
+ * 하위 항목이던 /todos·/goals·/reviews·/community·/wiki·/welfare가 모듈로
+ * 올라왔을 뿐이라 저장된 즐겨찾기 경로는 전부 그대로 유효하다.)
  * ---------------------------------------------------------------------
  */
 
@@ -97,7 +108,11 @@ export interface NavModule {
   key: string;
   /** 모듈 패널 제목 겸 전체 라벨 */
   label: string;
-  /** 76px 레일용 짧은 라벨 (2~4자) */
+  /**
+   * 64px 레일용 짧은 라벨.
+   * 14px / letter-spacing -0.02em 기준 한글 4자(≈56px)까지가 레일 안쪽 폭이다.
+   * 5자 이상인 라벨만 여기서 줄인다.
+   */
   short?: string;
   href: string;
   icon: LucideIcon;
@@ -139,26 +154,11 @@ export const NAV_MODULES: NavModule[] = [
     ready: true,
     // /profile은 별도 모듈이 아니라 홈의 하위 화면이다
     prefixes: ["/", "/profile"],
-    sections: [
-      {
-        key: "shortcuts",
-        items: [
-          { key: "home-dash", label: "대시보드", href: "/", icon: Home },
-          {
-            key: "home-profile",
-            label: "내 프로필",
-            href: "/profile",
-            icon: UsersRound,
-          },
-          {
-            key: "home-favorites",
-            label: "즐겨찾기 관리",
-            href: "/profile#favorites",
-            icon: Star,
-          },
-        ],
-      },
-    ],
+    /*
+     * 홈은 패널이 없다 — 원본 홈도 레일에서 바로 3열 대시보드가 시작된다.
+     * 내 프로필·즐겨찾기 관리는 상단바 아바타 메뉴와 프로필 화면이 담당한다.
+     * sections를 비워 두면 AppShell이 본문을 pl-rail(64px)로 당긴다.
+     */
   },
   {
     key: "directory",
@@ -214,6 +214,17 @@ export const NAV_MODULES: NavModule[] = [
     icon: Calendar,
     ready: true,
     prefixes: ["/calendar", "/admin/holidays", "/admin/resources"],
+    /*
+     * 09-calendar.md 패널 — "일정등록" 주요 버튼(모듈 공통 문법 212×48).
+     * ?new=1은 calendar/page.tsx가 이미 받는 규약이다(마운트 직후 작성 모달).
+     * 모듈 href(/calendar)는 그대로라 즐겨찾기 문자열 판정에 영향 없다 —
+     * primaryAction은 favoritableItems에 들어가지 않는다.
+     */
+    primaryAction: {
+      label: "일정등록",
+      href: "/calendar?new=1",
+      icon: CalendarPlus,
+    },
     sections: [
       {
         key: "main",
@@ -293,45 +304,79 @@ export const NAV_MODULES: NavModule[] = [
     ],
   },
   {
-    /*
-     * 업무일지·할일·목표는 "내가 무슨 일을 했고 무엇을 할 것인가"라는
-     * 한 축이라 모듈 하나로 묶는다. 셋을 레일에 따로 올리면 8칸이 11칸이 되고,
-     * 76px 폭에서 "일지"·"할일"·"목표"가 나란히 서면 무게가 과장된다.
-     */
-    key: "work",
-    label: "업무",
+    key: "worklog",
+    label: "업무일지",
     href: "/worklog",
     icon: NotebookPen,
     ready: true,
-    prefixes: ["/worklog", "/todos", "/goals", "/reviews", "/admin/reviews"],
+    prefixes: ["/worklog"],
     sections: [
       {
         key: "main",
         items: [
           {
-            key: "work-log",
+            key: "worklog-mine",
             label: "업무일지",
             href: "/worklog",
             icon: NotebookPen,
           },
+        ],
+      },
+    ],
+  },
+  {
+    key: "todo",
+    label: "할일",
+    href: "/todos",
+    icon: ListChecks,
+    ready: true,
+    prefixes: ["/todos"],
+    sections: [
+      {
+        key: "main",
+        items: [
           {
-            key: "work-todos",
+            key: "todo-mine",
             label: "내 할일",
             href: "/todos",
             icon: ListChecks,
           },
-          { key: "work-goals", label: "목표", href: "/goals", icon: Target },
-          /*
-           * 평가를 레일에 따로 올리지 않고 업무 안에 둔다. 반기 평가는
-           * 업무일지·목표·프로젝트를 근거로 쓰는 화면이라(스펙 12 · 5장)
-           * 같은 축이고, 레일을 11칸으로 늘리면 76px에서 글자가 뭉개진다.
-           */
+        ],
+      },
+    ],
+  },
+  {
+    key: "goal",
+    label: "목표",
+    href: "/goals",
+    icon: Target,
+    ready: true,
+    prefixes: ["/goals"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          { key: "goal-mine", label: "목표", href: "/goals", icon: Target },
+        ],
+      },
+    ],
+  },
+  {
+    key: "review",
+    label: "평가",
+    href: "/reviews",
+    icon: ClipboardCheck,
+    ready: true,
+    prefixes: ["/reviews", "/admin/reviews"],
+    sections: [
+      {
+        key: "main",
+        items: [
           {
-            key: "work-reviews",
-            label: "평가",
+            key: "review-mine",
+            label: "내 평가",
             href: "/reviews",
             icon: ClipboardCheck,
-            prefixes: ["/reviews"],
           },
         ],
       },
@@ -348,7 +393,6 @@ export const NAV_MODULES: NavModule[] = [
   {
     key: "project",
     label: "프로젝트",
-    short: "프로젝트",
     href: "/projects",
     icon: FolderKanban,
     ready: true,
@@ -386,6 +430,7 @@ export const NAV_MODULES: NavModule[] = [
     sections: [
       {
         key: "main",
+        title: "결재하기",
         items: [
           {
             key: "ap-mine",
@@ -417,9 +462,7 @@ export const NAV_MODULES: NavModule[] = [
     href: "/board",
     icon: Megaphone,
     ready: true,
-    // 동호회는 별도 모듈이 아니라 "가입이 필요한 게시판"이다(스펙 16 · 1장).
-    // 새 모듈로 떼면 레일이 한 칸 늘고 게시판/동호회가 서로 남이 된다.
-    prefixes: ["/board", "/admin/boards", "/community", "/admin/community"],
+    prefixes: ["/board", "/admin/boards"],
     sections: [
       {
         key: "main",
@@ -436,13 +479,6 @@ export const NAV_MODULES: NavModule[] = [
             href: "/board",
             icon: Megaphone,
           },
-          {
-            key: "community",
-            label: "동호회",
-            href: "/community",
-            icon: UsersRound,
-            prefixes: ["/community"],
-          },
         ],
       },
       adminSection([
@@ -452,6 +488,36 @@ export const NAV_MODULES: NavModule[] = [
           href: "/admin/boards",
           icon: Settings,
         },
+      ]),
+    ],
+  },
+  {
+    /*
+     * 동호회는 "가입이 필요한 게시판"이라 게시판 모듈 안에 두고 있었다(스펙 16 · 1장).
+     * 데이터 모델은 그 말이 맞지만 이용자에게는 공지·자유게시판과 다른 목적지다 —
+     * 레일을 묶지 않는 정책으로 바꾸면서 개별 모듈로 올린다.
+     * 라우트(/community/*)와 board_type 구분은 그대로다.
+     */
+    key: "community",
+    label: "동호회",
+    href: "/community",
+    icon: UsersRound,
+    ready: true,
+    prefixes: ["/community", "/admin/community"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "community-list",
+            label: "동호회",
+            href: "/community",
+            icon: UsersRound,
+            prefixes: ["/community"],
+          },
+        ],
+      },
+      adminSection([
         {
           key: "admin-community",
           label: "동호회 관리",
@@ -467,7 +533,7 @@ export const NAV_MODULES: NavModule[] = [
     href: "/files",
     icon: FolderOpen,
     ready: true,
-    prefixes: ["/files", "/wiki", "/admin/files"],
+    prefixes: ["/files", "/admin/files"],
     sections: [
       {
         key: "main",
@@ -490,19 +556,6 @@ export const NAV_MODULES: NavModule[] = [
             href: "/files/library",
             icon: Library,
           },
-          /*
-           * 위키를 파일함 모듈 안에 둔다. 스펙 14 · 5장이 둘의 역할을
-           * "위키는 텍스트 협업 문서, 파일함은 실제 파일"로 나눠 놓았는데,
-           * 찾는 사람 입장에서는 "사내 문서를 찾는다"는 같은 행동이다.
-           * 레일을 한 칸 더 늘려 나눠 세울 만큼 다른 일이 아니다.
-           */
-          {
-            key: "wiki",
-            label: "위키",
-            href: "/wiki",
-            icon: BookOpen,
-            prefixes: ["/wiki"],
-          },
         ],
       },
       adminSection([
@@ -517,17 +570,33 @@ export const NAV_MODULES: NavModule[] = [
   },
   {
     /*
-     * 자산과 복지포인트는 도메인이 다르지만 둘 다 "회사가 가진 것을 직원이
-     * 배정받아 쓴다"는 성격이고 각각 화면이 두어 개뿐이다(스펙 13 · 1장).
-     * 따로 올리면 레일 두 칸을 얇은 모듈 둘이 차지한다.
+     * 위키는 파일함 모듈 안에 있었다. "사내 문서를 찾는다"는 같은 행동이라는
+     * 이유였는데, 스펙 14 · 5장이 나눠 둔 대로 위키는 텍스트 협업 문서고
+     * 파일함은 실제 파일이다. 편집 흐름이 완전히 다르므로 레일에 따로 세운다.
      */
-    key: "resource",
-    label: "자산·복지",
-    short: "자산",
+    key: "wiki",
+    label: "위키",
+    href: "/wiki",
+    icon: BookOpen,
+    ready: true,
+    prefixes: ["/wiki"],
+    primaryAction: { label: "새 문서", href: "/wiki/new", icon: FilePlus2 },
+    sections: [
+      {
+        key: "main",
+        items: [
+          { key: "wiki-list", label: "위키 문서", href: "/wiki", icon: BookOpen },
+        ],
+      },
+    ],
+  },
+  {
+    key: "asset",
+    label: "자산",
     href: "/assets",
     icon: Boxes,
     ready: true,
-    prefixes: ["/assets", "/welfare", "/admin/assets", "/admin/welfare"],
+    prefixes: ["/assets", "/admin/assets"],
     sections: [
       {
         key: "main",
@@ -539,7 +608,6 @@ export const NAV_MODULES: NavModule[] = [
             href: "/assets/my-loans",
             icon: PackageOpen,
           },
-          { key: "welfare", label: "복지포인트", href: "/welfare", icon: Gift },
         ],
       },
       adminSection([
@@ -549,6 +617,30 @@ export const NAV_MODULES: NavModule[] = [
           href: "/admin/assets",
           icon: Settings,
         },
+      ]),
+    ],
+  },
+  {
+    key: "welfare",
+    label: "복지포인트",
+    short: "복지",
+    href: "/welfare",
+    icon: Gift,
+    ready: true,
+    prefixes: ["/welfare", "/admin/welfare"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "welfare-mine",
+            label: "복지포인트",
+            href: "/welfare",
+            icon: Gift,
+          },
+        ],
+      },
+      adminSection([
         {
           key: "admin-welfare",
           label: "복지포인트 관리",
@@ -565,7 +657,11 @@ export const NAV_MODULES: NavModule[] = [
     icon: Shield,
     ready: true,
     roles: ["system_admin"],
-    // 다른 모듈이 가져간 /admin/* 는 제외되고 개요·감사로그만 남는다
+    /*
+     * 다른 모듈이 가져간 /admin/* 는 제외되고 개요·감사로그만 남는다.
+     * resolveModule이 "가장 긴 prefix"를 고르기 때문에 /admin/employees는
+     * 조직도(15자)가 시스템(6자)을 이긴다 — 이 배열에 하위 경로를 나열하지 않는다.
+     */
     prefixes: ["/admin", "/admin/audit-logs"],
     sections: [
       {
@@ -644,18 +740,58 @@ export function visibleChildSections(
     .filter((section) => section.items.length > 0);
 }
 
-/** 즐겨찾기로 추가 가능한 항목 — 모듈과 하위 화면 전부 */
+/** 역할 검사까지 끝낸 패널 주요 액션 — 이 역할이 볼 수 없으면 null */
+export function visiblePrimaryAction(
+  module: NavModule,
+  role: RoleName,
+): NonNullable<NavModule["primaryAction"]> | null {
+  const action = module.primaryAction;
+  return action && allowed(action.roles, role) ? action : null;
+}
+
+/**
+ * 이 역할에게 패널을 그릴 내용이 있는가.
+ *
+ * AppShell의 본문 들여쓰기(pl-shell/pl-rail)와 ModulePanel의 렌더 여부는
+ * 반드시 같은 답을 봐야 한다. 서로 다른 판정을 들고 있으면 — 예전 AppShell은
+ * 역할 필터 없이 원시 sections/primaryAction만 봤다 — 섹션 전체가 역할
+ * 제한인 모듈에서 일반 직원 화면이 "패널은 없는데 본문만 324px 들여쓰기"가
+ * 되어 260px 죽은 여백이 생긴다. 두 쪽 다 이 함수(또는 정확히 같은 원시
+ * 함수 조합: visibleChildSections + visiblePrimaryAction)만 쓴다.
+ */
+export function hasPanel(module: NavModule, role: RoleName): boolean {
+  return (
+    visibleChildSections(module, role).length > 0 ||
+    !!visiblePrimaryAction(module, role)
+  );
+}
+
+/**
+ * 즐겨찾기로 추가 가능한 항목 — 모듈과 하위 화면 전부.
+ *
+ * 묶음을 풀면서 모듈 href와 첫 하위 항목 href가 같아진 모듈이 늘었다
+ * (할일 = /todos = "내 할일"). 같은 주소가 목록에 두 번 뜨면 하나는 별이
+ * 켜지고 하나는 꺼진 것처럼 보이므로(즐겨찾기 판정이 target_path 문자열 비교다)
+ * href 기준으로 접는다. 모듈이 먼저 오니 짧은 라벨이 살아남는다.
+ */
 export function favoritableItems(
   role: RoleName,
 ): { key: string; label: string; href: string }[] {
   const out: { key: string; label: string; href: string }[] = [];
+  const seen = new Set<string>();
+  const push = (item: { key: string; label: string; href: string }) => {
+    if (seen.has(item.href)) return;
+    seen.add(item.href);
+    out.push(item);
+  };
+
   for (const mod of visibleModules(role)) {
     if (!mod.ready) continue;
-    out.push({ key: mod.key, label: mod.label, href: mod.href });
+    push({ key: mod.key, label: mod.label, href: mod.href });
     for (const section of visibleChildSections(mod, role)) {
       for (const item of section.items) {
         if (item.ready === false) continue;
-        out.push({
+        push({
           key: item.key,
           label: `${mod.label} · ${item.label}`,
           href: item.href,

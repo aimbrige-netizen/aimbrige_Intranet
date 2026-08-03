@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { UsersRound } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { CreateCommunityButton } from "@/features/boards/CommunityActions";
 import { CommunityCard } from "@/features/boards/CommunityCard";
@@ -38,16 +37,23 @@ export default async function CommunityPage() {
       />
 
       {communities.length === 0 ? (
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={UsersRound}
-              title="아직 만들어진 동호회가 없습니다"
-              description="관심사가 맞는 사람을 모으려면 먼저 하나 만들어 보세요. 만든 사람이 첫 회원이 됩니다."
-            />
-          </CardBody>
-        </Card>
+        /*
+          md+ 흰 시트에서는 빈 상태를 시트에 직접, md 미만은 canvas 위라
+          faint 문구가 뜨지 않게 카드 면을 유지한다 (LibraryList와 동일).
+        */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={UsersRound}
+            title="아직 만들어진 동호회가 없습니다"
+            description="관심사가 맞는 사람을 모으려면 먼저 하나 만들어 보세요. 만든 사람이 첫 회원이 됩니다."
+          />
+        </div>
       ) : (
+        /*
+          동호회 카드 그리드의 .ab-card 테두리는 유지한다(스윕 판단):
+          이중선은 "카드 안 카드"에서 나는데 이 그리드는 시트 위 1겹이고,
+          테두리를 걷으면 흰 시트 위 흰 칸이라 카드 경계 자체가 사라진다.
+        */
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {communities.map((community) => (
             <CommunityCard key={community.id} community={community} />

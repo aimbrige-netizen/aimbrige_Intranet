@@ -3,9 +3,9 @@ import { AlarmClock, CalendarClock, FolderKanban, Gauge } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { Meter } from "@/components/ui/Progress";
+import { METER_FILL, Meter } from "@/components/ui/Progress";
 import { StatCard } from "@/components/ui/StatCard";
 import { ProjectCard } from "@/features/projects/ProjectCard";
 import { ProjectFilters } from "@/features/projects/ProjectFilters";
@@ -36,12 +36,17 @@ const DISTRIBUTION_ORDER = [
   "on_hold",
 ] as const;
 
-/** 범례 색은 Meter의 채움 색과 정확히 같아야 한다 */
+/**
+ * 범례 색은 Meter의 채움 색과 정확히 같아야 한다.
+ * 문자열을 따로 적으면 Progress.tsx의 FILL이 바뀔 때 조용히 어긋나므로
+ * 같은 톤 표(METER_FILL)에서 끌어온다. cancelled만 막대에 쌓이지 않는
+ * 트랙 색이라 예외다(DISTRIBUTION_ORDER 참고).
+ */
 const LEGEND_SWATCH: Record<ProjectStatus, string> = {
-  completed: "bg-success",
-  in_progress: "bg-info",
-  planning: "bg-muted",
-  on_hold: "bg-warn",
+  completed: METER_FILL[PROJECT_STATUS_METER_TONES.completed],
+  in_progress: METER_FILL[PROJECT_STATUS_METER_TONES.in_progress],
+  planning: METER_FILL[PROJECT_STATUS_METER_TONES.planning],
+  on_hold: METER_FILL[PROJECT_STATUS_METER_TONES.on_hold],
   cancelled: "bg-line",
 };
 
@@ -211,14 +216,17 @@ export default async function ProjectsPage({
       </div>
 
       {/* 카드 목록만으로는 다섯 상태의 비중이 보이지 않는다 */}
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
+        섹션 제목 + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
       {summary.total > 0 ? (
-        <Card className="mb-5">
-          <CardHeader
+        <section className="mb-5">
+          <SectionHeader
             title="상태 분포"
             description={`전체 ${summary.total}건`}
-            density="compact"
           />
-          <CardBody density="compact">
+          <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
             <Meter
               max={summary.total}
               segments={DISTRIBUTION_ORDER.map((value) => ({
@@ -240,8 +248,8 @@ export default async function ProjectsPage({
                 />
               ))}
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <ProjectFilters
@@ -254,34 +262,36 @@ export default async function ProjectsPage({
       />
 
       {shown.length === 0 ? (
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={FolderKanban}
-              title={
-                filtered
-                  ? "조건에 맞는 프로젝트가 없습니다"
-                  : "아직 등록된 프로젝트가 없습니다"
-              }
-              description={
-                filtered
-                  ? "다른 상태·팀의 프로젝트는 위 필터에서 확인할 수 있습니다."
-                  : "프로젝트를 등록하면 마일스톤 진행률과 업무일지가 여기에 모입니다."
-              }
-              action={
-                filtered ? (
-                  <LinkButton href="/projects" size="small" variant="secondary">
-                    전체 보기
-                  </LinkButton>
-                ) : canCreate ? (
-                  <LinkButton href="/projects/new" size="small">
-                    새 프로젝트
-                  </LinkButton>
-                ) : undefined
-              }
-            />
-          </CardBody>
-        </Card>
+        /*
+          빈 상태도 흰 시트 직접 배치. 아래 프로젝트 카드 그리드는 유지 —
+          흰 시트 위 흰 카드끼리는 테두리가 유일한 경계다.
+        */
+        <div className="ab-card md:rounded-none md:border-0">
+          <EmptyState
+            icon={FolderKanban}
+            title={
+              filtered
+                ? "조건에 맞는 프로젝트가 없습니다"
+                : "아직 등록된 프로젝트가 없습니다"
+            }
+            description={
+              filtered
+                ? "다른 상태·팀의 프로젝트는 위 필터에서 확인할 수 있습니다."
+                : "프로젝트를 등록하면 마일스톤 진행률과 업무일지가 여기에 모입니다."
+            }
+            action={
+              filtered ? (
+                <LinkButton href="/projects" size="small" variant="secondary">
+                  전체 보기
+                </LinkButton>
+              ) : canCreate ? (
+                <LinkButton href="/projects/new" size="small">
+                  새 프로젝트
+                </LinkButton>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((project) => (

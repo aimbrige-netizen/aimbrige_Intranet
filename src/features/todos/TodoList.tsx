@@ -196,7 +196,12 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
         </Callout>
       ) : null}
 
-      <Card className="overflow-hidden">
+      {/*
+        08 흰 시트: md+에서 카드 테두리는 흰 면 위 이중선 — 입력 밴드와
+        행 구분선이 이미 구조를 그리므로 목록을 시트에 직접 놓는다(10-modules2).
+        md 미만은 canvas 위 카드 문법 유지.
+      */}
+      <Card className="overflow-hidden md:rounded-none md:border-0">
         {/* 상시 노출 입력 — 엔터 한 번으로 추가된다 */}
         <form
           onSubmit={add}
@@ -294,7 +299,7 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
                     onChange={() => toggle(todo)}
                     disabled={pending}
                     aria-label={`완료 처리 — ${todo.content}`}
-                    className="size-4 shrink-0 accent-[#ff6f0f]"
+                    className="size-4 shrink-0 accent-primary"
                   />
                   <span className="min-w-0 flex-1 truncate text-body-sm text-ink">
                     {todo.content}
@@ -377,7 +382,7 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
                         onChange={() => toggle(todo)}
                         disabled={pending}
                         aria-label={`완료 해제 — ${todo.content}`}
-                        className="size-4 shrink-0 accent-[#ff6f0f]"
+                        className="size-4 shrink-0 accent-primary"
                       />
                       <span className="min-w-0 flex-1 truncate text-body-sm text-muted line-through">
                         {todo.content}

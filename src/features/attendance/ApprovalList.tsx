@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Check, Inbox, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Textarea } from "@/components/ui/Field";
@@ -90,8 +90,12 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
         ))}
       </div>
 
-      <Card>
-        <CardHeader
+      {/*
+        08·10 흰 시트 스윕: md+에서 카드 테두리는 흰 면 위 이중선 —
+        섹션 제목 + 표 직접 배치, md 미만(회청 canvas)은 카드 면 유지.
+      */}
+      <section>
+        <SectionHeader
           title={tab === "pending" ? "승인 대기" : "처리 이력"}
           description={
             tab === "pending"
@@ -99,7 +103,7 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
               : undefined
           }
         />
-        <CardBody className="p-0">
+        <div className="ab-card md:rounded-none md:border-0">
           {shown.length === 0 ? (
             <EmptyState
               icon={Inbox}
@@ -186,8 +190,8 @@ export function ApprovalList({ items }: { items: ApprovalItem[] }) {
               </table>
             </div>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <Modal
         open={!!rejecting}

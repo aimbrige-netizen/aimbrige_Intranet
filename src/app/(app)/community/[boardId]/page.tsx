@@ -6,7 +6,7 @@ import { AvatarWithName } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import {
   JoinCommunityButton,
@@ -168,13 +168,14 @@ export default async function CommunityBoardPage({
         </Callout>
       ) : null}
 
-      <Card className="mb-5">
-        <CardHeader
+      {/* 흰 시트 위 카드 래퍼 제거(08) — 섹션 제목 + 명단 직접 배치 */}
+      <section className="mb-5">
+        <SectionHeader
           title="회원"
           description={`${members.length}명이 활동하고 있습니다.`}
-          density="compact"
         />
-        <CardBody density="compact">
+        {/* md 미만은 canvas 위 카드 문법 유지 — 스윕 공통 md-해체 래퍼 */}
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {members.length === 0 ? (
             <p className="text-caption">아직 회원이 없습니다.</p>
           ) : (
@@ -199,8 +200,8 @@ export default async function CommunityBoardPage({
               ))}
             </ul>
           )}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <PostList
         board={board}

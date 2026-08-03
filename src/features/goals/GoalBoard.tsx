@@ -203,49 +203,53 @@ export function GoalBoard({
       ) : null}
 
       {shown.length === 0 ? (
-        <Card>
-          <CardBody>
-            <EmptyState
-              icon={Target}
-              title={
-                rows.length === 0
-                  ? `${ownerLabel} 등록한 목표가 없습니다`
-                  : `${GOAL_FILTER_LABELS[filter]} 목표가 없습니다`
-              }
-              description={
-                rows.length > 0
-                  ? "다른 상태의 목표는 위 필터에서 확인할 수 있습니다."
-                  : canEdit
-                    ? "분기 평가와는 별개로, 언제든 개인 목표를 올려 두고 상태만 바꿔가며 관리합니다."
-                    : "팀원의 목표는 조회만 할 수 있습니다."
-              }
-              action={
-                rows.length > 0 ? (
-                  <Button
-                    size="small"
-                    variant="secondary"
-                    onClick={() => setFilter("all")}
-                  >
-                    전체 보기
-                  </Button>
-                ) : canEdit ? (
-                  /*
-                   * 위 툴바에 이미 같은 동작의 오렌지 버튼이 있다. 여기까지
-                   * primary로 두면 완전 빈 화면에 진한 오렌지 면이 둘이 된다
-                   * (디자인 시스템 0장 원칙1).
-                   */
-                  <Button
-                    size="small"
-                    variant="secondary"
-                    onClick={() => openDraft(EMPTY_DRAFT)}
-                  >
-                    목표 추가
-                  </Button>
-                ) : undefined
-              }
-            />
-          </CardBody>
-        </Card>
+        /*
+          08 흰 시트: md+에서 빈 상태를 카드에 담으면 흰 면 위 이중 테두리 —
+          시트에 직접 놓는다(10-modules2). md 미만은 canvas 위 카드 유지.
+          (아래 목표 카드 그리드는 유지 — 흰 시트 위 흰 카드끼리는 테두리가
+          유일한 경계라 걷으면 칸이 사라진다)
+        */
+        <div className="ab-card md:rounded-none md:border-0">
+          <EmptyState
+            icon={Target}
+            title={
+              rows.length === 0
+                ? `${ownerLabel} 등록한 목표가 없습니다`
+                : `${GOAL_FILTER_LABELS[filter]} 목표가 없습니다`
+            }
+            description={
+              rows.length > 0
+                ? "다른 상태의 목표는 위 필터에서 확인할 수 있습니다."
+                : canEdit
+                  ? "분기 평가와는 별개로, 언제든 개인 목표를 올려 두고 상태만 바꿔가며 관리합니다."
+                  : "팀원의 목표는 조회만 할 수 있습니다."
+            }
+            action={
+              rows.length > 0 ? (
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => setFilter("all")}
+                >
+                  전체 보기
+                </Button>
+              ) : canEdit ? (
+                /*
+                 * 위 툴바에 이미 같은 동작의 오렌지 버튼이 있다. 여기까지
+                 * primary로 두면 완전 빈 화면에 진한 오렌지 면이 둘이 된다
+                 * (디자인 시스템 0장 원칙1).
+                 */
+                <Button
+                  size="small"
+                  variant="secondary"
+                  onClick={() => openDraft(EMPTY_DRAFT)}
+                >
+                  목표 추가
+                </Button>
+              ) : undefined
+            }
+          />
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {shown.map((goal) => (

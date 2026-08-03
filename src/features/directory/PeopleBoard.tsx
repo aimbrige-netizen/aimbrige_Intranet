@@ -208,6 +208,7 @@ export function PeopleBoard({
               인라인 클로저를 물리면 RSC 직렬화가 던진다(서버 액션만 넘어간다).
             */}
             <EmployeeExportButton
+              variant="ghost"
               total={sorted.length}
               rows={sorted.map((employee) => ({
                 name: employee.name,
@@ -244,7 +245,11 @@ export function PeopleBoard({
         </div>
       ) : null}
 
-      <div className="ab-card overflow-hidden">
+      {/*
+        08·10 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 표를 시트에
+        직접 놓는다. md 미만(회청 canvas)은 카드 면 유지(캘린더 패턴).
+      */}
+      <div className="ab-card overflow-hidden md:rounded-none md:border-0">
         <EmployeeTable
           rows={sorted}
           today={today}

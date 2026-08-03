@@ -1,0 +1,77 @@
+import Link from "next/link";
+import {
+  CalendarPlus,
+  FilePlus2,
+  Mail,
+  NotebookPen,
+  PencilLine,
+  Umbrella,
+} from "lucide-react";
+import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { gmailInboxUrl } from "@/features/mail/format";
+
+/**
+ * Quick Menu — 다우오피스 홈 가운데 열 첫 카드의 배치 그대로.
+ *
+ *   제목 20/600 → 타일 그리드(3열 · radius 16 · 아이콘+12px 라벨)
+ *   → 전체 폭 시안 버튼 한 개
+ *
+ * 타일 면은 02에 색 기록이 없다. 한때 bg #fcfcfc를 하드코딩했는데 02·06
+ * 어디에도 없는 값이라(흰색과 사실상 구분도 안 된다) 걷어내고, 06 button
+ * base 문법(bg #fff · hover #f8f8f8=subtle)을 그대로 쓴다 — 타일은 흰 카드
+ * 면 위의 버튼이다.
+ *
+ * 원본 타일(메일쓰기/연락처 추가/일정등록/게시판 글쓰기/설문작성)은 우리
+ * 모듈의 같은 성격 액션으로 치환했고, 하단 "PC메신저 다운로드" 자리는
+ * 우리에게 같은 무게의 상수 액션인 Gmail 딥링크가 받는다(스펙 11 · 3.1).
+ */
+const TILES = [
+  { href: "/approvals/new", label: "기안 작성", icon: FilePlus2 },
+  { href: "/calendar?new=1", label: "일정 등록", icon: CalendarPlus },
+  { href: "/board", label: "게시판 글쓰기", icon: PencilLine },
+  { href: "/worklog", label: "업무일지", icon: NotebookPen },
+  { href: "/attendance", label: "연차 신청", icon: Umbrella },
+];
+
+export function QuickMenuWidget({ email }: { email: string }) {
+  return (
+    <Card>
+      <CardHeader title="Quick Menu" density="widget" />
+      <CardBody density="widget">
+        <ul className="grid grid-cols-3 gap-3">
+          {TILES.map((tile) => {
+            const Icon = tile.icon;
+            return (
+              <li key={tile.href}>
+                <Link
+                  href={tile.href}
+                  className="flex h-[78px] flex-col items-center justify-center gap-1.5 rounded-2xl transition-colors duration-fast ease-standard hover:bg-subtle"
+                >
+                  <Icon
+                    className="size-6 text-ink-sub"
+                    strokeWidth={1.5}
+                    aria-hidden
+                  />
+                  <span className="text-[12px] font-medium text-ink">
+                    {tile.label}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* 원본: 전체 폭 h40 시안 채움 버튼 */}
+        <a
+          href={gmailInboxUrl(email)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex h-10 w-full items-center justify-center gap-2 rounded-sm bg-primary text-body-sm font-medium text-white transition-colors duration-fast ease-standard hover:bg-primary-hover active:bg-primary-pressed"
+        >
+          <Mail className="size-4" aria-hidden />
+          Gmail 받은편지함 열기
+        </a>
+      </CardBody>
+    </Card>
+  );
+}

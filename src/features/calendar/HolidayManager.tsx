@@ -172,7 +172,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                           type="button"
                           onClick={() => openEdit(holiday)}
                           aria-label={`${holiday.name} 수정`}
-                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
+                          className="rounded-sm p-1.5 text-muted transition-colors hover:bg-line hover:text-ink"
                         >
                           <Pencil className="size-3.5" />
                         </button>
@@ -266,7 +266,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                 setValues((v) => ({ ...v, isNonWorking: e.target.checked }))
               }
               disabled={pending}
-              className="mt-0.5 size-4 accent-[#ff6f0f]"
+              className="mt-0.5 size-4 accent-primary"
             />
             <span>
               근무일에서 제외

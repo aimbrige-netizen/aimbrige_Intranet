@@ -400,7 +400,7 @@ function OvertimeModal({
             checked={compensate}
             onChange={(e) => setCompensate(e.target.checked)}
             disabled={s.pending}
-            className="mt-0.5 size-4 accent-[#ff6f0f]"
+            className="mt-0.5 size-4 accent-primary"
           />
           <span>
             초과근무를 보상휴가로 받기

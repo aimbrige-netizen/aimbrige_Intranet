@@ -10,6 +10,7 @@ import {
   isChildActive,
   resolveModule,
   visibleChildSections,
+  visiblePrimaryAction,
   type NavChild,
 } from "@/lib/nav";
 import {
@@ -20,7 +21,7 @@ import {
 import type { RoleName } from "@/types/db";
 
 /**
- * 모듈 사이드 패널 (224px).
+ * 모듈 사이드 패널 (260px) — daou-survey/03-approval.md 실측.
  *
  * 이게 없어서 7개 모듈이 각자 하위 섹션을 콘텐츠 영역에 우겨넣었고,
  * 같은 목적(하위 화면 이동)에 서로 다른 UI 패턴이 11가지 쓰였다.
@@ -29,6 +30,17 @@ import type { RoleName } from "@/types/db";
  * 구성은 위에서부터 모듈 제목 → 주요 액션 → 하위 섹션 트리 → 상주 위젯.
  * 상주 위젯(출퇴근 버튼 등)은 스크롤과 무관하게 항상 손에 닿아야 해서
  * 하단에 고정한다.
+ *
+ * 실측 대비 바뀐 것:
+ *   - 폭 224 → 260
+ *   - 배경 흰색 + 우측 경계선 → **둘 다 없앤다.** 패널은 본문과 같은 바닥 위에
+ *     떠 있는 목록이지 별도의 면이 아니다. 종전에는 흰 패널 / 흰 본문이
+ *     경계선 한 줄로만 갈려서 선이 유일한 구조 신호였는데, canvas가 회청으로
+ *     바뀐 지금은 흰 카드들이 알아서 떠 보인다.
+ *   - 모듈 제목 15/bold → 20/500
+ *   - 섹션 제목 11/bold → 14/600, 항목 13 → 14/400 · 행 높이 32
+ *     섹션과 항목이 같은 14px이고 굵기로만 갈리는 게 실측의 핵심이다.
+ *     11px로 줄여 놓으면 위계가 아니라 그냥 작아 보인다.
  *
  * 데스크톱 전용. 768px 미만에서는 레일 드로어가 하위 항목까지 함께 펼친다.
  */
@@ -42,33 +54,51 @@ export function ModulePanel({ role }: { role: RoleName }) {
 
   const sections = visibleChildSections(active, role);
   // 주요 액션에도 역할 제한이 있다 (프로젝트 등록은 팀장 이상)
-  const primaryAction =
-    active.primaryAction &&
-    (!active.primaryAction.roles || active.primaryAction.roles.includes(role))
-      ? active.primaryAction
-      : null;
+  const primaryAction = visiblePrimaryAction(active, role);
   const ActionIcon = primaryAction?.icon;
+
+  /*
+   * 보여줄 것이 하나도 없으면 아예 그리지 않는다 — 홈처럼 패널 없는 모듈에서
+   * 빈 fixed aside가 본문 위 260px를 투명하게 덮어 클릭을 먹는다.
+   * 아래 조건은 nav.ts의 hasPanel과 같은 원시 함수 조합
+   * (visibleChildSections + visiblePrimaryAction)이라, AppShell의
+   * pl-rail/pl-shell 판정과 항상 같은 답이 나온다.
+   */
+  if (sections.length === 0 && !primaryAction) return null;
 
   return (
     <aside
       className={cn(
-        "fixed left-rail top-topbar z-20 hidden h-[calc(100dvh-theme(spacing.topbar))] w-panel flex-col border-r border-line bg-surface md:flex",
+        "fixed left-[var(--rail-w)] top-topbar z-20 hidden h-[calc(100dvh-theme(spacing.topbar))] w-panel flex-col transition-[left] duration-standard ease-standard md:flex",
       )}
       aria-label={`${active.label} 메뉴`}
     >
-      <div className="flex h-12 shrink-0 items-center border-b border-line px-4">
-        <h2 className="truncate text-body font-bold text-ink">
+      <div className="flex h-14 shrink-0 items-center px-4">
+        {/* 20px/500 — fontSize 스케일에 20px 단이 없다(h2 19 / h1 24) */}
+        <h2 className="truncate text-[20px] font-medium leading-[1.35] tracking-[-0.02em] text-ink">
           {active.label}
         </h2>
       </div>
 
       {primaryAction ? (
-        <div className="shrink-0 px-3 pt-3">
+        /* px-6: 패널 260 − 24×2 = 버튼 폭 212 (아래 실측 212×48의 그 212다.
+           px-4는 228을 렌더했다) */
+        <div className="shrink-0 px-6 pb-1">
+          {/*
+            실측(07-modules.md — 결재 "새 결재 진행"·게시판 "글쓰기" 동일):
+            212×48 · radius 12 · 흰 바탕 · border 1px #4a4b4c(line-dark) ·
+            14px/400 먹색. 종전 h-10 · 16px/600은 03-approval.md 오독이었다 —
+            버튼의 무게는 큰 글자가 아니라 진한 윤곽선이 만든다.
+            large가 h-12 · rounded-card · text-body(14)라 그대로 쓰고,
+            secondary의 border-line-strong만 line-dark로, BASE의
+            font-medium만 400으로 되돌린다. hover는 원본
+            button-bg-base-hover(#f8f8f8)=subtle — secondary가 이미 그 값이다.
+          */}
           <LinkButton
             href={primaryAction.href}
-            size="small"
-            variant="primary-low"
-            className="w-full"
+            size="large"
+            variant="secondary"
+            className="w-full border-line-dark font-normal"
           >
             {ActionIcon ? <ActionIcon className="size-4" aria-hidden /> : null}
             {primaryAction.label}
@@ -97,9 +127,14 @@ export function ModulePanel({ role }: { role: RoleName }) {
         ))}
       </nav>
 
+      {/*
+        상주 위젯 구분선은 line(#eaecef)이 아니라 line-strong이다.
+        패널 배경이 사라지면서 이 선은 흰 면이 아니라 canvas(#edf0f3) 위에
+        놓이는데, line은 canvas와 거의 같은 밝기라 아예 안 보인다.
+      */}
       <div
         id={PANEL_WIDGET_SLOT}
-        className="shrink-0 border-t border-line p-3 empty:hidden"
+        className="shrink-0 border-t border-line-strong px-2 py-3 empty:hidden"
       />
     </aside>
   );
@@ -179,9 +214,16 @@ function PanelSection({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3 last:mb-0">
+    <div className="mb-4 last:mb-0">
+      {/*
+        섹션 제목과 항목은 같은 14px이고 굵기(600 vs 400)로만 갈린다.
+        muted를 쓰지 않는 이유는 globals.css의 .ab-form-label과 같다 —
+        실측치로 옅어진 muted는 흐린 글자색이지 구조 라벨색이 아니다.
+      */}
       {title ? (
-        <p className="px-2 pb-1 text-nano font-bold text-muted">{title}</p>
+        <p className="px-2 pb-1 text-body-sm font-semibold text-ink-sub">
+          {title}
+        </p>
       ) : null}
       <ul>{children}</ul>
     </div>
@@ -205,17 +247,37 @@ function PanelLink({
         href={item.href}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "flex items-center gap-2 rounded-card px-2 py-1.5 text-body-sm transition-colors duration-fast ease-standard",
-          active
-            ? "bg-primary-light font-bold text-primary"
-            : "text-ink hover:bg-subtle",
+          // 행 높이 32px 고정. 14px/400, 활성만 600으로 올린다.
+          "flex h-8 items-center gap-2 rounded-card px-2 text-body-sm transition-colors duration-fast ease-standard hover:bg-canvas-hover",
+          /*
+           * 활성 강조는 색·틴트가 아니라 굵기다 (07-modules.md 결재함 트리 —
+           * 활성/제목 14/600 rgb(51,51,51), 배경 틴트 없음).
+           *
+           * bg-primary-light 틴트를 제거한 근거: 원본 트리는 굵기만으로
+           * 활성을 표시하고, 틴트를 남기면 색+굵기 이중 강조가 돼 원본
+           * 문법과 달라진다. 배경 없는 패널에서 primary-light 면은 패널
+           * 유일의 색면이 돼 주요 액션 버튼보다 무거워지는 문제도 있었다.
+           * 섹션 제목과 같은 text-ink-sub/600을 쓰므로 "지금 보고 있는
+           * 항목"은 제목과 같은 급으로 읽힌다 — 이게 원본의 위계다.
+           *
+           * hover(canvas-hover)는 활성에도 그대로 둔다 — 틴트가 사라진
+           * 지금 활성 행도 겉보기엔 일반 행이라, hover까지 없애면 그 행만
+           * 포인터에 반응하지 않는 죽은 행이 된다.
+           * (canvas-hover인 이유: 패널 행은 canvas(#edf0f3) 위에 놓여서
+           * subtle(#f8f8f8)을 쓰면 hover가 어두워지는 대신 밝아진다 —
+           * 흰 카드 위 표 행 hover와 방향이 반대가 된다.)
+           */
+          active ? "font-semibold text-ink-sub" : "text-ink",
         )}
       >
+        {/* 활성 강조가 굵기로 바뀌면서 아이콘·배지도 시안이 아니라
+            라벨과 같은 ink-sub를 따른다 — 색 강조를 남기면 틴트를 뺀
+            의미가 없다. */}
         {Icon ? (
           <Icon
             className={cn(
               "size-4 shrink-0",
-              active ? "text-primary" : "text-muted",
+              active ? "text-ink-sub" : "text-muted",
             )}
             aria-hidden
           />
@@ -225,7 +287,7 @@ function PanelLink({
           <span
             className={cn(
               "shrink-0 tabular-nums",
-              active ? "text-primary" : "text-muted",
+              active ? "text-ink-sub" : "text-muted",
             )}
           >
             {badge}

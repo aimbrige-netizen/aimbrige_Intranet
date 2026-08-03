@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Building2, History, Mail, Phone, Users } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { Card, CardBody, SectionHeader } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import {
   Badge,
@@ -111,8 +111,12 @@ export default async function DirectoryEmployeePage({
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
         <div className="space-y-5">
-          <Card>
-            <CardBody className="flex flex-col items-center gap-3 py-6 text-center">
+          {/*
+            08·10 흰 시트 스윕: md+에서 카드 테두리는 흰 면 위 이중선 —
+            신원 블록은 시트에 직접 놓고, md 미만(회청 canvas)은 카드 유지.
+          */}
+          <Card className="md:rounded-none md:border-0">
+            <CardBody className="flex flex-col items-center gap-3 py-6 text-center md:px-0">
               <Avatar
                 name={employee.name}
                 src={employee.profile_image_url}
@@ -168,9 +172,10 @@ export default async function DirectoryEmployeePage({
         </div>
 
         <div className="space-y-5">
-          <Card>
-            <CardHeader title="기본정보" density="compact" />
-            <CardBody density="compact">
+          {/* 카드 해체(10 스윕) — 섹션 제목 + 직접 배치, md 미만은 카드 유지 */}
+          <section>
+            <SectionHeader title="기본정보" />
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 md:grid-cols-3">
                 {info.map((item) => (
                   <div key={item.label}>
@@ -187,16 +192,15 @@ export default async function DirectoryEmployeePage({
                   {employee.responsibilities || "등록된 담당업무가 없습니다."}
                 </p>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader
+          <section>
+            <SectionHeader
               title="리포팅 라인"
               description={path.join(" › ")}
-              density="compact"
             />
-            <CardBody density="compact">
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               <div className="mb-3 flex flex-wrap items-center gap-1.5">
                 {path.map((step, i) => (
                   <span key={step} className="flex items-center gap-1.5">
@@ -236,20 +240,19 @@ export default async function DirectoryEmployeePage({
                   compact
                 />
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader
+          <section>
+            <SectionHeader
               title="같은 팀 동료"
               description={
                 employee.team
                   ? `${employee.team.name} · ${teammates.length}명 / 같은 부서 ${profile.departmentSize}명`
                   : "팀 미배정"
               }
-              density="compact"
             />
-            <CardBody density="compact">
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               {teammates.length === 0 ? (
                 <EmptyState
                   icon={Users}
@@ -289,16 +292,15 @@ export default async function DirectoryEmployeePage({
                   ))}
                 </ul>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </section>
 
-          <Card>
-            <CardHeader
+          <section>
+            <SectionHeader
               title="조직 변경 이력"
               description="팀 이동·승진 등 조직 관련 변경 내역입니다."
-              density="compact"
             />
-            <CardBody density="compact">
+            <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
               {timeline.length === 0 ? (
                 <EmptyState
                   icon={History}
@@ -326,8 +328,8 @@ export default async function DirectoryEmployeePage({
                   ))}
                 </ol>
               )}
-            </CardBody>
-          </Card>
+            </div>
+          </section>
         </div>
       </div>
     </>

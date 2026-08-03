@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   Calendar,
   CalendarPlus,
-  Clock,
   FileCheck,
   FilePlus2,
   Megaphone,
@@ -42,17 +41,10 @@ export function ApprovalPendingWidget({
 }) {
   return (
     <Card>
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <FileCheck className="size-4 text-muted" aria-hidden />
-            결재 대기
-          </span>
-        }
-        description="지금 내 차례인 문서"
-        density="compact"
+      {/* 원본 홈 위젯 헤더는 20/600 제목 한 줄이다 — 아이콘·설명 없음 */}
+      <CardHeader title="결재 대기 문서" density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         {items.length === 0 ? (
           <EmptyState
             icon={FileCheck}
@@ -114,17 +106,9 @@ export function WeekAttendanceWidget({
 
   return (
     <Card>
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Clock className="size-4 text-muted" aria-hidden />
-            {title}
-          </span>
-        }
-        description="정규 근무 09:00~18:00 · 주 40시간 기준"
-        density="compact"
+      <CardHeader title={title} density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         <DayStrip days={week.days.map((day) => toStripDay(day, today))} />
 
         <dl className="mt-3 grid grid-cols-3 divide-x divide-line border-t border-line pt-3 text-center">
@@ -198,7 +182,8 @@ function toStripDay(day: WeeklyDay, today: string): StripDay {
   }
 
   if (day.onLeave) {
-    chips.push({ lines: ["휴가"], tone: "primary" });
+    // 다우 tag-attendance 실측: vacation = 파랑(#0d99ff/#84c3ff) = info 톤
+    chips.push({ lines: ["휴가"], tone: "info" });
   }
 
   const isNonWorking = day.isWeekend || !!day.holidayName;
@@ -217,17 +202,9 @@ function toStripDay(day: WeeklyDay, today: string): StripDay {
 export function NoticesWidget({ notices }: { notices: NoticeItem[] }) {
   return (
     <Card>
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Megaphone className="size-4 text-muted" aria-hidden />
-            공지사항
-          </span>
-        }
-        description="아직 읽지 않은 글"
-        density="compact"
+      <CardHeader title="공지사항" density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         {notices.length === 0 ? (
           <EmptyState
             icon={Megaphone}
@@ -283,17 +260,15 @@ export function CalendarUpcomingWidget({
 }) {
   return (
     <Card>
+      {/* 기간은 제목 옆이 아니라 action 자리에 흐리게 — 원본의 우측 보조 표기 자리 */}
       <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Calendar className="size-4 text-muted" aria-hidden />
-            다가오는 일정
-          </span>
+        title="다가오는 일정"
+        action={
+          <span className="text-label tabular-nums text-muted">{rangeLabel}</span>
         }
-        description={rangeLabel}
-        density="compact"
+        density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         {events.length === 0 ? (
           <EmptyState
             icon={Calendar}
@@ -377,17 +352,9 @@ export function FavoritesWidget({
 }) {
   return (
     <Card>
-      <CardHeader
-        title={
-          <span className="flex items-center gap-2">
-            <Star className="size-4 text-muted" aria-hidden />
-            즐겨찾기
-          </span>
-        }
-        description="자주 쓰는 화면"
-        density="compact"
+      <CardHeader title="즐겨찾기" density="widget"
       />
-      <CardBody density="compact">
+      <CardBody density="widget">
         {favorites.length === 0 ? (
           <EmptyState
             icon={Star}

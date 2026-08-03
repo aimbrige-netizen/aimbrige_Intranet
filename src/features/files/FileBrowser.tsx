@@ -17,7 +17,6 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody } from "@/components/ui/Card";
 import { Meter, MiniMeter } from "@/components/ui/Progress";
 import { StatCard } from "@/components/ui/StatCard";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
@@ -257,7 +256,11 @@ export function FileBrowser({
     <>
       {!connected ? <DriveReauthBanner canConfigure={canConfigure} /> : null}
 
-      {/* 요약 밴드 — 용량은 분모(총 할당량) 없이는 판단할 수 없는 숫자다 */}
+      {/*
+        요약 밴드 — 용량은 분모(총 할당량) 없이는 판단할 수 없는 숫자다.
+        10 스윕 판단: StatCard hairline은 시트와 같은 흰 면 위 유일한
+        구분선(1겹)이라 이중 테두리가 아니다 — border 유지.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="Drive 사용량"
@@ -435,11 +438,18 @@ export function FileBrowser({
         </p>
       ) : null}
 
-      {/* 드롭 존은 표 전체다 — 업로드하려고 버튼을 찾아 올라가지 않게 한다 */}
-      <Card
+      {/*
+        드롭 존은 표 전체다 — 업로드하려고 버튼을 찾아 올라가지 않게 한다.
+        md+ 흰 시트에서는 .ab-card 테두리를 걷고 표를 시트에 직접 놓는다
+        (10 스윕). 드래그 강조는 border 대신 ring — md+에서 border-0과
+        충돌하지 않고 양쪽 브레이크포인트에서 같은 모습으로 켜진다.
+      */}
+      <section
         className={cn(
-          "overflow-hidden transition-colors duration-fast ease-standard",
-          dragging && canUpload && "border-primary bg-primary-light/40",
+          "ab-card overflow-hidden transition-colors duration-fast ease-standard md:rounded-none md:border-0",
+          dragging &&
+            canUpload &&
+            "bg-primary-light/40 ring-1 ring-inset ring-primary",
         )}
         onDragOver={(event) => {
           if (!canUpload) return;
@@ -449,8 +459,7 @@ export function FileBrowser({
         onDragLeave={() => setDragging(false)}
         onDrop={onDrop}
       >
-        <CardBody className="p-0">
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[720px]">
               <thead>
                 <tr>
@@ -548,9 +557,8 @@ export function FileBrowser({
                 )}
               </tbody>
             </table>
-          </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </>
   );
 }

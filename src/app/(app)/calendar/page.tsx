@@ -10,9 +10,9 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
-import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatCard } from "@/components/ui/StatCard";
 import { CalendarBoard } from "@/features/calendar/CalendarBoard";
+import { CalendarHeader } from "@/features/calendar/CalendarHeader";
 import { ResourceBoard } from "@/features/calendar/ResourceBoard";
 import {
   bookingHours,
@@ -163,32 +163,8 @@ export default async function CalendarPage({
           ? "기준일 이후 30일"
           : "주간 예약 현황";
 
-  const navigator = (
-    <PeriodNavigator
-      label={periodLabel}
-      sublabel={periodSub}
-      prevHref={step(-1)}
-      nextHref={step(1)}
-      todayHref={calendarHref({ scope, view })}
-      atToday={inPeriod}
-      className="mb-0"
-      right={
-        view === "resources" ? undefined : (
-          <SegmentedControl
-            ariaLabel="기간 단위"
-            value={view}
-            options={SCHEDULE_VIEWS.map((option) => ({
-              value: option,
-              label: VIEW_LABELS[option],
-              href: calendarHref({ scope, view: option }),
-            }))}
-          />
-        )
-      }
-    />
-  );
-
   if (view === "resources") {
+    // 리소스 화면은 09 스펙 대상이 아니라 공용 PeriodNavigator를 유지한다
     return (
       <ResourceScreen
         resources={resources}
@@ -198,10 +174,46 @@ export default async function CalendarPage({
         today={today}
         myId={me.id}
         bookingRange={{ from: bookingFrom, to: bookingTo }}
-        navigator={navigator}
+        navigator={
+          <PeriodNavigator
+            label={periodLabel}
+            sublabel={periodSub}
+            prevHref={step(-1)}
+            nextHref={step(1)}
+            todayHref={calendarHref({ scope, view })}
+            atToday={inPeriod}
+            className="mb-0"
+          />
+        }
       />
     );
   }
+
+  /*
+   * 콘텐츠 헤더 (09): "2026.08" 24/500 + 화살표 + 오늘, 우측 보기 전환 필
+   * 세그먼트. 월간은 커서(YYYY-MM)를 점 표기로, 주간·리스트는 표시 구간을
+   * 같은 표기로 잇는다.
+   */
+  const headerLabel =
+    view === "month"
+      ? cursor.replace("-", ".")
+      : `${first.replace(/-/g, ".")} ~ ${last.replace(/-/g, ".")}`;
+
+  const scheduleHeader = (
+    <CalendarHeader
+      label={headerLabel}
+      prevHref={step(-1)}
+      nextHref={step(1)}
+      todayHref={calendarHref({ scope, view })}
+      atToday={inPeriod}
+      active={view}
+      segments={SCHEDULE_VIEWS.map((option) => ({
+        value: option,
+        label: VIEW_LABELS[option],
+        href: calendarHref({ scope, view: option }),
+      }))}
+    />
+  );
 
   const counts = countByKind(items);
   const own =
@@ -245,7 +257,7 @@ export default async function CalendarPage({
             <span>이 기간 공휴일 {holidayCount}일</span>
           </>
         }
-        toolbar={navigator}
+        toolbar={scheduleHeader}
       />
 
       {/* 요약 밴드 — 분모 없는 숫자는 두지 않는다 */}
@@ -319,6 +331,7 @@ export default async function CalendarPage({
         canCreateTeamEvent={!!me.team_id}
         attendeeOptions={attendeeOptions}
         openCreateOnMount={searchParams.new === "1"}
+        isAdmin={me.isSystemAdmin}
       />
     </>
   );

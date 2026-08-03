@@ -3,7 +3,6 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody } from "@/components/ui/Card";
 import { FormRow, Input, Textarea } from "@/components/ui/Field";
 import { FilterChip } from "@/components/ui/TableToolbar";
 import {
@@ -202,9 +201,13 @@ export function PostEditor({
 
   return (
     <div className="space-y-5">
-      <Card>
-        <CardBody className="p-0">
-          <div className="ab-form-grid !rounded-none !border-0">
+      {/*
+        폼 카드 정리(10-modules2 스윕): 종전 Card 안에 .ab-form-grid를 넣고
+        !border-0로 안쪽 테두리를 죽이는 이중 구조였다 — 그리드를 직접 놓는다.
+        ab-form-grid 자체의 테두리는 카드 장식이 아니라 라벨/필드 칸을 닫는
+        표 구조선이라 흰 시트 위에서도 유지한다(결재 폼과 같은 문법).
+      */}
+      <div className="ab-form-grid">
             <FormRow label="게시판">
               <span className="text-body text-ink">
                 {board.name}
@@ -256,7 +259,7 @@ export function PostEditor({
                       checked={isPinned}
                       onChange={(e) => setIsPinned(e.target.checked)}
                       disabled={busy}
-                      className="size-4 accent-[#ff6f0f]"
+                      className="size-4 accent-primary"
                     />
                     목록 상단에 고정
                   </label>
@@ -289,9 +292,7 @@ export function PostEditor({
                 onRemoveQueued={removeQueued}
               />
             </FormRow>
-          </div>
-        </CardBody>
-      </Card>
+      </div>
 
       <div className="flex items-center justify-end gap-3">
         {message ? (

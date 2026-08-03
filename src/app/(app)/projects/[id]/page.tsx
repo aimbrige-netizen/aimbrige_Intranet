@@ -11,7 +11,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Meter } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -234,13 +234,16 @@ export default async function ProjectDetailPage({
       </div>
 
       {/* 기본 정보 — 진행률 막대가 분모를 그대로 노출한다 */}
-      <Card className="mb-5">
-        <CardHeader
+      {/*
+        08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
+        섹션 제목 + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+      */}
+      <section className="mb-5">
+        <SectionHeader
           title="프로젝트 개요"
           description={`등록 ${formatDate(project.created_at)} · 최종 변경 ${formatDate(project.updated_at)}`}
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
           <Meter
             value={progress.done}
             max={progress.total || 1}
@@ -302,8 +305,8 @@ export default async function ProjectDetailPage({
               numeric
             />
           </dl>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <div className="mb-4">
         <SegmentedControl
@@ -389,13 +392,12 @@ function WorklogSection({
   }
 
   return (
-    <Card>
-      <CardHeader
+    <section>
+      <SectionHeader
         title="업무일지"
         description={`${logs.length}건 · 최근 기록부터`}
-        density="compact"
       />
-      <CardBody density="compact" className="!p-0">
+      <div className="ab-card md:rounded-none md:border-0">
         {logs.length === 0 ? (
           <div className="px-4">
             <EmptyState
@@ -443,7 +445,7 @@ function WorklogSection({
             </table>
           </div>
         )}
-      </CardBody>
-    </Card>
+      </div>
+    </section>
   );
 }

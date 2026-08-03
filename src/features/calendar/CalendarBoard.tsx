@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { CalendarClock, CalendarPlus, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
 import { Meter, type MeterSegment, type MeterTone } from "@/components/ui/Progress";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
@@ -35,6 +35,7 @@ import {
 import { EventModal } from "@/features/calendar/EventModal";
 import { BookingModal } from "@/features/calendar/BookingModal";
 import { EventDetail } from "@/features/calendar/EventDetail";
+import { CalendarPanelFilters } from "@/features/calendar/CalendarPanelFilters";
 import type {
   CalendarItem,
   CalendarItemKind,
@@ -56,19 +57,17 @@ import type {
  *    그 날의 전체 목록을 아래 상세 표로 편다.
  */
 
-/** 날짜 숫자 색 — 일요일·공휴일 빨강, 토요일 파랑 (국내 캘린더 관습) */
-function dayToneClass(
-  weekday: number,
-  isHoliday: boolean,
-  inRange = true,
-): string {
-  const tone =
-    isHoliday || weekday === 0
-      ? "text-danger"
-      : weekday === 6
-        ? "text-info"
-        : "text-ink";
-  return inRange ? tone : `${tone} opacity-40`;
+/**
+ * 날짜 숫자 색 — 일요일·공휴일 빨강, 토요일 파랑 (국내 캘린더 관습).
+ * 이달 밖 날짜는 톤을 흐리는(opacity) 게 아니라 #bbbbbb(ghost) 단색이다 —
+ * 09 실측. 월간 격자가 호출부에서 text-ghost로 직접 처리한다.
+ */
+function dayToneClass(weekday: number, isHoliday: boolean): string {
+  return isHoliday || weekday === 0
+    ? "text-danger"
+    : weekday === 6
+      ? "text-info"
+      : "text-ink";
 }
 
 /** 요일별 분포 막대에서 쓸 종류별 톤 */
@@ -134,6 +133,7 @@ export function CalendarBoard({
   canCreateTeamEvent,
   attendeeOptions,
   openCreateOnMount,
+  isAdmin,
 }: {
   items: CalendarItem[];
   resources: Resource[];
@@ -156,6 +156,8 @@ export function CalendarBoard({
   attendeeOptions: AttendeeOption[];
   /** ?new=1로 들어오면 마운트 직후 작성 모달을 연다 */
   openCreateOnMount?: boolean;
+  /** 패널 하단 ⚙ 캘린더 환경설정(관리자 전용 /admin/holidays) 노출 여부 */
+  isAdmin?: boolean;
 }) {
   const [hidden, setHidden] = useState<Set<CalendarItemKind>>(new Set());
   const [selectedDate, setSelectedDate] = useState(focusDate);
@@ -254,6 +256,17 @@ export function CalendarBoard({
 
   return (
     <>
+      {/*
+        종류 필터는 모듈 패널의 체크박스가 정본이다(09 패널 3~6).
+        필터 상태(hidden)는 여기 살고, 패널에는 포털로 같은 상태를 잇는다.
+      */}
+      <CalendarPanelFilters
+        kinds={kinds}
+        hiddenKinds={hidden}
+        onToggle={toggle}
+        showSettings={!!isAdmin}
+      />
+
       <TableToolbar
         filters={
           <>
@@ -269,31 +282,40 @@ export function CalendarBoard({
                 }),
               )}
             />
-            <span className="mx-1 hidden h-5 w-px bg-line md:block" aria-hidden />
-            <FilterChip
-              active={hidden.size === 0}
-              count={items.length}
-              onClick={() => setHidden(new Set())}
+            {/*
+              md 미만에는 모듈 패널이 없다(레일 드로어 문법) — 종류 필터가
+              통째로 사라지지 않게 칩을 모바일 한정으로 남긴다. md+는 패널
+              체크박스가 담당하므로 같은 상태를 두 곳에 그리지 않는다.
+            */}
+            <span
+              className="flex flex-wrap items-center gap-2 md:hidden"
+              aria-label="종류 필터"
             >
-              전체
-            </FilterChip>
-            {kinds.map((kind) => {
-              const color = EVENT_COLORS[kind];
-              return (
-                <FilterChip
-                  key={kind}
-                  active={!hidden.has(kind)}
-                  count={counts.get(kind) ?? 0}
-                  onClick={() => toggle(kind)}
-                >
-                  <span
-                    className={cn("size-2 rounded-full", color.dot)}
-                    aria-hidden
-                  />
-                  {color.label}
-                </FilterChip>
-              );
-            })}
+              <FilterChip
+                active={hidden.size === 0}
+                count={items.length}
+                onClick={() => setHidden(new Set())}
+              >
+                전체
+              </FilterChip>
+              {kinds.map((kind) => {
+                const color = EVENT_COLORS[kind];
+                return (
+                  <FilterChip
+                    key={kind}
+                    active={!hidden.has(kind)}
+                    count={counts.get(kind) ?? 0}
+                    onClick={() => toggle(kind)}
+                  >
+                    <span
+                      className={cn("size-2 rounded-full", color.dot)}
+                      aria-hidden
+                    />
+                    {color.label}
+                  </FilterChip>
+                );
+              })}
+            </span>
           </>
         }
         count={
@@ -307,9 +329,10 @@ export function CalendarBoard({
               <Plus className="size-3.5" />
               일정 추가
             </Button>
+            {/* 콘텐츠 상단 툴바 보조 액션은 고스트(07·10) — primary는 '일정 추가' 하나 */}
             <Button
               size="small"
-              variant="secondary"
+              variant="ghost"
               onClick={() => setBookingModalOpen(true)}
             >
               <CalendarClock className="size-3.5" />
@@ -337,55 +360,60 @@ export function CalendarBoard({
         </div>
       ) : null}
 
-      <Card>
-        <CardBody
-          density="compact"
-          className={view === "list" ? "!p-0" : "!p-2 md:!p-3"}
-        >
-          {view === "month" ? (
-            <MonthGrid
-              days={days}
-              byDay={byDay}
-              holidays={holidays}
-              today={today}
-              cursorMonth={cursorMonth}
-              activeDate={activeDate}
-              onSelectDay={setSelectedDate}
-              onPick={setDetail}
-              onAdd={openCreate}
-            />
-          ) : view === "week" ? (
-            <WeekGrid
-              days={days}
-              byDay={byDay}
-              holidays={holidays}
-              today={today}
-              activeDate={activeDate}
-              onSelectDay={setSelectedDate}
-              onPick={setDetail}
-              onAdd={openCreate}
-            />
-          ) : (
-            <ItemTable
-              rows={days.flatMap((day) =>
-                (byDay.get(day) ?? []).map((item) => ({ date: day, item })),
-              )}
-              holidays={holidays}
-              showDate
-              onPick={setDetail}
-              emptyTitle={emptyTitle}
-              emptyDescription={emptyDescription}
-              emptyAction={emptyAction}
-            />
-          )}
-        </CardBody>
-      </Card>
+      {/*
+        08 흰 시트: md+에서는 본문 전체가 흰 면이라 .ab-card 래퍼가 흰 면 위
+        이중 테두리가 된다 — 격자를 시트에 직접 놓는다. md 미만은 패널 없는
+        회청 canvas 위 카드 문법이 그대로라 카드 면을 유지한다.
+      */}
+      <div
+        className={cn(
+          "ab-card md:rounded-none md:border-0",
+          view !== "list" && "p-2 md:p-0",
+        )}
+      >
+        {view === "month" ? (
+          <MonthGrid
+            days={days}
+            byDay={byDay}
+            holidays={holidays}
+            today={today}
+            cursorMonth={cursorMonth}
+            activeDate={activeDate}
+            onSelectDay={setSelectedDate}
+            onPick={setDetail}
+            onAdd={openCreate}
+          />
+        ) : view === "week" ? (
+          <WeekGrid
+            days={days}
+            byDay={byDay}
+            holidays={holidays}
+            today={today}
+            activeDate={activeDate}
+            onSelectDay={setSelectedDate}
+            onPick={setDetail}
+            onAdd={openCreate}
+          />
+        ) : (
+          <ItemTable
+            rows={days.flatMap((day) =>
+              (byDay.get(day) ?? []).map((item) => ({ date: day, item })),
+            )}
+            holidays={holidays}
+            showDate
+            onPick={setDetail}
+            emptyTitle={emptyTitle}
+            emptyDescription={emptyDescription}
+            emptyAction={emptyAction}
+          />
+        )}
+      </div>
 
-      {/* 선택한 날 상세 — 월간 셀에 다 못 들어간 항목이 여기로 온다 */}
+      {/* 선택한 날 상세 — 월간 셀에 다 못 들어간 항목이 여기로 온다.
+          흰 시트 위라 카드가 아니라 섹션 제목 + 표 직접 배치(08 문법). */}
       {view !== "list" ? (
-        <Card className="mt-5">
-          <CardHeader
-            density="compact"
+        <section className="mt-5">
+          <SectionHeader
             title={
               <span className="flex items-center gap-2">
                 <span
@@ -421,7 +449,7 @@ export function CalendarBoard({
               </Button>
             }
           />
-          <CardBody density="compact" className="!p-0">
+          <div className="ab-card md:rounded-none md:border-0">
             <ItemTable
               rows={selectedItems.map((item) => ({
                 date: activeDate,
@@ -442,8 +470,8 @@ export function CalendarBoard({
                 </Button>
               }
             />
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       ) : null}
 
       <EventModal
@@ -519,9 +547,9 @@ function WeekdayDistribution({
   const peak = columns.reduce((a, b) => (b.sum > a.sum ? b : a));
 
   return (
-    <Card className="mb-5">
-      <CardHeader
-        density="compact"
+    // 흰 시트 위 카드 래퍼 제거(08) — 섹션 제목 + 내용 직접 배치
+    <section className="mb-5">
+      <SectionHeader
         title="요일별 일정 분포"
         description={
           total === 0
@@ -529,36 +557,34 @@ function WeekdayDistribution({
             : `${total}건 · 가장 많은 요일 ${WEEKDAY_LABELS[peak.weekday]}요일 ${peak.sum}건`
         }
       />
-      <CardBody density="compact">
-        <div className="grid grid-cols-7 gap-2">
-          {columns.map((column) => (
-            <div key={column.weekday}>
-              <p
-                className={cn(
-                  "mb-1.5 text-nano font-bold",
-                  column.weekday === 0
-                    ? "text-danger"
-                    : column.weekday === 6
-                      ? "text-info"
-                      : "text-muted",
-                )}
-              >
-                {WEEKDAY_LABELS[column.weekday]}
-              </p>
-              <Meter
-                max={max}
-                segments={column.segments}
-                size="md"
-                aria-label={`${WEEKDAY_LABELS[column.weekday]}요일 ${column.sum}건 (최대 ${max}건)`}
-              />
-              <p className="mt-1 text-nano tabular-nums text-muted">
-                {column.sum}건 /{max}
-              </p>
-            </div>
-          ))}
-        </div>
-      </CardBody>
-    </Card>
+      <div className="grid grid-cols-7 gap-2">
+        {columns.map((column) => (
+          <div key={column.weekday}>
+            <p
+              className={cn(
+                "mb-1.5 text-nano font-bold",
+                column.weekday === 0
+                  ? "text-danger"
+                  : column.weekday === 6
+                    ? "text-info"
+                    : "text-muted",
+              )}
+            >
+              {WEEKDAY_LABELS[column.weekday]}
+            </p>
+            <Meter
+              max={max}
+              segments={column.segments}
+              size="md"
+              aria-label={`${WEEKDAY_LABELS[column.weekday]}요일 ${column.sum}건 (최대 ${max}건)`}
+            />
+            <p className="mt-1 text-nano tabular-nums text-muted">
+              {column.sum}건 /{max}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -635,14 +661,15 @@ function MonthGrid({
 }) {
   return (
     <div>
+      {/* 요일 헤더 — 07-modules.md 실측: h-48 · 14px/400 · 일요일 rgb(255,0,10) · 토요일 파랑(info) */}
       <div className="grid grid-cols-7 border-b border-line">
         {WEEKDAY_LABELS.map((label, index) => (
           <div
             key={label}
             className={cn(
-              "px-2 py-2 text-center text-label font-bold",
+              "flex h-12 items-center justify-center text-body",
               index === 0
-                ? "text-danger"
+                ? "text-sunday"
                 : index === 6
                   ? "text-info"
                   : "text-muted",
@@ -667,23 +694,32 @@ function MonthGrid({
             <div
               key={day}
               className={cn(
-                "group relative min-h-32 border-b border-r border-line p-1 last:border-r-0",
-                !inMonth && "bg-canvas/60",
+                /*
+                 * 09 실측: 날짜 칸 ~206×106 · td 테두리 없음, 격자선은 안쪽
+                 * 얇은 선(line #eaecef) — 7열 끝의 오른선만 접어 바깥 테두리를
+                 * 만들지 않는다. 이달 밖 칸의 회청 면(bg-canvas/60)은 걷는다 —
+                 * 원본은 칸 배경이 아니라 숫자색(#bbbbbb)으로만 가른다.
+                 */
+                "group relative min-h-[106px] border-b border-r border-line py-1 [&:nth-child(7n)]:border-r-0",
                 isSelected && "ring-1 ring-inset ring-primary",
               )}
             >
-              <div className="mb-1 flex items-center gap-1">
+              {/* 날짜 숫자는 칸 좌상단 pl-[18px] 정렬 (09) */}
+              <div className="mb-1 flex items-center gap-1 pl-[18px] pr-1">
                 <button
                   type="button"
                   onClick={() => onSelectDay(day)}
                   aria-pressed={isSelected}
                   title={`${day} 일정 보기`}
                   className={cn(
-                    "grid size-6 shrink-0 place-items-center rounded-full text-label tabular-nums transition-colors duration-fast ease-standard",
+                    "grid size-7 shrink-0 place-items-center rounded-full text-body tabular-nums transition-colors duration-fast ease-standard",
                     isToday
-                      ? "bg-primary font-bold text-white"
+                      ? // 오늘 = 먹색(#1c1c1c) 원형 필 + 흰 숫자 (09)
+                        "bg-ink text-white"
                       : cn(
-                          dayToneClass(weekday, !!holiday, inMonth),
+                          inMonth
+                            ? dayToneClass(weekday, !!holiday)
+                            : "text-ghost", // 이달 밖 날짜 #bbbbbb (09)
                           "hover:bg-subtle",
                         ),
                   )}
@@ -714,7 +750,8 @@ function MonthGrid({
                 </button>
               </div>
 
-              <div className="space-y-0.5">
+              {/* 칸 좌우 padding이 숫자 행(pl-18)으로 넘어가서 칩은 px-1을 따로 갖는다 */}
+              <div className="space-y-0.5 px-1">
                 {dayItems.slice(0, MONTH_CHIP_LIMIT).map((item) => (
                   <EventChip key={item.id} item={item} onPick={onPick} />
                 ))}

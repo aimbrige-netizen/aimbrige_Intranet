@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { FormRow, Input, Textarea } from "@/components/ui/Field";
 import {
@@ -236,9 +236,13 @@ export function ApprovalForm({
         </Callout>
       ) : null}
 
-      <Card>
-        <CardHeader title="신청 내용" description={`${meta.label} 양식`} />
-        <CardBody>
+      {/*
+        흰 시트 스윕(10): 바깥 래퍼 카드를 걷는다 — 카드 테두리 + ab-form-grid
+        테두리가 이중선이었다. 폼 자체는 원본도 테두리 표 형태라 ab-form-grid의
+        테두리는 모든 폭에서 유지한다.
+      */}
+      <section>
+        <SectionHeader title="신청 내용" description={`${meta.label} 양식`} />
           <div className="ab-form-grid">
             {documentType === "special_request" ? (
               <>
@@ -503,17 +507,19 @@ export function ApprovalForm({
               </>
             ) : null}
           </div>
-        </CardBody>
-      </Card>
+      </section>
 
-      {/* 결재라인 미리보기 (스펙 3.3 공통) */}
-      <Card>
-        <CardHeader
+      {/*
+        결재라인 미리보기 (스펙 3.3 공통).
+        흰 시트 위 카드 해체 — md+는 SectionHeader + 직접 배치,
+        md 미만(canvas 위 카드 문법)만 ab-card 면을 유지한다.
+      */}
+      <section>
+        <SectionHeader
           title="결재라인"
           description={`제출하면 ${lineSteps.length - 1}단계로 진행됩니다.`}
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <ApprovalStepStrip steps={lineSteps} />
           {!line.step1 ? (
             <p className="mt-3 text-caption">
@@ -521,8 +527,8 @@ export function ApprovalForm({
               최종 승인자에게 바로 전달됩니다.
             </p>
           ) : null}
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       <div className="flex flex-wrap items-center justify-end gap-2">
         {message ? (

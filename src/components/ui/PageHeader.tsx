@@ -55,7 +55,14 @@ export function PageHeader({
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-h1 text-ink">{title}</h1>
+          {/*
+            실측: 콘텐츠 영역 제목은 20px/600이다(홈 위젯 제목 20/600,
+            대시보드 탭 18/600). 24px h1은 원본 어디에도 없는 단이라
+            화면마다 제목만 크게 떠 보였다.
+          */}
+          <h1 className="text-[20px] font-semibold leading-tight text-ink">
+            {title}
+          </h1>
           {description ? (
             <p className="mt-1 text-caption">{description}</p>
           ) : null}
