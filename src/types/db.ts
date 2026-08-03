@@ -482,3 +482,93 @@ export interface MailAttachment {
   size: number;
   uploaded_at: string;
 }
+
+// =====================================================================
+// 스펙 13 — ESS 3종: 인사·급여·계약 (마이그레이션 30)
+//
+// DB 값은 영문 토큰이다(코드베이스 전체 규약). 다우 표기(연봉제/월급제,
+// 지급/공제, 재직/경력, 작성중/서명완료/만료)는 화면에서 라벨링한다.
+// =====================================================================
+
+/** 급여 유형 — annual: 연봉제, monthly: 월급제 */
+export type PayType = "annual" | "monthly";
+
+/**
+ * 급여상세. 이 프로젝트 최민감 데이터 — RLS는 본인 select + system_admin
+ * all 뿐이고 manager 정책은 의도적으로 없다(팀장도 팀원 급여 불가시).
+ */
+export interface PayrollProfile {
+  employee_id: string;
+  pay_type: PayType;
+  annual_salary: number | null;
+  monthly_salary: number | null;
+  fixed_allowance: number;
+  note: string | null;
+  updated_at: string;
+}
+
+export interface PayrollSlip {
+  id: string;
+  employee_id: string;
+  /** 급여월 — 항상 그 달 1일(YYYY-MM-01). RPC가 정규화한다 */
+  pay_month: string;
+  pay_date: string;
+  /**
+   * 합계 3종은 payroll_slip_items에서 트리거로 재계산되는 파생값이다 —
+   * 직접 수정은 가드가 막고, net = gross - deduction은 CHECK로 고정된다.
+   */
+  gross_total: number;
+  deduction_total: number;
+  net_total: number;
+  memo: string | null;
+  created_at: string;
+}
+
+/** 명세 항목 종류 — payment: 지급, deduction: 공제 */
+export type PayrollItemKind = "payment" | "deduction";
+
+export interface PayrollSlipItem {
+  id: string;
+  slip_id: string;
+  kind: PayrollItemKind;
+  name: string;
+  amount: number;
+  sort: number;
+}
+
+/** 증명서 종류 — employment: 재직증명서, career: 경력증명서 */
+export type CertificateType = "employment" | "career";
+
+/**
+ * 신청 상태. 전이는 requested→issued/rejected뿐이다(가드 트리거).
+ * 취소는 상태가 아니라 requested 행의 삭제다 — 처리된 신청은 기록으로 남는다.
+ */
+export type CertificateStatus = "requested" | "issued" | "rejected";
+
+export interface CertificateRequest {
+  id: string;
+  employee_id: string;
+  cert_type: CertificateType;
+  purpose: string;
+  status: CertificateStatus;
+  requested_at: string;
+  /** 처리 시각·처리자 — 가드 트리거가 서버 값으로 강제한다 */
+  processed_at: string | null;
+  processed_by: string | null;
+  reject_reason: string | null;
+}
+
+/** 계약 상태 — draft: 작성중, signed: 서명완료, expired: 만료 */
+export type ContractStatus = "draft" | "signed" | "expired";
+
+export interface EmploymentContract {
+  id: string;
+  employee_id: string;
+  title: string;
+  status: ContractStatus;
+  /** 체결일(date). 서명완료에는 필수 — CHECK가 강제한다 */
+  signed_at: string | null;
+  /** 스토리지 경로: <employee_id>/<파일명> — 첫 세그먼트가 열람 권한 판정 */
+  file_path: string | null;
+  created_at: string;
+}

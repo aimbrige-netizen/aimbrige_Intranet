@@ -1,4 +1,5 @@
 import {
+  Banknote,
   BookOpen,
   Boxes,
   Building2,
@@ -10,11 +11,14 @@ import {
   Clock,
   FileCheck,
   FilePlus2,
+  FileSignature,
+  FileText,
   FolderKanban,
   FolderOpen,
   Gift,
   GitBranch,
   Home,
+  IdCard,
   Inbox,
   Library,
   ListChecks,
@@ -27,9 +31,11 @@ import {
   Send,
   Settings,
   Shield,
+  Stamp,
   Target,
   Users,
   UsersRound,
+  Wallet,
   type LucideIcon,
 } from "lucide-react";
 import type { RoleName } from "@/types/db";
@@ -57,9 +63,10 @@ import type { RoleName } from "@/types/db";
  * 그 안에 목표가 있는지 알 수 있으니, 뭉개진 글자 대신 한 번 더 클릭하는
  * 비용으로 바꾼 것뿐이다. 그래서 묶음을 전부 풀고 개별 모듈로 올린다.
  *
- * 다우오피스에 있고 우리에게 없는 것(AI·급여·계약·경비·차량일지·설문 등)은
- * 만들지 않는다. 우리 라우트가 실제로 있는 18개만 올린다.
- * (메일은 12-mail.md에서 사내 메일로 신설돼 이 목록에서 빠졌다.)
+ * 다우오피스에 있고 우리에게 없는 것(AI·경비·차량일지·설문 등)은
+ * 만들지 않는다. 우리 라우트가 실제로 있는 모듈만 올린다.
+ * (메일은 12-mail.md, 인사·급여·계약 ESS 3종은 13-ess.md에서 신설돼
+ * "없는 것" 목록에서 빠졌다 — 다우처럼 레일 뒤쪽, 복지 다음·시스템 앞.)
  * ---------------------------------------------------------------------
  * href는 기간 파라미터(period·cursor·from·to)를 싣지 않는다.
  *
@@ -705,6 +712,116 @@ export const NAV_MODULES: NavModule[] = [
           label: "복지포인트 관리",
           href: "/admin/welfare",
           icon: Gift,
+        },
+      ]),
+    ],
+  },
+  {
+    /*
+     * ESS 3종 (13-ess.md) — 인사·급여·계약. 다우 ESS는 별도 서브앱이지만
+     * 우리는 기존 셸에 모듈 3개로 얹는다. 레일 순서는 다우처럼 뒤쪽 —
+     * 복지포인트 다음, 시스템 앞.
+     *
+     * /hr의 인사카드 탭(?tab=appointments·projects·contracts)은 패널 항목이
+     * 아니다 — 항목은 '내 인사정보'(/hr)와 '증명서 발급 신청'
+     * (/hr?tab=certificates) 둘뿐이고, 탭 파라미터 규약은 /directory?tab=과
+     * 같아서 isChildActive가 그대로 동작한다.
+     */
+    key: "hr",
+    label: "인사",
+    href: "/hr",
+    icon: IdCard,
+    ready: true,
+    prefixes: ["/hr", "/admin/hr"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "hr-card",
+            label: "내 인사정보",
+            href: "/hr",
+            icon: IdCard,
+          },
+          {
+            key: "hr-certificates",
+            label: "증명서 발급 신청",
+            href: "/hr?tab=certificates",
+            icon: FileText,
+          },
+        ],
+      },
+      adminSection([
+        {
+          key: "admin-hr",
+          label: "증명서 발급 관리",
+          href: "/admin/hr",
+          icon: Stamp,
+        },
+      ]),
+    ],
+  },
+  {
+    /*
+     * 급여 화면(/payroll·/admin/payroll)은 담당 A의 라우트다 — nav는 이
+     * 파일의 유일 수정자(담당 B)가 세 모듈을 한 번에 올린다(13-ess.md).
+     * payroll_* 데이터는 본인 + system_admin만 본다(프로젝트 보안 규약 5) —
+     * 그래서 이 모듈에는 manager용 섹션이 없다.
+     */
+    key: "payroll",
+    label: "급여",
+    href: "/payroll",
+    icon: Wallet,
+    ready: true,
+    prefixes: ["/payroll", "/admin/payroll"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "payroll-mine",
+            label: "내 급여",
+            href: "/payroll",
+            icon: Wallet,
+          },
+        ],
+      },
+      adminSection([
+        {
+          key: "admin-payroll",
+          label: "급여 관리",
+          href: "/admin/payroll",
+          icon: Banknote,
+        },
+      ]),
+    ],
+  },
+  {
+    /* 계약 화면(/contracts·/admin/contracts)도 담당 A의 라우트다 */
+    key: "contracts",
+    label: "계약",
+    href: "/contracts",
+    icon: FileSignature,
+    ready: true,
+    prefixes: ["/contracts", "/admin/contracts"],
+    sections: [
+      {
+        key: "main",
+        items: [
+          {
+            key: "contracts-mine",
+            label: "내 계약서",
+            href: "/contracts",
+            icon: FileSignature,
+          },
+        ],
+      },
+      adminSection([
+        {
+          key: "admin-contracts",
+          label: "계약 관리",
+          href: "/admin/contracts",
+          icon: Settings,
         },
       ]),
     ],
