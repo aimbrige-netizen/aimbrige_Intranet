@@ -190,7 +190,7 @@ export function OrgBrowser({
           <ToolbarSearch
             value={query}
             onChange={setQuery}
-            placeholder="이름·직급·부서 검색"
+            placeholder="이름·직위·부서 검색"
             ariaLabel="조직도 검색"
           />
         }
@@ -346,6 +346,8 @@ export function OrgBrowser({
                 ),
               )}
               today={today}
+              /* 주소록 표 문법(16): th 높이 48px — 이 화면 한정 */
+              thClassName="h-12 align-middle"
               columns={{ department: detail.kind !== "team", phone: false }}
               minWidth="min-w-[760px]"
               emptyTitle="소속 인원이 없습니다"

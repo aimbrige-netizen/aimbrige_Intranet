@@ -121,11 +121,15 @@ export default async function DirectoryPage({
       ? { kind: "department", id: searchParams.department }
       : { kind: "company" };
 
+  /*
+   * 목록 탭 제목 줄은 주소록 "…(총n건)" 문법(16·10 실측 — "총"과 숫자 사이
+   * 공백 없음)을 따른다 — 분모는 제목이 든다. 임직원·외부 연락처 공통.
+   */
   const title =
     tab === "people"
-      ? "임직원 목록"
+      ? `임직원 (총${stats.total}명)`
       : tab === "external"
-        ? "외부 연락처"
+        ? `외부 연락처 (총${contacts.length}건)`
         : "조직도";
 
   return (
@@ -135,9 +139,10 @@ export default async function DirectoryPage({
         meta={
           tab === "external" ? (
             <>
+              {/* 건수는 제목 "(총n건)"이 들었다 — 여기서 겹치지 않는다 */}
               <span>{COMPANY_NAME}</span>
               <span>·</span>
-              <span>벤더·거래처·파트너 {contacts.length}건</span>
+              <span>벤더·거래처·파트너</span>
               <span>·</span>
               <span>전 직원 조회 가능</span>
             </>

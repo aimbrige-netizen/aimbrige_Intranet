@@ -143,17 +143,20 @@ export function ExternalContacts({
     });
   }, [contacts, category, keyword]);
 
-  /** 화면에 보이는 그대로(현재 분류·검색어)를 내려받는다 */
+  /**
+   * 화면에 보이는 그대로(현재 분류·검색어)를 내려받는다.
+   * 컬럼 순서·라벨도 아래 표와 같다 — 등록 컬럼만 등록자·등록일 둘로 편다.
+   */
   const exportCsv = () =>
     downloadCsv(
       "외부연락처",
       [
         "이름",
-        "소속 회사",
-        "직책",
-        "분류",
-        "전화번호",
+        "회사",
         "이메일",
+        "전화",
+        "그룹",
+        "직책",
         "메모",
         "등록자",
         "등록일",
@@ -161,10 +164,10 @@ export function ExternalContacts({
       filtered.map((contact) => [
         contact.name,
         contact.company ?? "",
-        contact.role ?? "",
-        contact.category ? CATEGORY_LABELS[contact.category] : "미분류",
-        contact.phone ?? "",
         contact.email ?? "",
+        contact.phone ?? "",
+        contact.category ? CATEGORY_LABELS[contact.category] : "미분류",
+        contact.role ?? "",
         contact.memo ?? "",
         contact.creator?.name ?? "",
         formatDate(contact.created_at),
@@ -313,14 +316,20 @@ export function ExternalContacts({
         <div className="ab-card overflow-hidden md:rounded-none md:border-0">
           <div className="overflow-x-auto">
             <table className="ab-table ab-table--compact min-w-[860px]">
+              {/*
+                주소록 실측 축(16): 이름 · 회사 · 이메일 · 전화 · 그룹.
+                그 뒤는 우리 데이터 고유 컬럼(직책·메모·등록·관리).
+                th 높이 48px(h-12)도 주소록 실측 — 이 화면 한정.
+                체크박스 열은 세우지 않는다 — 선택 일괄 액션이 없다.
+              */}
               <thead>
-                <tr>
+                <tr className="[&>th]:h-12 [&>th]:align-middle">
                   <th>이름</th>
-                  <th>소속 회사</th>
-                  <th>직책</th>
-                  <th>분류</th>
-                  <th>전화번호</th>
+                  <th>회사</th>
                   <th>이메일</th>
+                  <th>전화</th>
+                  <th>그룹</th>
+                  <th>직책</th>
                   <th>메모</th>
                   <th>등록</th>
                   <th className="w-20">관리</th>
@@ -348,7 +357,10 @@ export function ExternalContacts({
                     <tr key={contact.id}>
                       <td className="font-bold text-ink">{contact.name}</td>
                       <td>{contact.company ?? "-"}</td>
-                      <td>{contact.role ?? "-"}</td>
+                      <td className="text-muted">{contact.email ?? "-"}</td>
+                      <td className="whitespace-nowrap text-muted">
+                        {contact.phone ?? "-"}
+                      </td>
                       <td>
                         {contact.category ? (
                           <Badge tone="info">
@@ -358,10 +370,7 @@ export function ExternalContacts({
                           <span className="text-caption">미분류</span>
                         )}
                       </td>
-                      <td className="whitespace-nowrap text-muted">
-                        {contact.phone ?? "-"}
-                      </td>
-                      <td className="text-muted">{contact.email ?? "-"}</td>
+                      <td>{contact.role ?? "-"}</td>
                       <td
                         className="max-w-56 truncate text-muted"
                         title={contact.memo ?? ""}

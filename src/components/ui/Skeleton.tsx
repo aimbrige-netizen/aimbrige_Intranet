@@ -49,10 +49,21 @@ export function SkeletonStats({ count = 4 }: { count?: number }) {
  * md 미만은 실화면과 같이 카드 면 유지. 헤더도 회색면이 아니라
  * 실측 표 문법(투명 + 진한 밑줄)을 따른다.
  */
-export function SkeletonTable({ rows = 5 }: { rows?: number }) {
+export function SkeletonTable({
+  rows = 5,
+  headClassName = "px-4 py-3",
+}: {
+  rows?: number;
+  /**
+   * 헤더 줄 배치 클래스. 기본은 표 기본 th 높이(≈36px)에 맞춘 py-3.
+   * th 높이를 48px로 올린 화면(/directory — 주소록 실측 16)은
+   * "flex h-12 items-center px-4"를 넘겨 로딩→로드 높이 점프를 없앤다.
+   */
+  headClassName?: string;
+}) {
   return (
     <div className="overflow-hidden rounded-card border border-line bg-surface md:rounded-none md:border-0">
-      <div className="border-b border-ink-sub px-4 py-3">
+      <div className={cn("border-b border-ink-sub", headClassName)}>
         <Skeleton className="h-3 w-24" />
       </div>
       {Array.from({ length: rows }, (_, i) => (

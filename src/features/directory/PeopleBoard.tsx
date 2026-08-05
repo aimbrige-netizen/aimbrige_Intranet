@@ -156,7 +156,7 @@ export function PeopleBoard({
             <ToolbarSearch
               name="q"
               defaultValue={params.q}
-              placeholder="이름·직급·부서·이메일 검색"
+              placeholder="이름·직위·부서·이메일 검색"
               ariaLabel="임직원 통합검색"
             />
           </form>
@@ -191,7 +191,8 @@ export function PeopleBoard({
             ) : null}
           </>
         }
-        count={`${sorted.length}명 표시 / 전체 ${index.employees.length}명`}
+        /* 분모(총 n명)는 제목 줄이 들었다(주소록 문법) — 여기는 필터 결과만 */
+        count={`${sorted.length}명 표시`}
         actions={
           <>
             {canToggleInactive ? (
@@ -250,9 +251,15 @@ export function PeopleBoard({
         직접 놓는다. md 미만(회청 canvas)은 카드 면 유지(캘린더 패턴).
       */}
       <div className="ab-card overflow-hidden md:rounded-none md:border-0">
+        {/*
+          주소록 표 문법(16): th 14/400 · 높이 48px(h-12) — 이 화면 한정,
+          .ab-table 전역은 그대로. 체크박스 열은 세우지 않는다 — 선택해서
+          거는 일괄 액션이 없다(내보내기는 현재 필터 전체를 받는다).
+        */}
         <EmployeeTable
           rows={sorted}
           today={today}
+          thClassName="h-12 align-middle"
           minWidth="min-w-[1040px]"
           sort={{ key: sortKey, dir }}
           sortHref={sortHref}

@@ -124,7 +124,11 @@ const DEFAULT_COLUMNS: Required<EmployeeTableColumns> = {
   account: false,
 };
 
-/** 컬럼 순서는 어느 화면에서나 동일하다 */
+/**
+ * 컬럼 순서는 어느 화면에서나 동일하다.
+ * 앞머리는 주소록 실측 축(16 — 이름 · 부서/팀 · 직위 · 이메일 · 전화)을
+ * 따르고, 주소록에 없는 정보 컬럼(재직상태·역할·입사일·근속·계정)은 뒤에 둔다.
+ */
 export function EmployeeTable({
   rows,
   today,
@@ -138,6 +142,7 @@ export function EmployeeTable({
   emptyAction,
   compact = true,
   minWidth = "min-w-[900px]",
+  thClassName,
 }: {
   rows: EmployeeTableRow[];
   /** 근속 계산 기준일 (YYYY-MM-DD) */
@@ -154,19 +159,25 @@ export function EmployeeTable({
   emptyAction?: React.ReactNode;
   compact?: boolean;
   minWidth?: string;
+  /**
+   * th에 덧붙는 클래스. 조직도/임직원 화면은 주소록 실측(16 — th 높이 48px
+   * 확정)에 맞춰 "h-12 align-middle"을 넘긴다. .ab-table 전역을 바꾸지 않고
+   * 화면 한정으로 얹는 자리다 — 관리자 목록 등 다른 호출부는 기본 높이 유지.
+   */
+  thClassName?: string;
 }) {
   const show = { ...DEFAULT_COLUMNS, ...columns };
   const sortable = new Set<EmployeeSortKey>(sortableKeys ?? EMPLOYEE_SORT_KEYS);
 
   const headers: { key: EmployeeSortKey | null; label: string }[] = [
     { key: "name", label: "이름" },
-    { key: "position", label: "직급" },
     ...(show.department ? [{ key: "department" as const, label: "부서" }] : []),
     ...(show.team ? [{ key: null, label: "팀" }] : []),
-    ...(show.status ? [{ key: "status" as const, label: "재직상태" }] : []),
-    ...(show.role ? [{ key: null, label: "역할" }] : []),
+    { key: "position", label: "직위" },
     ...(show.email ? [{ key: null, label: "이메일" }] : []),
     ...(show.phone ? [{ key: null, label: "전화" }] : []),
+    ...(show.status ? [{ key: "status" as const, label: "재직상태" }] : []),
+    ...(show.role ? [{ key: null, label: "역할" }] : []),
     ...(show.hireDate ? [{ key: "hire_date" as const, label: "입사일" }] : []),
     ...(show.tenure ? [{ key: null, label: "근속" }] : []),
     ...(show.account ? [{ key: null, label: "계정" }] : []),
@@ -185,6 +196,7 @@ export function EmployeeTable({
               return (
                 <th
                   key={header.label}
+                  className={thClassName || undefined}
                   aria-sort={
                     sortableHere
                       ? ariaSortOf(current, sort?.dir ?? "asc")
@@ -230,19 +242,9 @@ export function EmployeeTable({
                     />
                   </Link>
                 </td>
-                <td>{row.position ?? "-"}</td>
                 {show.department ? <td>{row.departmentName ?? "-"}</td> : null}
                 {show.team ? <td>{row.teamName ?? "-"}</td> : null}
-                {show.status ? (
-                  <td>
-                    <EmploymentStatusBadge status={row.employmentStatus} />
-                  </td>
-                ) : null}
-                {show.role ? (
-                  <td>
-                    <RoleBadge role={row.roleName} />
-                  </td>
-                ) : null}
+                <td>{row.position ?? "-"}</td>
                 {show.email ? (
                   <td className="text-muted">
                     <a
@@ -256,6 +258,16 @@ export function EmployeeTable({
                 {show.phone ? (
                   <td className="whitespace-nowrap text-muted">
                     {row.phone ?? "-"}
+                  </td>
+                ) : null}
+                {show.status ? (
+                  <td>
+                    <EmploymentStatusBadge status={row.employmentStatus} />
+                  </td>
+                ) : null}
+                {show.role ? (
+                  <td>
+                    <RoleBadge role={row.roleName} />
                   </td>
                 ) : null}
                 {show.hireDate ? (

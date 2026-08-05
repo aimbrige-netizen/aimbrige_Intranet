@@ -77,7 +77,7 @@ export function EmployeeExportButton(props: EmployeeExportButtonProps) {
 
   const header = [
     "이름",
-    "직급",
+    "직위",
     "부서",
     "팀",
     "재직상태",

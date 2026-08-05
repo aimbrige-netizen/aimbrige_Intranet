@@ -85,7 +85,7 @@ export function OrgTree({
         {nothingToShow ? (
           <p className="px-2 py-6 text-caption">
             {search
-              ? "검색 결과가 없습니다. 이름·직급·부서명으로 다시 찾아보세요."
+              ? "검색 결과가 없습니다. 이름·직위·부서명으로 다시 찾아보세요."
               : "등록된 부서가 없습니다. 조직 구조가 등록되면 여기에 표시됩니다."}
           </p>
         ) : null}
@@ -364,19 +364,22 @@ function EmployeeRow({
           {employee.position}
         </span>
       ) : null}
+      {/*
+        색 절제(10 스윕): 트리 안 배지 틴트(info-light·warn-light 면)를 걷어내고
+        직위와 같은 텍스트 단으로 내린다. 휴직만 글자색(warn-ink)으로 남긴다 —
+        면 없이도 상태는 읽혀야 한다.
+      */}
       {role ? (
-        <span className="ml-auto shrink-0 rounded-sm bg-info-light px-1.5 text-nano text-info-ink">
-          {role}
-        </span>
+        <span className="ml-auto shrink-0 text-nano text-muted">{role}</span>
       ) : null}
       {employee.employment_status !== "active" ? (
         <span
           className={cn(
-            "shrink-0 rounded-sm px-1.5 text-nano",
+            "shrink-0 text-nano",
             !role && "ml-auto",
             employee.employment_status === "leave"
-              ? "bg-warn-light text-warn-ink"
-              : "bg-subtle text-muted",
+              ? "text-warn-ink"
+              : "text-muted",
           )}
         >
           {employee.employment_status === "leave" ? "휴직" : "퇴사"}
