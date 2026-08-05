@@ -474,12 +474,14 @@ function EmptyRow({
       }
       /*
         여기서만 cta(브랜드색 채운 버튼)를 쓴다 — 실측의 `새 글 작성하기`와
-        같은 자리다. 위쪽 세 갈래("첫 페이지로"·"검색 해제"·"전체 보기")는
-        앞세울 액션이 아니라 필터를 되돌리는 문이라 secondary로 둔다.
-        canWrite가 아니면 아무것도 렌더하지 않는다 — 눌러도 안 되는 버튼은
-        두지 않는다는 이 프로젝트의 규약.
+        같은 자리·같은 문구다(05-board.md). 위쪽 세 갈래("첫 페이지로"·
+        "검색 해제"·"전체 보기")는 앞세울 액션이 아니라 필터를 되돌리는 문이라
+        secondary로 둔다. canWrite가 아니면 아무것도 렌더하지 않는다 —
+        눌러도 안 되는 버튼은 두지 않는다는 이 프로젝트의 규약.
       */
-      cta={canWrite ? { label: "첫 글 쓰기", href: `${basePath}/new` } : undefined}
+      cta={
+        canWrite ? { label: "새 글 작성하기", href: `${basePath}/new` } : undefined
+      }
     />
   );
 }

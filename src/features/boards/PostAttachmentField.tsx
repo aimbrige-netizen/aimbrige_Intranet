@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef } from "react";
-import { Paperclip, Trash2, Upload } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { useRef, useState } from "react";
+import { Paperclip, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { registerPostAttachment } from "@/server/actions/boards";
 import { formatFileSize } from "./format";
@@ -102,7 +102,12 @@ export function PostAttachmentField({
   onRemoveQueued: (index: number) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
   const count = saved.length + queued.length;
+  /** 용량 표시(16 실측 "0MB") — 지금 담긴 파일 크기의 합 */
+  const totalBytes =
+    saved.reduce((sum, file) => sum + (file.file_size ?? 0), 0) +
+    queued.reduce((sum, file) => sum + file.size, 0);
 
   return (
     <div>
@@ -162,20 +167,46 @@ export function PostAttachmentField({
         </ul>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <Button
-          size="small"
-          variant="secondary"
-          onClick={() => inputRef.current?.click()}
-          disabled={busy}
-        >
-          <Upload className="size-3.5" />
-          파일 선택
-        </Button>
-        <span className="text-caption">
-          이미지·PDF, 건당 10MB 이하 · 첨부 {count}건
-          {immediate ? " · 고르면 바로 저장됩니다" : ""}
-        </span>
+      {/*
+        드롭존 문법(16 실측): "이 곳에 파일을 드래그 하세요. 또는 파일선택"
+        + 용량 표시. 업로드 로직(onPick 이후)은 그대로고 고르는 UI만 바꿨다 —
+        드래그가 안 되는 환경(터치)을 위해 파일선택 버튼이 같은 onPick을 연다.
+      */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          if (!busy) setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          if (busy) return;
+          const files = Array.from(e.dataTransfer.files);
+          if (files.length) onPick(files);
+        }}
+        className={cn(
+          "flex flex-col items-center justify-center gap-1 rounded-card border border-dashed px-4 py-6 text-center transition-colors duration-fast ease-standard",
+          dragOver
+            ? "border-primary bg-primary-light"
+            : "border-line-strong bg-subtle",
+        )}
+      >
+        <p className="text-body text-muted">
+          이 곳에 파일을 드래그 하세요. 또는{" "}
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            className="font-medium text-primary-ink underline underline-offset-2 transition-colors duration-fast ease-standard hover:text-primary disabled:opacity-50"
+          >
+            파일선택
+          </button>
+        </p>
+        <p className="text-caption tabular-nums">
+          첨부 {count}건 · {formatFileSize(totalBytes) ?? "0 MB"} · 이미지·PDF
+          건당 10MB 이하{immediate ? " · 고르면 바로 저장됩니다" : ""}
+        </p>
         <input
           ref={inputRef}
           type="file"

@@ -206,94 +206,120 @@ export function PostEditor({
         !border-0로 안쪽 테두리를 죽이는 이중 구조였다 — 그리드를 직접 놓는다.
         ab-form-grid 자체의 테두리는 카드 장식이 아니라 라벨/필드 칸을 닫는
         표 구조선이라 흰 시트 위에서도 유지한다(결재 폼과 같은 문법).
+
+        행 구성은 16-board-write-contact.md 실측 순서 그대로 —
+        To.(게시판) → 제목 → 파일 첨부 → 본문 → 등록 옵션 → 하단 등록·취소.
+        실측의 공개 설정(공개/비공개)·알림(메일·푸시)·임시저장은 우리 데이터에
+        그 개념이 없어 행 자체를 세우지 않는다(빈 껍데기 금지). "공지로 등록"
+        체크는 기존 is_pinned 플래그에 매핑한다 — 비밀글 플래그는 없다.
+
+        폼 라벨 14/400 잉크(16 실측 — 폼 라벨이 굵지 않다). ab-form-label의
+        13/500(text-label font-bold)과 다른 이 화면 한정 값이라, 전역 클래스는
+        건드리지 않고 arbitrary variant로 이 그리드 안에서만 덮는다.
       */}
-      <div className="ab-form-grid">
-            <FormRow label="게시판">
-              <span className="text-body text-ink">
-                {board.name}
-                <span className="ml-2 text-caption">
-                  {BOARD_TYPE_LABELS[board.board_type]}
-                </span>
-              </span>
+      <div className="ab-form-grid [&_.ab-form-label]:text-body [&_.ab-form-label]:font-normal [&_.ab-form-label]:text-ink">
+        {/*
+          실측 1행 "To." — 게시판 선택. 우리는 패널에서 게시판을 고르고
+          들어오므로 선택 트리 대신 이미 정해진 대상 게시판을 보여준다.
+        */}
+        <FormRow label="To.">
+          <span className="text-body text-ink">
+            {board.name}
+            <span className="ml-2 text-caption">
+              {BOARD_TYPE_LABELS[board.board_type]}
+            </span>
+          </span>
+        </FormRow>
+
+        <FormRow label="제목" required htmlFor="p-title" error={errors.title}>
+          <Input
+            id="p-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            disabled={busy}
+            invalid={!!errors.title}
+            maxLength={200}
+          />
+        </FormRow>
+
+        {/* 실측 3행 — 파일 첨부가 본문보다 위다. UI만 드롭존 문법으로 갔다 */}
+        <FormRow label="파일 첨부">
+          <PostAttachmentField
+            saved={saved}
+            queued={queued}
+            busy={busy}
+            immediate={!!post}
+            progress={progress}
+            error={fileError}
+            onPick={pickFiles}
+            onRemoveSaved={removeSaved}
+            onRemoveQueued={removeQueued}
+          />
+        </FormRow>
+
+        <FormRow label="본문" required htmlFor="p-content" error={errors.content}>
+          <Textarea
+            id="p-content"
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            disabled={busy}
+            invalid={!!errors.content}
+            className="min-h-64"
+            placeholder="줄바꿈은 그대로 표시되고, http로 시작하는 주소는 링크가 됩니다."
+          />
+        </FormRow>
+
+        {/* 등록 옵션(실측 5~7행 자리) — 공지 타입만 (스펙 3.2) */}
+        {isNotice ? (
+          <>
+            {/*
+              카테고리는 실측 행엔 없는 우리 데이터 개념이다 — 걷어내면 공지
+              분류 입력 길이 사라지므로 등록 옵션 자리에 세운다.
+              목록의 필터 칩과 같은 조작 — 5개뿐이라 접을 이유가 없다.
+            */}
+            <FormRow label="카테고리">
+              <div className="flex flex-wrap gap-2">
+                <FilterChip
+                  active={!category}
+                  onClick={() => setCategory("")}
+                >
+                  선택 안 함
+                </FilterChip>
+                {POST_CATEGORIES.map((c) => (
+                  <FilterChip
+                    key={c}
+                    active={category === c}
+                    onClick={() => setCategory(c)}
+                  >
+                    {c}
+                  </FilterChip>
+                ))}
+              </div>
             </FormRow>
 
-            <FormRow label="제목" required htmlFor="p-title" error={errors.title}>
-              <Input
-                id="p-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={busy}
-                invalid={!!errors.title}
-                maxLength={200}
-              />
+            {/* 실측 "공지로 등록" 체크 = 우리 is_pinned(목록 상단 고정) */}
+            <FormRow label="공지로 등록">
+              <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
+                <input
+                  type="checkbox"
+                  checked={isPinned}
+                  onChange={(e) => setIsPinned(e.target.checked)}
+                  disabled={busy}
+                  className="size-4 accent-primary"
+                />
+                목록 상단에 고정
+              </label>
             </FormRow>
-
-            {/* 카테고리·상단고정은 공지 타입만 (스펙 3.2) */}
-            {isNotice ? (
-              <>
-                {/* 목록의 필터 칩과 같은 조작으로 맞춘다 — 5개뿐이라 접을 이유가 없다 */}
-                <FormRow label="카테고리">
-                  <div className="flex flex-wrap gap-2">
-                    <FilterChip
-                      active={!category}
-                      onClick={() => setCategory("")}
-                    >
-                      선택 안 함
-                    </FilterChip>
-                    {POST_CATEGORIES.map((c) => (
-                      <FilterChip
-                        key={c}
-                        active={category === c}
-                        onClick={() => setCategory(c)}
-                      >
-                        {c}
-                      </FilterChip>
-                    ))}
-                  </div>
-                </FormRow>
-
-                <FormRow label="상단 고정">
-                  <label className="flex cursor-pointer items-center gap-2 text-body text-ink">
-                    <input
-                      type="checkbox"
-                      checked={isPinned}
-                      onChange={(e) => setIsPinned(e.target.checked)}
-                      disabled={busy}
-                      className="size-4 accent-primary"
-                    />
-                    목록 상단에 고정
-                  </label>
-                </FormRow>
-              </>
-            ) : null}
-
-            <FormRow label="내용" required htmlFor="p-content" error={errors.content}>
-              <Textarea
-                id="p-content"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                disabled={busy}
-                invalid={!!errors.content}
-                className="min-h-64"
-                placeholder="줄바꿈은 그대로 표시되고, http로 시작하는 주소는 링크가 됩니다."
-              />
-            </FormRow>
-
-            <FormRow label="첨부파일">
-              <PostAttachmentField
-                saved={saved}
-                queued={queued}
-                busy={busy}
-                immediate={!!post}
-                progress={progress}
-                error={fileError}
-                onPick={pickFiles}
-                onRemoveSaved={removeSaved}
-                onRemoveQueued={removeQueued}
-              />
-            </FormRow>
+          </>
+        ) : null}
       </div>
 
+      {/*
+        하단 실측(16 스펙 8번)은 등록(주 버튼)·임시저장·"임시 저장된 글(n)"
+        뿐이다. 임시저장은 우리에게 없는 개념이라 세우지 않고, 취소는 실측에
+        없는 우리 UX 관례 버튼 — 배치는 사내 폼 문법(ApprovalForm·WikiEditor의
+        "주 버튼 = 맨 오른쪽")을 따라 취소 → 등록 순으로 둔다.
+      */}
       <div className="flex items-center justify-end gap-3">
         {message ? (
           <p className="mr-auto text-label text-danger">{message}</p>
