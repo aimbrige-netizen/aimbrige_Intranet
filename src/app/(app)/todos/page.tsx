@@ -51,8 +51,6 @@ export default async function TodosPage() {
     );
   }
 
-  const weekDelta = summary.weekDone - summary.lastWeekDone;
-
   return (
     <>
       <PageHeader
@@ -68,7 +66,12 @@ export default async function TodosPage() {
         }
       />
 
-      {/* 요약 밴드 — 맨숫자를 두지 않는다. 전부 분모나 비교값이 붙는다 */}
+      {/*
+        요약 밴드 — 맨숫자를 두지 않는다. 전부 분모나 비교값이 붙는다.
+        색 절제(17 ToDO+ 자체 품질): 색을 갖는 값은 기한 지남(warn)과
+        이번 주 완료(positive) 둘뿐이다 — 완료·기한 초과만 의미 있는 색이고,
+        미완료·오늘 마감은 위반이 아니라 중립이다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="미완료"
@@ -76,7 +79,7 @@ export default async function TodosPage() {
           unit="건"
           denominator={summary.total}
           denominatorUnit="건"
-          tone="informative"
+          tone="neutral"
           icon={ListChecks}
           max={summary.total || 1}
           meterValue={summary.open}
@@ -99,8 +102,8 @@ export default async function TodosPage() {
           }
         />
         {/*
-          이 화면에서 색을 올리는 값은 여기 하나뿐이다.
-          미완료는 할 일이지 위반이 아니라서 중립·정보 톤으로 둔다.
+          이 화면에서 경고색을 올리는 값은 여기 하나뿐이다.
+          미완료는 할 일이지 위반이 아니라서 중립 톤으로 둔다.
         */}
         <StatCard
           label="기한 지남"
@@ -128,15 +131,11 @@ export default async function TodosPage() {
           icon={CheckCircle2}
           max={summary.done || 1}
           meterValue={summary.weekDone}
-          delta={
-            summary.weekDone || summary.lastWeekDone
-              ? {
-                  label: `${weekDelta >= 0 ? "+" : ""}${weekDelta}`,
-                  direction:
-                    weekDelta > 0 ? "up" : weekDelta < 0 ? "down" : "flat",
-                }
-              : undefined
-          }
+          /*
+            증감 델타 배지는 두지 않는다 — 지난주보다 덜 완료한 주에 danger
+            틴트가 붙는데, 개인 할일의 주간 증감은 성패 판정이 아니다(17 색
+            절제). 비교값은 sub의 지난주 건수로 충분하다.
+          */
           sub={`지난주 ${summary.lastWeekDone}건`}
         />
       </div>
@@ -145,6 +144,9 @@ export default async function TodosPage() {
       {/*
         08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 —
         섹션 제목 + 직접 배치로 해체하고 md 미만만 카드 유지(10-modules2).
+        (radius-16 블록은 14-ehr 전용 단이라 여기서는 쓰지 않는다 — 스펙 17이
+        ToDO+에 허용한 정밀화 범위는 공통 문법 4가지뿐이고, 아래 TodoList도
+        같은 md+ 해체 문법을 유지한다.)
       */}
       {rows.length > 0 ? (
         <section className="mb-5">
