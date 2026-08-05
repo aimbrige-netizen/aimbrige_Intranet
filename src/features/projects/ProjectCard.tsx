@@ -86,16 +86,14 @@ export function ProjectCard({
       ) : null}
 
       <div className="mt-auto space-y-2.5 pt-1">
+        {/*
+          진행률 게이지는 민트(positive) — 지표 게이지 채움은 민트 잉크라는
+          14-ehr 규율(상세 개요 게이지와 같은 축). 상태는 상단 배지가 말한다.
+        */}
         <Meter
           value={progress.done}
           max={progress.total || 1}
-          tone={
-            project.status === "completed"
-              ? "positive"
-              : progress.total === 0
-                ? "neutral"
-                : "informative"
-          }
+          tone={progress.total === 0 ? "neutral" : "positive"}
           size="sm"
           label={progressLabel(progress)}
           valueLabel={`${progress.percent}%`}

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { CalendarOff, CalendarRange, Flag, Sun } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { Chip } from "@/components/ui/ChipStrip";
@@ -101,40 +100,38 @@ export default async function HolidaysPage({
 
   return (
     <>
-      <PageHeader
-        title="휴일 관리"
-        meta={
-          <>
-            <span>
-              {year - 1}년 {prevCount ?? 0}일 → {year}년 {total}일
-            </span>
-            <span>·</span>
-            <span>캘린더 빨간날과 근무일 산정의 공통 기준</span>
-          </>
-        }
-        toolbar={
-          <PeriodNavigator
-            label={period.label}
-            sublabel={year === thisYear ? "올해" : period.sublabel}
-            prevHref={yearHref(period.prevCursor)}
-            nextHref={yearHref(period.nextCursor)}
-            todayHref={yearHref(null)}
-            atToday={period.includesToday}
-            className="mb-0"
-          />
-        }
+      {/*
+        콘텐츠 제목 "휴일 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        전년 대비 일수는 스테퍼 보조 줄로 내린다 — 연도 이동과 같은 자리의
+        정보다. "공통 기준" 설명은 요약 카드 sub가 이미 말한다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        휴일 관리
+      </h1>
+
+      <PeriodNavigator
+        label={period.label}
+        sublabel={`${year === thisYear ? "올해 · " : ""}${year - 1}년 ${prevCount ?? 0}일 → ${year}년 ${total}일`}
+        prevHref={yearHref(period.prevCursor)}
+        nextHref={yearHref(period.nextCursor)}
+        todayHref={yearHref(null)}
+        atToday={period.includesToday}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/*
+          민트 규율 — 근무일 제외가 이 화면의 작동값(연차·근무일 산정)이라
+          민트, 종류별 개수는 분류 셈값이라 중립이다(색 절제).
+          종전 brand 강조는 장식이라 걷어냈다.
+        */}
         <StatCard
           label="근무일 제외"
           value={nonWorking}
           unit="일"
           denominator={total}
           denominatorUnit="일"
-          tone="brand"
+          tone="positive"
           icon={CalendarRange}
-          emphasis
           max={total || 1}
           meterValue={nonWorking}
           state={total === 0 ? "empty" : "ok"}
@@ -150,7 +147,7 @@ export default async function HolidaysPage({
           unit="일"
           denominator={total}
           denominatorUnit="일"
-          tone="informative"
+          tone="neutral"
           icon={Flag}
           max={total || 1}
           meterValue={publicCount}
@@ -180,13 +177,13 @@ export default async function HolidaysPage({
         />
       </div>
 
-      <Card className="mb-5">
-        <CardHeader
+      {/* 08 흰 시트: 카드 해체 — 섹션 제목 + 직접 배치, md 미만만 카드 유지 */}
+      <section className="mb-5">
+        <SectionHeader
           title={`${year}년 분포`}
           description="근무일에서 제외되는 날은 빨강, 캘린더에만 표시되는 날은 회색입니다"
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             {byMonth.map(({ month, items }) => (
               <div
@@ -224,19 +221,18 @@ export default async function HolidaysPage({
               </div>
             ))}
           </div>
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
-      <Card>
-        <CardHeader
-          title={`${year}년 휴일 목록`}
+      <section>
+        <SectionHeader
+          title={`${year}년 휴일 목록 (총${total}일)`}
           description="음력 공휴일·대체공휴일·임시공휴일은 자동 계산이 불가능해 직접 관리합니다"
-          density="compact"
         />
-        <CardBody density="compact">
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <HolidayManager holidays={holidays} />
-        </CardBody>
-      </Card>
+        </div>
+      </section>
     </>
   );
 }

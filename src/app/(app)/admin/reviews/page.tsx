@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ClipboardList } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card, CardBody, CardHeader } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -43,20 +42,24 @@ export default async function AdminReviewsPage() {
 
   return (
     <>
-      <PageHeader
-        title="평가 사이클 관리"
-        meta={<span>{cycles.length}개 사이클</span>}
-      />
+      {/*
+        콘텐츠 제목 "평가 사이클 관리" 20/500 — PageHeader급 밴드 없음(확립
+        문법). 종전 메타(n개 사이클)는 사이클 섹션 제목이 분모로 든다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        평가 사이클 관리
+      </h1>
 
-      <Card className="mb-4">
-        <CardHeader
+      <section className="mb-5">
+        <SectionHeader
           title="새 사이클 시작"
           description="시작하면 전 직원이 목표설정 단계로 들어옵니다."
         />
-        <CardBody>
+        {/* 08 흰 시트: md+에서는 시트에 직접, md 미만은 canvas 위 카드 유지 */}
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           <CycleCreateForm />
-        </CardBody>
-      </Card>
+        </div>
+      </section>
 
       {/*
         알림 발송은 스펙 5장에 있지만 Resend 키가 없어 아직 못 붙인다.
@@ -73,22 +76,27 @@ export default async function AdminReviewsPage() {
           {error}
         </Callout>
       ) : cycles.length === 0 ? (
-        <EmptyState
-          icon={ClipboardList}
-          title="사이클이 없습니다"
-          description="위에서 첫 사이클을 시작하세요."
-        />
+        <div className="mt-4 ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={ClipboardList}
+            title="사이클이 없습니다"
+            description="위에서 첫 사이클을 시작하세요."
+          />
+        </div>
       ) : (
-        <ul className="mt-4 space-y-3">
+        /*
+          흰 시트 위 카드 나열 해체(08) — 사이클 한 건 = 구분선 행.
+          md 미만은 canvas 위라 카드 면을 유지한다.
+        */
+        <section className="mt-5">
+          <SectionHeader title={`사이클 (총${cycles.length}개)`} />
+          <ul className="ab-card divide-y divide-line px-4 md:rounded-none md:border-0 md:px-0">
           {cycles.map((cycle, index) => {
             const progress = progressList[index].data;
             const total = progress?.total_employees ?? 0;
 
             return (
-              <li
-                key={cycle.id}
-                className="rounded-card border border-line bg-surface p-4"
-              >
+              <li key={cycle.id} className="py-4">
                 <div className="flex flex-wrap items-center gap-3">
                   <Link
                     href={`/reviews/${cycle.id}`}
@@ -133,7 +141,8 @@ export default async function AdminReviewsPage() {
               </li>
             );
           })}
-        </ul>
+          </ul>
+        </section>
       )}
     </>
   );

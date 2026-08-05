@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/ui/PageHeader";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { Callout } from "@/components/ui/Callout";
 import { WikiEditor } from "@/features/wiki/WikiEditor";
 import { buildParentOptions } from "@/features/wiki/options";
@@ -20,7 +21,19 @@ export default async function NewWikiPage({
 
   return (
     <>
-      <PageHeader title="새 문서" backHref="/wiki" />
+      {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(확립 문법) */}
+      <div className="mb-5">
+        <Link
+          href="/wiki"
+          className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+        >
+          <ChevronLeft className="size-3.5" aria-hidden />
+          위키 홈으로
+        </Link>
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          새 문서
+        </h1>
+      </div>
 
       {error ? (
         <Callout tone="warn" title="문서 목록을 불러오지 못했습니다">

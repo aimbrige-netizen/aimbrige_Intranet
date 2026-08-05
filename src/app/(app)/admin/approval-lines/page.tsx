@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { GitBranch, ShieldAlert, UserCheck } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { Callout } from "@/components/ui/Callout";
 import {
@@ -64,22 +63,24 @@ export default async function ApprovalLinesPage() {
 
   return (
     <>
-      <PageHeader
-        title="결재라인 설정"
-        meta={
-          <>
-            <span>문서유형 {total}종</span>
-            <span>·</span>
-            <span>
-              {teamReviewOn === 0
-                ? "신청자 → 최종 승인자 (2단계)"
-                : teamReviewOn === total
-                  ? "신청자 → 팀장 → 최종 승인자 (3단계)"
-                  : `1차 팀장 검토 ${teamReviewOn}/${total}종`}
-            </span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "결재라인 설정" 20/500 — PageHeader급 밴드 없음(확립
+        문법). 종전 메타(유형 수·단계 구성)는 제목 아래 한 줄로 남긴다 —
+        지금 결재가 몇 단계로 도는지는 장식이 아니라 설정 상태다.
+      */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          결재라인 설정
+        </h1>
+        <p className="mt-1.5 text-label text-muted">
+          문서유형 {total}종 ·{" "}
+          {teamReviewOn === 0
+            ? "신청자 → 최종 승인자 (2단계)"
+            : teamReviewOn === total
+              ? "신청자 → 팀장 → 최종 승인자 (3단계)"
+              : `1차 팀장 검토 ${teamReviewOn}/${total}종`}
+        </p>
+      </div>
 
       {unset > 0 ? (
         <Callout
@@ -93,26 +94,30 @@ export default async function ApprovalLinesPage() {
       ) : null}
 
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-3">
+        {/*
+          민트 규율 — 지정 완료는 "기안이 살아 있는 유형 수"라 민트다.
+          종전 brand 강조(오렌지 틴트)는 장식이라 걷어냈다(색 절제).
+        */}
         <StatCard
           label="결재선 지정 완료"
           value={set}
           unit="건"
           denominator={total}
           denominatorUnit="건"
-          tone="brand"
+          tone="positive"
           icon={GitBranch}
-          emphasis
           max={total || 1}
           meterValue={set}
           sub={unset > 0 ? `미지정 ${unset}건` : "모든 유형에서 기안 가능"}
         />
+        {/* 문제 0건은 경고가 꺼진 상태지 성과가 아니다 — 중립으로 둔다(할일 화면과 같은 판단) */}
         <StatCard
           label="기안 불가 유형"
           value={unset}
           unit="건"
           denominator={total}
           denominatorUnit="건"
-          tone={unset > 0 ? "critical" : "positive"}
+          tone={unset > 0 ? "critical" : "neutral"}
           icon={ShieldAlert}
           sub={unset > 0 ? "최종 승인자 미지정" : "이상 없음"}
         />

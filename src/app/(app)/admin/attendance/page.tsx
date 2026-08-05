@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AlarmClock, CalendarOff, Clock3, TriangleAlert } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { Meter } from "@/components/ui/Progress";
@@ -269,7 +268,6 @@ export default async function AdminAttendancePage({
   const prevLate = ((prevRecords ?? []) as { status: string }[]).filter(
     (r) => r.status === "late",
   ).length;
-  const lateDelta = lateTotal - prevLate;
 
   const avgHours = headcount > 0 ? totalHours / headcount : 0;
   const avgPlannedDays = headcount > 0 ? plannedTotal / headcount : 0;
@@ -306,52 +304,55 @@ export default async function AdminAttendancePage({
 
   return (
     <>
-      <PageHeader
-        title="근태 관리"
-        meta={
-          <>
-            <span>재직 {headcount}명</span>
-            <span>·</span>
-            <span>정규 근무 09:00~18:00</span>
-            <span>·</span>
-            <span>수동 조정은 감사 로그에 기록</span>
-          </>
-        }
-        toolbar={
-          <PeriodNavigator
-            label={periodLabel}
-            sublabel={period.sublabel}
-            prevHref={linkTo(view, period.prevCursor)}
-            nextHref={linkTo(view, period.nextCursor)}
-            nextDisabled={rangeTo >= today}
-            todayHref={linkTo(view, null)}
-            atToday={inPeriod}
-            className="mb-0"
-            right={
-              <SegmentedControl
-                options={UNITS.map((unit) => ({
-                  value: unit,
-                  label: PERIOD_UNIT_LABELS[unit],
-                  // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
-                  href: linkTo(unit, inPeriod ? null : cursor),
-                }))}
-                value={view}
-                ariaLabel="기간 단위"
-              />
-            }
+      {/*
+        콘텐츠 제목 "근태 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(재직 n명·정규 근무·감사 기록)는 제목 아래 한 줄로 남긴다 —
+        분모(재직)와 판정 기준(09~18시)은 아래 모든 집계의 전제라 내용이다.
+      */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          근태 관리
+        </h1>
+        <p className="mt-1.5 text-label text-muted">
+          재직 {headcount}명 · 정규 근무 09:00~18:00 · 수동 조정은 감사 로그에
+          기록
+        </p>
+      </div>
+
+      <PeriodNavigator
+        label={periodLabel}
+        sublabel={period.sublabel}
+        prevHref={linkTo(view, period.prevCursor)}
+        nextHref={linkTo(view, period.nextCursor)}
+        nextDisabled={rangeTo >= today}
+        todayHref={linkTo(view, null)}
+        atToday={inPeriod}
+        right={
+          <SegmentedControl
+            options={UNITS.map((unit) => ({
+              value: unit,
+              label: PERIOD_UNIT_LABELS[unit],
+              // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
+              href: linkTo(unit, inPeriod ? null : cursor),
+            }))}
+            value={view}
+            ariaLabel="기간 단위"
           />
         }
       />
 
       {/* 요약 밴드 — 모든 숫자에 분모나 비교값을 붙인다 */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/*
+          민트 규율 — 1인 평균 근무는 이 화면의 살아 있는 지표 값이라 민트다.
+          종전 brand 강조(오렌지 틴트)는 장식이라 걷어냈다(색 절제).
+        */}
         <StatCard
           label="1인 평균 근무"
           value={formatHours(avgHours)}
           denominator={`${Math.round(targetHours)}h`}
-          tone="brand"
+          tone="positive"
           icon={Clock3}
-          emphasis
           max={targetHours || 1}
           meterValue={avgHours}
           sub={`근무일 평균 ${(headcount > 0 ? sum((r) => r.workDays) / headcount : 0).toFixed(1)}일 / 예정 ${avgPlannedDays.toFixed(1)}일`}
@@ -362,12 +363,13 @@ export default async function AdminAttendancePage({
           unit="명"
           denominator={headcount}
           denominatorUnit="명"
+          /* 문제 0명은 경고가 꺼진 상태지 성과가 아니다 — 중립(색 절제) */
           tone={
             over52.length > 0
               ? "critical"
               : watchCount > 0
                 ? "warning"
-                : "positive"
+                : "neutral"
           }
           icon={TriangleAlert}
           max={headcount || 1}
@@ -378,17 +380,18 @@ export default async function AdminAttendancePage({
               : "임계선을 넘은 인원 없음"
           }
         />
+        {/*
+          증감 델타 배지는 두지 않는다 — 지각이 줄어든 기간에 초록, 늘어난
+          기간에 빨강이 붙는데 전사 지각 증감은 성패 판정이 아니다(색 절제,
+          할일·업무일지 화면과 같은 판단). 비교값은 sub의 직전 기간 건수로
+          충분하다. 지각 건수 자체도 위반 집계가 아니라 셈값이라 중립이다.
+        */}
         <StatCard
           label="지각"
           value={lateTotal}
           unit="건"
-          tone="informative"
+          tone="neutral"
           icon={AlarmClock}
-          delta={{
-            label: `${lateDelta > 0 ? "+" : ""}${lateDelta}`,
-            direction: lateDelta > 0 ? "up" : lateDelta < 0 ? "down" : "flat",
-            goodDirection: "down",
-          }}
           sub={`직전 기간 ${prevLate}건 · 조퇴 ${earlyTotal}건`}
         />
         <StatCard

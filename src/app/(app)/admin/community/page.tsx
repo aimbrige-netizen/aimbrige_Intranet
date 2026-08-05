@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { UsersRound } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Badge } from "@/components/ui/Badge";
-import { Card } from "@/components/ui/Card";
+import { SectionHeader } from "@/components/ui/Card";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { CommunityAdminActions } from "@/features/boards/CommunityActions";
 import { getCommunities } from "@/features/boards/data";
@@ -30,21 +28,21 @@ export default async function AdminCommunityPage() {
 
   return (
     <>
-      <PageHeader
-        title="동호회 관리"
-        description="보관하면 목록에서 사라지고 새 글·댓글·가입을 받지 않습니다. 이미 올라온 글과 그 링크는 그대로 남습니다."
-        meta={
-          <>
-            <span>전체 {communities.length}개</span>
-            <span>·</span>
-            <span>운영 중 {communities.length - archived}개</span>
-            <span>·</span>
-            <span>보관 {archived}개</span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "동호회 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(전체·운영·보관 개수)는 섹션 제목·설명이 나눠 든다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        동호회 관리
+      </h1>
 
-      <Card className="overflow-hidden">
+      <section>
+        <SectionHeader
+          title={`전체 동호회 (총${communities.length}개)`}
+          description={`운영 중 ${communities.length - archived}개 · 보관 ${archived}개 — 보관하면 목록에서 사라지고 새 글·댓글·가입을 받지 않습니다. 이미 올라온 글과 그 링크는 그대로 남습니다.`}
+        />
+        {/* 08 흰 시트: md+에서는 표를 시트에 직접, md 미만은 canvas 위 카드 유지 */}
+        <div className="ab-card overflow-hidden md:rounded-none md:border-0">
         <div className="overflow-x-auto">
           <table className="ab-table ab-table--compact min-w-[760px]">
             <thead>
@@ -82,11 +80,15 @@ export default async function AdminCommunityPage() {
                         </span>
                       ) : null}
                     </td>
+                    {/*
+                      색 절제 — 거의 전 행이 "운영 중"이라 초록 배지가 상시
+                      깔리면 색이 말을 잃는다. 예외 상태(보관)만 흐리게 가른다.
+                    */}
                     <td>
                       {community.archived_at ? (
-                        <Badge tone="neutral">보관</Badge>
+                        <span className="text-muted">보관</span>
                       ) : (
-                        <Badge tone="success">운영 중</Badge>
+                        <span className="text-ink">운영 중</span>
                       )}
                     </td>
                     <td className="text-right tabular-nums">
@@ -114,7 +116,8 @@ export default async function AdminCommunityPage() {
             </tbody>
           </table>
         </div>
-      </Card>
+        </div>
+      </section>
     </>
   );
 }

@@ -6,7 +6,6 @@ import {
   Flag,
   NotebookPen,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Avatar } from "@/components/ui/Avatar";
 import { Badge } from "@/components/ui/Badge";
 import { LinkButton } from "@/components/ui/Button";
@@ -76,7 +75,9 @@ export default async function ProjectDetailPage({
   if (error) {
     return (
       <>
-        <PageHeader title="프로젝트" />
+        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+          프로젝트
+        </h1>
         <Callout tone="danger" title="프로젝트를 불러오지 못했습니다">
           {error}
         </Callout>
@@ -124,28 +125,33 @@ export default async function ProjectDetailPage({
 
   return (
     <>
-      <PageHeader
-        title={project.name}
-        meta={
-          <>
-            <Badge
-              tone={PROJECT_STATUS_TONES[project.status]}
-              className={PROJECT_STATUS_BADGE_CLASS[project.status]}
-            >
-              {PROJECT_STATUS_LABELS[project.status]}
-            </Badge>
-            {/* 지연은 warn — 목록 카드·D-표기와 같은 색이다 */}
-            {overdue ? <Badge tone="warn">지연</Badge> : null}
-            <span>{project.team?.name ?? "팀 미지정"}</span>
-            <span>·</span>
-            <span>{project.owner?.name ?? "담당자 미지정"}</span>
-            <span>·</span>
-            <span className="tabular-nums">
-              {periodLabel(project.start_date, project.end_date)}
-            </span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목(프로젝트명) 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 상태 배지·소속·기간은 밴드 장식이 아니라 이 문서의
+        메타라 제목 아래 한 줄로 남긴다(게시글 상세와 같은 단).
+      */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          {project.name}
+        </h1>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+          <Badge
+            tone={PROJECT_STATUS_TONES[project.status]}
+            className={PROJECT_STATUS_BADGE_CLASS[project.status]}
+          >
+            {PROJECT_STATUS_LABELS[project.status]}
+          </Badge>
+          {/* 지연은 warn — 목록 카드·D-표기와 같은 색이다 */}
+          {overdue ? <Badge tone="warn">지연</Badge> : null}
+          <span>{project.team?.name ?? "팀 미지정"}</span>
+          <span>·</span>
+          <span>{project.owner?.name ?? "담당자 미지정"}</span>
+          <span>·</span>
+          <span className="tabular-nums">
+            {periodLabel(project.start_date, project.end_date)}
+          </span>
+        </div>
+      </div>
 
       {canEdit ? (
         <ProjectAdminBar
@@ -156,7 +162,11 @@ export default async function ProjectDetailPage({
         />
       ) : null}
 
-      {/* 요약 밴드 — 숫자마다 분모가 붙는다 */}
+      {/*
+        요약 밴드 — 숫자마다 분모가 붙는다.
+        색 절제(목록 화면과 같은 판단 축): 색을 갖는 값은 목표일 지남(warn)과
+        마일스톤 완료(민트 지표 규율 — 완료 건수는 달성 축) 둘뿐이다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="마일스톤 완료"
@@ -164,7 +174,7 @@ export default async function ProjectDetailPage({
           unit="개"
           denominator={progress.total}
           denominatorUnit="개"
-          tone={project.status === "completed" ? "positive" : "informative"}
+          tone="positive"
           icon={Flag}
           max={progress.total || 1}
           meterValue={progress.done}
@@ -175,7 +185,7 @@ export default async function ProjectDetailPage({
               : `진행률 ${progress.percent}% · 남은 ${openMilestones.length}개`
           }
         />
-        {/* 이 화면에서 색을 올리는 값은 여기 하나다 */}
+        {/* 이 화면에서 경고색을 올리는 값은 여기 하나다 */}
         <StatCard
           label="목표일 지난 마일스톤"
           value={overdueMilestones}
@@ -244,16 +254,15 @@ export default async function ProjectDetailPage({
           description={`등록 ${formatDate(project.created_at)} · 최종 변경 ${formatDate(project.updated_at)}`}
         />
         <div className="ab-card px-4 py-3 md:rounded-none md:border-0 md:p-0">
+          {/*
+            진행률 게이지는 민트(positive) — 지표 게이지 채움은 민트 잉크라는
+            14-ehr 규율(근태 주간누적과 같은 축). 완료/진행중을 게이지 색으로
+            가르지 않는다 — 상태는 상단 배지가 이미 말한다.
+          */}
           <Meter
             value={progress.done}
             max={progress.total || 1}
-            tone={
-              project.status === "completed"
-                ? "positive"
-                : progress.total === 0
-                  ? "neutral"
-                  : "informative"
-            }
+            tone={progress.total === 0 ? "neutral" : "positive"}
             size="lg"
             label={progressLabel(progress)}
             valueLabel={`${progress.percent}%`}

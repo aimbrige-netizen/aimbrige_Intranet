@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Boxes } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
@@ -42,23 +42,35 @@ export default async function AssetsPage() {
 
   return (
     <>
-      <PageHeader
-        title="자산"
-        meta={<span>전체 {assets.length}대</span>}
-      />
+      {/*
+        콘텐츠 제목 "자산" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        줄높이 30px은 06 heading-l 실측. 종전 메타(전체 n대)는 걷어낸다 —
+        전체 대수는 요약 카드 분모와 종류별 섹션 제목이 이미 들고 말한다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        자산
+      </h1>
 
       {error ? (
         <Callout tone="danger" title="자산 목록을 불러오지 못했습니다">
           {error}
         </Callout>
       ) : assets.length === 0 ? (
-        <EmptyState
-          icon={Boxes}
-          title="등록된 자산이 없습니다"
-          description="시스템 관리자가 자산을 등록하면 여기에 표시됩니다."
-        />
+        /* md+ 흰 시트에서는 빈 상태를 시트에 직접, md 미만은 canvas 위라 카드 면 유지 */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={Boxes}
+            title="등록된 자산이 없습니다"
+            description="시스템 관리자가 자산을 등록하면 여기에 표시됩니다."
+          />
+        </div>
       ) : (
         <>
+          {/*
+            민트 규율(14-ehr) — 총계·경과 상태는 먹색, "지금 살아 있는 값"만
+            민트다. 이 화면에서 그 값은 대여 가능 대수 하나뿐이다. 대여 중·
+            수리 중은 위반이 아니라 경과 상태라 중립으로 둔다(색 절제).
+          */}
           <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-3">
             <StatCard
               label="대여 가능"
@@ -66,6 +78,7 @@ export default async function AssetsPage() {
               unit="대"
               denominator={assets.length}
               denominatorUnit="대"
+              tone="positive"
             />
             <StatCard
               label="대여 중"
@@ -91,12 +104,8 @@ export default async function AssetsPage() {
             */}
             {Array.from(groups.entries()).map(([type, rows]) => (
               <section key={type}>
-                <h2 className="mb-2 text-body-sm font-bold text-ink">
-                  {type}
-                  <span className="ml-2 text-label font-normal text-muted">
-                    {rows.length}대
-                  </span>
-                </h2>
+                {/* 섹션 제목 14/600 공통 단 — 분모는 제목이 든다(07·16 문법) */}
+                <SectionHeader title={`${type} (총${rows.length}대)`} />
                 <div className="ab-card overflow-hidden md:rounded-none md:border-0">
                   <table className="ab-table">
                     <thead>

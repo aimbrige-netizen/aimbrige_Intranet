@@ -4,9 +4,9 @@ import { Skeleton, SkeletonStats } from "@/components/ui/Skeleton";
 export default function Loading() {
   return (
     <>
+      {/* 콘텐츠 제목 20/500 한 줄 — 메타 밴드가 없어진 실제 헤더와 같은 골격 */}
       <div className="mb-5">
-        <Skeleton className="h-7 w-28" />
-        <Skeleton className="mt-2 h-3 w-72" />
+        <Skeleton className="h-[30px] w-28" />
       </div>
       <SkeletonStats count={4} />
       <div className="mb-5 rounded-card border border-line bg-surface p-4">

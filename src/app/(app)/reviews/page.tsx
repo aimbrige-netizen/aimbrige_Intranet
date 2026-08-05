@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ClipboardList, Users } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkButton } from "@/components/ui/Button";
@@ -36,70 +36,80 @@ export default async function ReviewsPage() {
 
   return (
     <>
-      <PageHeader
-        title="내 평가"
-        meta={
-          <span>
-            {cycles.length}개 사이클
-            {cycles.length > 0
-              ? ` · 진행중 ${cycles.filter((c) => c.status !== "completed").length}개`
-              : null}
-          </span>
-        }
-        actions={
-          /*
-            사이클이 하나도 없으면 팀원 평가로 갈 곳 자체가 없다.
-            눌러도 안 되는 버튼을 두는 대신 렌더하지 않는다.
-          */
-          (me.isManager || me.isSystemAdmin) && cycles.length > 0 ? (
-            <LinkButton href={teamHref(cycles)} size="small" variant="secondary">
-              <Users className="size-4" />
-              팀원 평가
-            </LinkButton>
-          ) : undefined
-        }
-      />
+      {/*
+        콘텐츠 제목 "내 평가" 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 줄높이 30px은 06 heading-l 실측. 종전 메타(사이클 건수)는
+        아래 섹션 제목의 설명이 분모까지 들고 말한다.
+      */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          내 평가
+        </h1>
+        {/*
+          사이클이 하나도 없으면 팀원 평가로 갈 곳 자체가 없다.
+          눌러도 안 되는 버튼을 두는 대신 렌더하지 않는다.
+        */}
+        {(me.isManager || me.isSystemAdmin) && cycles.length > 0 ? (
+          <LinkButton href={teamHref(cycles)} size="small" variant="secondary">
+            <Users className="size-4" />
+            팀원 평가
+          </LinkButton>
+        ) : undefined}
+      </div>
 
       {error ? (
         <Callout tone="danger" title="평가 정보를 불러오지 못했습니다">
           {error}
         </Callout>
       ) : cycles.length === 0 ? (
-        <EmptyState
-          icon={ClipboardList}
-          title="평가 사이클이 없습니다"
-          description="시스템 관리자가 사이클을 시작하면 여기에 표시됩니다."
-        />
+        /*
+          08 흰 시트: md+에서 빈 상태를 카드에 담으면 이중 테두리 — 시트에
+          직접 놓고 md 미만은 canvas 위 카드 면을 유지한다(07 빈 상태 문법).
+        */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={ClipboardList}
+            title="평가 사이클이 없습니다"
+            description="시스템 관리자가 사이클을 시작하면 여기에 표시됩니다."
+          />
+        </div>
       ) : (
-        <ul className="space-y-2">
-          {cycles.map((cycle) => {
-            const review = byCycle.get(cycle.id) ?? null;
-            const stage = reviewStage(review, cycle.status);
-            return (
-              <li key={cycle.id}>
-                <Link
-                  href={`/reviews/${cycle.id}`}
-                  className="flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas md:border-0 md:bg-transparent md:hover:bg-subtle"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-body-sm font-bold text-ink">
-                      {cycle.name}
-                    </p>
-                    <p className="text-label text-muted">
-                      {periodLabel(cycle.start_date, cycle.end_date)}
-                    </p>
-                  </div>
-                  <Badge tone={REVIEW_STAGE_TONES[stage]}>
-                    {REVIEW_STAGE_LABELS[stage]}
-                  </Badge>
-                  <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
-                    {CYCLE_STATUS_LABELS[cycle.status]}
-                  </Badge>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <section>
+          {/* 섹션 제목 14/600 (확립 문법) — 종전 헤더 메타가 이 설명으로 내려왔다 */}
+          <SectionHeader
+            title="평가 사이클"
+            description={`전체 ${cycles.length}개 · 진행중 ${cycles.filter((c) => c.status !== "completed").length}개`}
+          />
+          <ul className="space-y-2">
+            {cycles.map((cycle) => {
+              const review = byCycle.get(cycle.id) ?? null;
+              const stage = reviewStage(review, cycle.status);
+              return (
+                <li key={cycle.id}>
+                  <Link
+                    href={`/reviews/${cycle.id}`}
+                    className="flex items-center gap-3 rounded-card border border-line bg-surface px-4 py-3 transition-colors duration-fast ease-standard hover:bg-canvas md:border-0 md:bg-transparent md:hover:bg-subtle"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-body-sm font-bold text-ink">
+                        {cycle.name}
+                      </p>
+                      <p className="text-label text-muted">
+                        {periodLabel(cycle.start_date, cycle.end_date)}
+                      </p>
+                    </div>
+                    <Badge tone={REVIEW_STAGE_TONES[stage]}>
+                      {REVIEW_STAGE_LABELS[stage]}
+                    </Badge>
+                    <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
+                      {CYCLE_STATUS_LABELS[cycle.status]}
+                    </Badge>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </>
   );

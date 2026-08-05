@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FileText, History, Pencil } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { ChevronLeft, FileText, History, Pencil } from "lucide-react";
 import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { LinkButton } from "@/components/ui/Button";
@@ -46,7 +45,12 @@ export default async function WikiPageView({
   if (error) {
     return (
       <>
-        <PageHeader title="위키 문서" backHref="/wiki" />
+        <div className="mb-5">
+          <BackToWiki />
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            위키 문서
+          </h1>
+        </div>
         <Callout tone="danger" title="문서를 불러오지 못했습니다">
           {error}
         </Callout>
@@ -66,25 +70,18 @@ export default async function WikiPageView({
 
   return (
     <>
-      <PageHeader
-        title={page.title}
-        meta={
-          <>
-            {parent ? (
-              <Link href={`/wiki/${parent.id}`} className="hover:underline">
-                {parent.title}
-              </Link>
-            ) : (
-              <span>최상위 문서</span>
-            )}
-            <span>
-              {page.updated_at.slice(0, 10)} 수정
-              {page.updated_by_name ? ` · ${page.updated_by_name}` : null}
-            </span>
-          </>
-        }
-        actions={
-          <>
+      {/*
+        문서 제목 20/500 — PageHeader급 밴드 없음(확립 문법, 게시글 상세와
+        같은 단). 상위 문서·수정 정보는 문서 메타라 제목 아래 한 줄로 남긴다 —
+        장식이 아니라 "지금 보는 판이 언제 것인가"라는 내용이다.
+      */}
+      <div className="mb-5">
+        <BackToWiki />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="min-w-0 text-[20px] font-medium leading-[30px] text-ink">
+            {page.title}
+          </h1>
+          <div className="flex shrink-0 items-center gap-2">
             <LinkButton
               href={showHistory ? `/wiki/${page.id}` : `/wiki/${page.id}?history=1`}
               size="small"
@@ -97,10 +94,22 @@ export default async function WikiPageView({
               <Pencil className="size-4" />
               편집
             </LinkButton>
-          </>
-        }
-        backHref="/wiki"
-      />
+          </div>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+          {parent ? (
+            <Link href={`/wiki/${parent.id}`} className="hover:underline">
+              {parent.title}
+            </Link>
+          ) : (
+            <span>최상위 문서</span>
+          )}
+          <span>
+            {page.updated_at.slice(0, 10)} 수정
+            {page.updated_by_name ? ` · ${page.updated_by_name}` : null}
+          </span>
+        </div>
+      </div>
 
       {showHistory ? (
         <div className="space-y-5">
@@ -181,5 +190,18 @@ export default async function WikiPageView({
         </>
       )}
     </>
+  );
+}
+
+/** 위키 홈 브레드크럼 — ESS 상세와 같은 단(20/500 제목 위 라벨 링크) */
+function BackToWiki() {
+  return (
+    <Link
+      href="/wiki"
+      className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+    >
+      <ChevronLeft className="size-3.5" aria-hidden />
+      위키 홈으로
+    </Link>
   );
 }

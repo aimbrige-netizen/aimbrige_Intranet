@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   ContractList,
   type ContractRowModel,
@@ -30,11 +29,16 @@ export default async function ContractsPage() {
 
   return (
     <>
-      <PageHeader
-        title="내 계약서"
-        description="내 근로계약서를 확인하고 파일을 열람합니다."
-        meta={<span>{rows.length}건</span>}
-      />
+      {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          내 계약서
+        </h1>
+        <p className="mt-1 text-caption">
+          내 근로계약서를 확인하고 파일을 열람합니다.
+        </p>
+        <p className="mt-1.5 text-label text-muted">{rows.length}건</p>
+      </div>
       <ContractList rows={rows} />
     </>
   );

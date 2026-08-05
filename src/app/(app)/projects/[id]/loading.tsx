@@ -4,8 +4,9 @@ import { Skeleton, SkeletonStats, SkeletonTable } from "@/components/ui/Skeleton
 export default function Loading() {
   return (
     <>
+      {/* 콘텐츠 제목 20/500 + 메타 한 줄 — 실제 헤더와 같은 골격 */}
       <div className="mb-5">
-        <Skeleton className="h-7 w-56" />
+        <Skeleton className="h-[30px] w-56" />
         <Skeleton className="mt-2 h-3 w-80" />
       </div>
       <SkeletonStats count={4} />

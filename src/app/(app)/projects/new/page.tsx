@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { ProjectForm } from "@/features/projects/ProjectForm";
 import { getOwnerOptions, getTeams } from "@/features/projects/data";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -22,23 +21,29 @@ export default async function NewProjectPage() {
 
   return (
     <>
-      <PageHeader
-        title="새 프로젝트"
-        description="프로젝트명만 있으면 등록됩니다. 나머지는 진행하면서 채워도 됩니다."
-        meta={
-          <>
-            <span>등록자 {me.name}</span>
-            <span>·</span>
-            <span>{me.department?.name ?? "부서 미지정"}</span>
-            {me.team?.name ? (
-              <>
-                <span>·</span>
-                <span>{me.team.name}</span>
-              </>
-            ) : null}
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "새 프로젝트" 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 안내문·등록자는 제목 아래 한 줄씩 남긴다.
+      */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          새 프로젝트
+        </h1>
+        <p className="mt-1 text-caption">
+          프로젝트명만 있으면 등록됩니다. 나머지는 진행하면서 채워도 됩니다.
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+          <span>등록자 {me.name}</span>
+          <span>·</span>
+          <span>{me.department?.name ?? "부서 미지정"}</span>
+          {me.team?.name ? (
+            <>
+              <span>·</span>
+              <span>{me.team.name}</span>
+            </>
+          ) : null}
+        </div>
+      </div>
 
       <ProjectForm
         teams={teams}

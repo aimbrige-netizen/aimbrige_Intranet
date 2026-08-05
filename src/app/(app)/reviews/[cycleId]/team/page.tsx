@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Users } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { ChevronLeft, Users } from "lucide-react";
 import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
@@ -56,7 +55,12 @@ export default async function ReviewTeamPage({
   if (cycleError) {
     return (
       <>
-        <PageHeader title="팀원 평가" backHref="/reviews" />
+        <div className="mb-5">
+          <BackLink href="/reviews" />
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            팀원 평가
+          </h1>
+        </div>
         <Callout tone="danger" title="사이클을 불러오지 못했습니다">
           {cycleError}
         </Callout>
@@ -84,30 +88,38 @@ export default async function ReviewTeamPage({
 
   return (
     <>
-      <PageHeader
-        title="팀원 평가"
-        meta={
-          <>
-            <span>{cycle.name}</span>
-            <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
-              {CYCLE_STATUS_LABELS[cycle.status]}
-            </Badge>
-            <span>팀원 {team.length}명</span>
-          </>
-        }
-        backHref={`/reviews/${cycle.id}`}
-      />
+      {/*
+        콘텐츠 제목 "팀원 평가" 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 사이클명·단계 배지·인원은 이 화면의 메타라 제목 아래
+        한 줄로 남긴다(평가 작성 화면과 같은 단).
+      */}
+      <div className="mb-5">
+        <BackLink href={`/reviews/${cycle.id}`} />
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          팀원 평가
+        </h1>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+          <span>{cycle.name}</span>
+          <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
+            {CYCLE_STATUS_LABELS[cycle.status]}
+          </Badge>
+          <span>팀원 {team.length}명</span>
+        </div>
+      </div>
 
       {teamError ? (
         <Callout tone="danger" title="팀원 목록을 불러오지 못했습니다">
           {teamError}
         </Callout>
       ) : team.length === 0 ? (
-        <EmptyState
-          icon={Users}
-          title="담당 팀원이 없습니다"
-          description="조직도에서 팀장·부서장으로 지정되면 팀원이 여기에 표시됩니다."
-        />
+        /* 08 흰 시트: 빈 상태는 시트에 직접, md 미만만 카드 유지(07 문법) */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={Users}
+            title="담당 팀원이 없습니다"
+            description="조직도에서 팀장·부서장으로 지정되면 팀원이 여기에 표시됩니다."
+          />
+        </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)]">
           <nav aria-label="팀원 목록">
@@ -202,6 +214,19 @@ export default async function ReviewTeamPage({
         </div>
       )}
     </>
+  );
+}
+
+/** 종전 PageHeader backHref 문법 그대로 — 제목 위 한 줄 뒤로가기 */
+function BackLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+    >
+      <ChevronLeft className="size-3.5" aria-hidden />
+      목록으로
+    </Link>
   );
 }
 

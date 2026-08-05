@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { History } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { ChevronLeft, History } from "lucide-react";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
 import { EmploymentStatusBadge, RoleBadge } from "@/components/ui/Badge";
@@ -67,31 +67,39 @@ export default async function EmployeeDetailPage({
 
   return (
     <>
-      <PageHeader
-        backHref="/admin/employees"
-        backLabel="임직원 목록"
-        title={employee.name}
-        description={employee.email}
-        meta={
-          <>
-            <span>
-              {[employee.department?.name, employee.team?.name]
-                .filter(Boolean)
-                .join(" › ") || "소속 미지정"}
-            </span>
-            <span>·</span>
-            <span>{employee.position ?? "직급 미지정"}</span>
-            <span>·</span>
-            <span>근속 {tenure}</span>
-          </>
-        }
-        action={
-          <div className="flex items-center gap-2">
+      {/*
+        콘텐츠 제목(임직원 이름) 20/500 — PageHeader급 밴드 없음(확립 문법).
+        소속·직급·근속·이메일은 인사 기록의 내용이라 제목 아래 한 줄로 남기고,
+        역할·재직상태 배지는 의미 있는 상태색이라 우측에 유지한다.
+      */}
+      <div className="mb-5">
+        <Link
+          href="/admin/employees"
+          className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+        >
+          <ChevronLeft className="size-3.5" aria-hidden />
+          임직원 목록
+        </Link>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="min-w-0 text-[20px] font-medium leading-[30px] text-ink">
+            {employee.name}
+          </h1>
+          <div className="flex shrink-0 items-center gap-2">
             <RoleBadge role={employee.role?.name} />
             <EmploymentStatusBadge status={employee.employment_status} />
           </div>
-        }
-      />
+        </div>
+        <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+          <span>
+            {[employee.department?.name, employee.team?.name]
+              .filter(Boolean)
+              .join(" › ") || "소속 미지정"}
+          </span>
+          <span>{employee.position ?? "직급 미지정"}</span>
+          <span>근속 {tenure}</span>
+          <span>{employee.email}</span>
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1fr_320px]">
         <div className="space-y-5">

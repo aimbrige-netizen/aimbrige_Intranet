@@ -1,8 +1,8 @@
 "use client";
 
-import { Printer } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, Printer } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { formatWon } from "@/features/approvals/format";
 
 /**
@@ -114,18 +114,31 @@ export function PaySlipDetail({ slip }: { slip: PaySlipDetailModel }) {
     <>
       <style>{PRINT_CSS}</style>
 
-      <PageHeader
-        title="급여명세서"
-        description={`${slip.monthLabel} 명세입니다. 급여 정보는 본인과 시스템 관리자만 볼 수 있습니다.`}
-        backHref="/payroll"
-        backLabel="급여명세서 목록으로"
-        actions={
+      {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+      <div className="mb-5">
+        <Link
+          href="/payroll"
+          className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+        >
+          <ChevronLeft className="size-3.5" aria-hidden />
+          급여명세서 목록으로
+        </Link>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+              급여명세서
+            </h1>
+            <p className="mt-1 text-caption">
+              {slip.monthLabel} 명세입니다. 급여 정보는 본인과 시스템
+              관리자만 볼 수 있습니다.
+            </p>
+          </div>
           <Button variant="secondary" onClick={() => window.print()}>
             <Printer className="size-4" aria-hidden />
             인쇄
           </Button>
-        }
-      />
+        </div>
+      </div>
 
       <div className="payslip-print-area ab-card p-5">
         {/* 인쇄물에는 셸 헤더가 없으므로 제목을 명세 안에서 한 번 더 세운다 */}

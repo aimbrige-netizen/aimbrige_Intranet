@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageHeader } from "@/components/ui/PageHeader";
 import {
   PayrollView,
   type PayrollProfileModel,
@@ -78,10 +77,16 @@ export default async function PayrollPage({
 
   return (
     <>
-      <PageHeader
-        title="내 급여"
-        description="급여상세와 월별 급여명세서입니다. 급여 정보는 본인과 시스템 관리자만 볼 수 있습니다."
-      />
+      {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          내 급여
+        </h1>
+        <p className="mt-1 text-caption">
+          급여상세와 월별 급여명세서입니다. 급여 정보는 본인과 시스템
+          관리자만 볼 수 있습니다.
+        </p>
+      </div>
       <PayrollView
         profile={profileModel}
         rows={rows}

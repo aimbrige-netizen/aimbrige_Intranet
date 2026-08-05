@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Building2, KeyRound, ListChecks, UserRoundCheck } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { StatCard } from "@/components/ui/StatCard";
@@ -187,22 +186,25 @@ export default async function EmployeesPage({
 
   return (
     <>
-      <PageHeader
-        title="임직원 관리"
-        description="계정 등록·역할 지정·재직상태를 관리합니다. 모든 변경은 감사 로그에 기록됩니다."
-        meta={
-          <>
-            <span>전체 {total}명</span>
-            <span>·</span>
-            <span>부서 {departments?.length ?? 0}개</span>
-            <span>·</span>
-            <span>팀 {teams?.length ?? 0}개</span>
-            <span>·</span>
-            <span>기준 {today}</span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "임직원 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(전체·부서·팀·기준일)는 제목 아래 한 줄로 남긴다 — 조직
+        규모는 이 화면의 내용이다. 변경 기록 안내는 상세 화면이 이미 말한다.
+      */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          임직원 관리
+        </h1>
+        <p className="mt-1.5 text-label text-muted">
+          전체 {total}명 · 부서 {departments?.length ?? 0}개 · 팀{" "}
+          {teams?.length ?? 0}개 · 기준 {today}
+        </p>
+      </div>
 
+      {/*
+        민트 규율 — 재직 인원은 "지금 살아 있는 값"이라 민트다.
+        종전 brand 강조(오렌지 틴트)는 장식이라 걷어냈다(색 절제).
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="재직 인원"
@@ -210,20 +212,20 @@ export default async function EmployeesPage({
           unit="명"
           denominator={total}
           denominatorUnit="명"
-          tone="brand"
+          tone="positive"
           icon={UserRoundCheck}
-          emphasis
           max={total || 1}
           meterValue={statusCounts.active}
           sub={`휴직 ${statusCounts.leave}명 · 퇴사 ${statusCounts.terminated}명`}
         />
+        {/* 미연결에는 퇴사자(영구 미연결)도 섞여 있어 경고 축을 쓰지 않는다 — 중립 셈값 */}
         <StatCard
           label="계정 연결"
           value={linked}
           unit="명"
           denominator={total}
           denominatorUnit="명"
-          tone="positive"
+          tone="neutral"
           icon={KeyRound}
           max={total || 1}
           meterValue={linked}
@@ -239,7 +241,7 @@ export default async function EmployeesPage({
           unit="명"
           denominator={total}
           denominatorUnit="명"
-          tone="informative"
+          tone="neutral"
           icon={Building2}
           max={total || 1}
           meterValue={placed}

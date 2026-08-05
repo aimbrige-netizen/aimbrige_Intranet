@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { ChevronLeft } from "lucide-react";
 import { Callout } from "@/components/ui/Callout";
 import { WikiEditor } from "@/features/wiki/WikiEditor";
 import { buildParentOptions } from "@/features/wiki/options";
@@ -31,7 +32,12 @@ export default async function EditWikiPage({
   if (error) {
     return (
       <>
-        <PageHeader title="문서 편집" backHref="/wiki" />
+        <div className="mb-5">
+          <BackLink href="/wiki" />
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            문서 편집
+          </h1>
+        </div>
         <Callout tone="danger" title="문서를 불러오지 못했습니다">
           {error}
         </Callout>
@@ -42,11 +48,17 @@ export default async function EditWikiPage({
 
   return (
     <>
-      <PageHeader
-        title="문서 편집"
-        meta={<span>{page.title}</span>}
-        backHref={`/wiki/${page.id}`}
-      />
+      {/*
+        콘텐츠 제목 20/500 — PageHeader급 밴드 없음(확립 문법).
+        어느 문서를 고치는 중인지는 제목 아래 메타 한 줄이 말한다.
+      */}
+      <div className="mb-5">
+        <BackLink href={`/wiki/${page.id}`} />
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          문서 편집
+        </h1>
+        <p className="mt-1.5 text-label text-muted">{page.title}</p>
+      </div>
 
       <WikiEditor
         pageId={page.id}
@@ -57,5 +69,18 @@ export default async function EditWikiPage({
         canDelete={me.isSystemAdmin}
       />
     </>
+  );
+}
+
+/** 문서/홈 브레드크럼 — ESS 상세와 같은 단(20/500 제목 위 라벨 링크) */
+function BackLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+    >
+      <ChevronLeft className="size-3.5" aria-hidden />
+      {href === "/wiki" ? "위키 홈으로" : "문서로 돌아가기"}
+    </Link>
   );
 }

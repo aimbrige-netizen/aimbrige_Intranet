@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Gift } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Badge } from "@/components/ui/Badge";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
@@ -54,64 +54,84 @@ export default async function WelfarePage({
 
   return (
     <>
-      <PageHeader
-        title="복지포인트"
-        meta={<span>{year}년</span>}
-        actions={
-          balance ? (
-            <WelfareRequestButton year={year} available={summary.available} />
-          ) : undefined
-        }
-      />
+      {/*
+        콘텐츠 제목 "복지포인트" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타({year}년)는 섹션 제목들이 연도를 들고 말한다.
+        이 화면의 주요 버튼(진한 오렌지)은 신청 버튼 하나다(원칙 1).
+      */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          복지포인트
+        </h1>
+        {balance ? (
+          <WelfareRequestButton year={year} available={summary.available} />
+        ) : null}
+      </div>
 
       {error ? (
         <Callout tone="danger" title="복지포인트를 불러오지 못했습니다">
           {error}
         </Callout>
       ) : !balance ? (
-        <EmptyState
-          icon={Gift}
-          title={`${year}년 복지포인트가 아직 지급되지 않았습니다`}
-          description="시스템 관리자가 연초 일괄 지급을 처리하면 여기에 표시됩니다."
-        />
+        /* md+ 흰 시트에서는 빈 상태를 시트에 직접, md 미만은 canvas 위라 카드 면 유지 */
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={Gift}
+            title={`${year}년 복지포인트가 아직 지급되지 않았습니다`}
+            description="시스템 관리자가 연초 일괄 지급을 처리하면 여기에 표시됩니다."
+          />
+        </div>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <StatCard label="지급" value={formatPoints(summary.granted)} unit="점" />
-            <StatCard
-              label="사용"
-              value={formatPoints(summary.used)}
-              unit="점"
-              denominator={summary.granted}
-              denominatorUnit="점"
-              meterValue={summary.used}
-              max={Math.max(summary.granted, 1)}
-            />
-            <StatCard label="잔여" value={formatPoints(summary.remaining)} unit="점" />
-            <StatCard
-              label="신청 가능"
-              value={formatPoints(summary.available)}
-              unit="점"
-              sub={
-                summary.pending > 0
-                  ? `승인 대기 ${formatPoints(summary.pending)}점 제외`
-                  : undefined
-              }
-            />
-          </div>
+          {/*
+            민트 규율(14-ehr) — 총계(지급)·경과(사용)는 먹색, "지금 살아 있는
+            값"만 민트다. 잔여와 신청 가능 중에서는 대기 신청까지 뺀
+            신청 가능이 그 값이다 — 둘 다 칠하면 색이 말을 잃는다(색 절제).
+          */}
+          <section className="mb-5">
+            <SectionHeader title={`${year}년 지급 현황`} />
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="지급" value={formatPoints(summary.granted)} unit="점" />
+              <StatCard
+                label="사용"
+                value={formatPoints(summary.used)}
+                unit="점"
+                denominator={summary.granted}
+                denominatorUnit="점"
+                meterValue={summary.used}
+                max={Math.max(summary.granted, 1)}
+              />
+              <StatCard label="잔여" value={formatPoints(summary.remaining)} unit="점" />
+              <StatCard
+                label="신청 가능"
+                value={formatPoints(summary.available)}
+                unit="점"
+                tone="positive"
+                sub={
+                  summary.pending > 0
+                    ? `승인 대기 ${formatPoints(summary.pending)}점 제외`
+                    : undefined
+                }
+              />
+            </div>
+          </section>
 
-          {requests.length === 0 ? (
-            <EmptyState
-              icon={Gift}
-              title="사용 내역이 없습니다"
-              description="도서·자기계발·건강관리 등에 쓴 금액을 신청하면 여기에 쌓입니다."
-            />
-          ) : (
-            /*
-              08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 표를
-              시트에 직접 놓고 md 미만만 카드 유지(10-modules2).
-            */
-            <div className="ab-card overflow-hidden md:rounded-none md:border-0">
+          <section>
+            <SectionHeader title={`사용 내역 (총${requests.length}건)`} />
+            {requests.length === 0 ? (
+              <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+                <EmptyState
+                  icon={Gift}
+                  title="사용 내역이 없습니다"
+                  description="도서·자기계발·건강관리 등에 쓴 금액을 신청하면 여기에 쌓입니다."
+                />
+              </div>
+            ) : (
+              /*
+                08 흰 시트: md+에서 .ab-card는 흰 면 위 이중 테두리 — 표를
+                시트에 직접 놓고 md 미만만 카드 유지(10-modules2).
+              */
+              <div className="ab-card overflow-hidden md:rounded-none md:border-0">
               <table className="ab-table">
                 <thead>
                   <tr>
@@ -158,8 +178,9 @@ export default async function WelfarePage({
                   ))}
                 </tbody>
               </table>
-            </div>
-          )}
+              </div>
+            )}
+          </section>
         </>
       )}
     </>

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileSignature, FolderKanban, History } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionHeader } from "@/components/ui/Card";
 import {
   Badge,
@@ -74,10 +73,15 @@ export default async function HrPage({
     const rows = await getMyCertificateRequests(me.id);
     return (
       <>
-        <PageHeader
-          title="증명서 발급 신청"
-          description="재직·경력증명서 발급을 신청하고 처리 상태를 확인합니다."
-        />
+        {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+        <div className="mb-5">
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            증명서 발급 신청
+          </h1>
+          <p className="mt-1 text-caption">
+            재직·경력증명서 발급을 신청하고 처리 상태를 확인합니다.
+          </p>
+        </div>
         <CertRequests rows={rows} />
       </>
     );
@@ -87,10 +91,16 @@ export default async function HrPage({
 
   return (
     <>
-      <PageHeader
-        title="내 인사정보"
-        description="인사카드는 읽기 전용입니다. 변경이 필요하면 시스템 관리자에게 문의하세요."
-      />
+      {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+      <div className="mb-5">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          내 인사정보
+        </h1>
+        <p className="mt-1 text-caption">
+          인사카드는 읽기 전용입니다. 변경이 필요하면 시스템 관리자에게
+          문의하세요.
+        </p>
+      </div>
 
       <div className="space-y-5">
         <HrCard me={me} />

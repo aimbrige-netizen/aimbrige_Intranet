@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { Wallet } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import Link from "next/link";
+import { ChevronLeft, Wallet } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
 import {
   PaySlipDetail,
@@ -42,11 +42,19 @@ export default async function PaySlipPage({
   if (!detail) {
     return (
       <>
-        <PageHeader
-          title="급여명세서"
-          backHref="/payroll"
-          backLabel="급여명세서 목록으로"
-        />
+        {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
+        <div className="mb-5">
+          <Link
+            href="/payroll"
+            className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+          >
+            <ChevronLeft className="size-3.5" aria-hidden />
+            급여명세서 목록으로
+          </Link>
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            급여명세서
+          </h1>
+        </div>
         <div className="ab-card p-4">
           <EmptyState
             icon={Wallet}

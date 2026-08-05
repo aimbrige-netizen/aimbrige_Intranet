@@ -16,7 +16,6 @@ import {
   UserPlus,
   type LucideIcon,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader, SectionHeader } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { Callout } from "@/components/ui/Callout";
@@ -198,37 +197,38 @@ export default async function AdminOverviewPage({
 
   return (
     <>
-      <PageHeader
-        title="시스템 개요"
-        description="전사 통계와 조치가 필요한 항목"
-        toolbar={
-          <PeriodNavigator
-            label={period.label}
-            /* 기간이 무엇에 걸리는지 여기서 한 번 말해 둔다.
-               필터를 바꿨는데 안 변하는 카드가 있으면 고장으로 읽힌다 */
-            sublabel="결재 처리·활동 로그에만 적용됩니다"
-            prevHref={
-              period.prevCursor ? linkFor(period.unit, period.prevCursor) : undefined
-            }
-            nextHref={
-              period.nextCursor ? linkFor(period.unit, period.nextCursor) : undefined
-            }
-            todayHref={linkFor(period.unit, null)}
-            atToday={period.includesToday}
-            nextDisabled={period.to >= today}
-            className="mb-0"
-            right={
-              <SegmentedControl
-                options={UNITS.map((unit) => ({
-                  value: unit,
-                  label: PERIOD_UNIT_LABELS[unit],
-                  // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
-                  href: linkFor(unit, period.includesToday ? null : period.cursor),
-                }))}
-                value={period.unit}
-                ariaLabel="조회 기간 단위"
-              />
-            }
+      {/*
+        콘텐츠 제목 "시스템 개요" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 설명("전사 통계와 조치가 필요한 항목")은 섹션 제목들이 이미 말한다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        시스템 개요
+      </h1>
+
+      <PeriodNavigator
+        label={period.label}
+        /* 기간이 무엇에 걸리는지 여기서 한 번 말해 둔다.
+           필터를 바꿨는데 안 변하는 카드가 있으면 고장으로 읽힌다 */
+        sublabel="결재 처리·활동 로그에만 적용됩니다"
+        prevHref={
+          period.prevCursor ? linkFor(period.unit, period.prevCursor) : undefined
+        }
+        nextHref={
+          period.nextCursor ? linkFor(period.unit, period.nextCursor) : undefined
+        }
+        todayHref={linkFor(period.unit, null)}
+        atToday={period.includesToday}
+        nextDisabled={period.to >= today}
+        right={
+          <SegmentedControl
+            options={UNITS.map((unit) => ({
+              value: unit,
+              label: PERIOD_UNIT_LABELS[unit],
+              // 지난 기간을 보는 중이면 단위를 바꿔도 그 지점에 머문다
+              href: linkFor(unit, period.includesToday ? null : period.cursor),
+            }))}
+            value={period.unit}
+            ariaLabel="조회 기간 단위"
           />
         }
       />
@@ -253,15 +253,18 @@ export default async function AdminOverviewPage({
       ) : null}
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {/*
+          민트 규율 — 재직 인원은 "지금 살아 있는 값"이라 민트다.
+          종전 brand 강조(오렌지 틴트)는 장식이라 걷어냈다(색 절제).
+        */}
         <StatCard
           label="재직 인원"
           value={headcount?.active ?? 0}
           unit="명"
           denominator={headcount?.total ?? 0}
           denominatorUnit="명"
-          tone="brand"
+          tone="positive"
           icon={Building2}
-          emphasis
           state={headcount ? "ok" : "empty"}
           href="/admin/employees"
           sub={
@@ -309,11 +312,12 @@ export default async function AdminOverviewPage({
                 : "전 유형 설정 완료"
           }
         />
+        {/* 기간 안 변경 건수는 셈값이라 중립 — 색은 상태에만(색 절제) */}
         <StatCard
           label="시스템 변경"
           value={activity.total}
           unit="건"
-          tone="informative"
+          tone="neutral"
           icon={ScrollText}
           href={auditHref}
           state={activity.errorMessage ? "empty" : "ok"}
@@ -387,7 +391,7 @@ export default async function AdminOverviewPage({
           label="평균 처리 소요"
           value={approvals?.avgDecisionDays ?? 0}
           unit="일"
-          tone="informative"
+          tone="neutral"
           icon={Timer}
           href="/approvals"
           /* 결재된 건이 없으면 "—"다. 0.0일로 적으면 "즉시 처리"로 읽힌다 */

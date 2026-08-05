@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AlarmClock, CalendarClock, Target, Trophy } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { METER_FILL, Meter } from "@/components/ui/Progress";
@@ -15,7 +14,7 @@ import {
   summarizeGoals,
 } from "@/features/goals/format";
 import { GOAL_STATUS_LABELS } from "@/features/goals/types";
-import { todayYmd, WEEKDAY_LABELS, weekdayOf } from "@/features/calendar/date";
+import { todayYmd } from "@/features/calendar/date";
 import { requireSessionEmployee } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "목표" };
@@ -73,11 +72,12 @@ export default async function GoalsPage({
   if (error) {
     return (
       <>
-        <PageHeader
-          title="목표"
-          meta={<span>{me.department?.name ?? "부서 미지정"}</span>}
-          actions={memberSelect}
-        />
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            목표
+          </h1>
+          {memberSelect}
+        </div>
         <Callout tone="danger" title="목표를 불러오지 못했습니다">
           {error}
         </Callout>
@@ -89,34 +89,18 @@ export default async function GoalsPage({
 
   return (
     <>
-      <PageHeader
-        title="목표"
-        meta={
-          <>
-            {/* 팀원 것을 볼 때 내 소속으로 되돌아가면 누구의 목표인지 흐려진다 */}
-            <span>
-              {target
-                ? [target.name, target.position].filter(Boolean).join(" ")
-                : me.name}
-            </span>
-            <span>·</span>
-            <span>
-              {target
-                ? (target.team_name ?? "팀 미지정")
-                : (me.team?.name ?? me.department?.name ?? "부서 미지정")}
-            </span>
-            <span>·</span>
-            <span>
-              오늘 {today} ({WEEKDAY_LABELS[weekdayOf(today)]})
-            </span>
-            <span>·</span>
-            <span>
-              진행중 {summary.active}건 / 전체 {summary.total}건
-            </span>
-          </>
-        }
-        actions={memberSelect}
-      />
+      {/*
+        콘텐츠 제목 "목표" 20/500 — PageHeader급 밴드 없음(확립 문법, 결재 홈
+        축). 줄높이 30px은 06 heading-l 실측. 종전 메타(소속·오늘 날짜·건수)는
+        걷어낸다 — 건수는 아래 요약 밴드·분포 섹션이 분모까지 들고 말하고,
+        조회 대상은 우측 MemberSelect 값과 팀원 조회 Callout이 말한다.
+      */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          목표
+        </h1>
+        {memberSelect}
+      </div>
 
       {target ? (
         <Callout
@@ -129,7 +113,12 @@ export default async function GoalsPage({
         </Callout>
       ) : null}
 
-      {/* 요약 밴드 — 숫자마다 분모가 붙는다 */}
+      {/*
+        요약 밴드 — 숫자마다 분모가 붙는다.
+        색 절제(할일 화면과 같은 판단 축): 색을 갖는 값은 기한 지남(warn)과
+        완료(민트 지표 규율) 둘뿐이다 — 진행중은 하고 있는 일이지 성패 판정이
+        아니라서 중립이다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="진행중"
@@ -137,7 +126,7 @@ export default async function GoalsPage({
           unit="건"
           denominator={summary.total}
           denominatorUnit="건"
-          tone="informative"
+          tone="neutral"
           icon={Target}
           max={summary.total || 1}
           meterValue={summary.active}
@@ -159,7 +148,7 @@ export default async function GoalsPage({
               : "예정된 목표일 없음"
           }
         />
-        {/* 이 화면에서 색을 올리는 값은 여기 하나다 — 진행중은 위반이 아니다 */}
+        {/* 이 화면에서 경고색을 올리는 값은 여기 하나다 — 진행중은 위반이 아니다 */}
         <StatCard
           label="목표일 지남"
           value={summary.overdue}

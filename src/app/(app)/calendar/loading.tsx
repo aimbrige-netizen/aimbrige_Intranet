@@ -31,16 +31,17 @@ function ViewAwareSkeleton() {
   return view === "resources" ? <ResourceSkeleton /> : <ScheduleSkeleton />;
 }
 
-/** 월간·주간·리스트 — PageHeader + 지표 밴드 4칸 + 42칸 격자 */
+/** 월간·주간·리스트 — 제목 20/500 + 날짜 내비·세그먼트 + 지표 밴드 4칸 + 42칸 격자 */
 function ScheduleSkeleton() {
   return (
     <>
-      <div className="mb-5">
-        <Skeleton className="h-7 w-32" />
-        <Skeleton className="mt-2 h-3 w-56" />
-        <div className="mt-4 flex justify-center">
-          <Skeleton className="h-8 w-72" />
-        </div>
+      {/* h1 "일정목록" — 20/500, 줄높이 30px (리소스 뷰와 같은 단) */}
+      <Skeleton className="h-[30px] w-24" />
+
+      {/* 날짜 내비(화살표 + 24px 라벨 + 오늘) · 우측 월간/주간/리스트 필 */}
+      <div className="mb-5 mt-4 flex items-center gap-3">
+        <Skeleton className="h-9 w-64" />
+        <Skeleton className="ml-auto h-8 w-[147px] rounded-pill" />
       </div>
 
       <SkeletonStats count={4} />

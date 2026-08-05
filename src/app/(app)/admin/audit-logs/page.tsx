@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { GitBranch, KeyRound, LogIn, ScrollText, Users } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { Card, CardBody, CardHeader } from "@/components/ui/Card";
 import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { StatCard, type StatTone } from "@/components/ui/StatCard";
@@ -66,19 +65,6 @@ const AUDIT_UNITS = [
   "year",
 ] as const satisfies readonly PeriodUnit[];
 
-const ACTION_TONES: Record<
-  string,
-  "neutral" | "primary" | "success" | "warn" | "danger"
-> = {
-  login: "neutral",
-  login_denied: "danger",
-  employee_created: "success",
-  employee_updated: "primary",
-  employment_status_changed: "warn",
-  role_changed: "warn",
-  profile_updated: "neutral",
-};
-
 const GROUP_ICONS: Record<string, LucideIcon> = {
   auth: LogIn,
   access: KeyRound,
@@ -87,11 +73,14 @@ const GROUP_ICONS: Record<string, LucideIcon> = {
   approval: GitBranch,
 };
 
-/** 그룹별 기본 톤 — 권한 변경만 경고 축에 둔다 */
+/**
+ * 그룹별 기본 톤 — 전부 중립이다(색 절제). 그룹은 분류지 상태가 아니고,
+ * 경고 축은 실제 사건(로그인 차단)이 있을 때만 카드가 조건부로 올린다.
+ */
 const GROUP_TONES: Record<string, StatTone> = {
   auth: "neutral",
-  access: "warning",
-  hr: "informative",
+  access: "neutral",
+  hr: "neutral",
   org: "neutral",
   approval: "neutral",
 };
@@ -360,33 +349,17 @@ export default async function AuditLogsPage({
 
   return (
     <>
-      <PageHeader
-        title="감사 로그"
-        meta={
-          <>
-            <span>조회 기간 {rangeTotal.toLocaleString("ko-KR")}건</span>
-            <span>·</span>
-            <span>
-              {searching
-                ? `'${q}' 검색 ${total.toLocaleString("ko-KR")}건`
-                : sortKey === "created_at"
-                  ? sortDir === "desc"
-                    ? "최신순"
-                    : "오래된순"
-                  : `액션 ${sortDir === "asc" ? "가나다순" : "역순"}`}
-            </span>
-            <span>·</span>
-            <span>
-              {rangeFrom} ~ {rangeTo}
-              {isDefaultRange ? ` (기본 ${DEFAULT_RANGE_DAYS}일)` : ""}
-            </span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "감사 로그" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(건수·정렬·구간)는 스테퍼 보조 줄과 표 정렬 헤더가 이미 든다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        감사 로그
+      </h1>
 
       <PeriodNavigator
         label={period.label}
-        sublabel={`${windowDays}일 구간 · ${rangeTotal.toLocaleString("ko-KR")}건`}
+        sublabel={`${windowDays}일 구간 · ${rangeTotal.toLocaleString("ko-KR")}건${isDefaultRange ? ` · 기본 ${DEFAULT_RANGE_DAYS}일` : ""}`}
         prevHref={stepHref(-1)}
         nextHref={stepHref(1)}
         nextDisabled={rangeTo >= today}
@@ -535,10 +508,20 @@ export default async function AuditLogsPage({
                           <span className="text-muted">시스템</span>
                         )}
                       </td>
+                      {/*
+                        색 절제 — 액션은 분류라 텍스트 셀로 간다(07 표 문법).
+                        실제 사건(로그인 차단)만 위험 상태색을 유지한다.
+                      */}
                       <td>
-                        <Badge tone={ACTION_TONES[log.action] ?? "neutral"}>
-                          {AUDIT_ACTION_LABELS[log.action] ?? log.action}
-                        </Badge>
+                        {log.action === "login_denied" ? (
+                          <Badge tone="danger">
+                            {AUDIT_ACTION_LABELS[log.action] ?? log.action}
+                          </Badge>
+                        ) : (
+                          <span className="text-ink">
+                            {AUDIT_ACTION_LABELS[log.action] ?? log.action}
+                          </span>
+                        )}
                       </td>
                       <td className="whitespace-nowrap">
                         {log.targetId && targetNames.has(log.targetId) ? (

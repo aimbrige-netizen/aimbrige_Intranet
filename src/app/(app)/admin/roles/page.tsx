@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { KeyRound, ShieldAlert, Users, UserX } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { RoleBoard, type RoleMember } from "./RoleBoard";
 import { requireSystemAdmin } from "@/lib/auth/session";
@@ -69,18 +68,18 @@ export default async function RolesPage() {
 
   return (
     <>
-      <PageHeader
-        title="권한관리"
-        description="역할 3종 고정 · 배정 변경은 임직원 상세 화면에서 처리합니다."
-        meta={
-          <>
-            <span>등록 {total}명</span>
-            <span>·</span>
-            <span>역할 {roleList.length || 3}종</span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "권한관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(등록 n명·역할 n종)는 카드 분모와 보드가 이미 들고 말한다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        권한관리
+      </h1>
 
+      {/*
+        색 절제 — 권한 보유는 좋은 것도 나쁜 것도 아닌 셈값이라 중립이다
+        (종전 brand 강조는 장식). 색은 실제 상태(미연결·회수 누락)에만 남긴다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="권한 보유"
@@ -88,9 +87,8 @@ export default async function RolesPage() {
           unit="명"
           denominator={total}
           denominatorUnit="명"
-          tone="brand"
+          tone="neutral"
           icon={KeyRound}
-          emphasis
           max={total || 1}
           meterValue={privileged}
           sub="관리자 또는 팀장·매니저"
@@ -113,7 +111,7 @@ export default async function RolesPage() {
           unit="명"
           denominator={total}
           denominatorUnit="명"
-          tone={unlinked > 0 ? "warning" : "positive"}
+          tone={unlinked > 0 ? "warning" : "neutral"}
           icon={UserX}
           sub={unlinked > 0 ? "역할이 있어도 로그인 불가" : "전원 연결됨"}
         />
@@ -123,7 +121,7 @@ export default async function RolesPage() {
           unit="명"
           denominator={privileged || 0}
           denominatorUnit="명"
-          tone={staleGrants > 0 ? "critical" : "positive"}
+          tone={staleGrants > 0 ? "critical" : "neutral"}
           icon={ShieldAlert}
           sub={
             staleGrants > 0

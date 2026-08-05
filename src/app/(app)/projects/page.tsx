@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { AlarmClock, CalendarClock, FolderKanban, Gauge } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { LinkButton } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { SectionHeader } from "@/components/ui/Card";
@@ -17,7 +16,7 @@ import {
   PROJECT_STATUS_METER_TONES,
   type ProjectStatus,
 } from "@/features/projects/types";
-import { todayYmd, WEEKDAY_LABELS, weekdayOf } from "@/features/calendar/date";
+import { todayYmd } from "@/features/calendar/date";
 import { requireSessionEmployee } from "@/lib/auth/session";
 
 export const metadata: Metadata = { title: "프로젝트" };
@@ -73,20 +72,12 @@ export default async function ProjectsPage({
     getTeams(),
   ]);
 
-  const meta = (
-    <>
-      <span>{me.department?.name ?? "부서 미지정"}</span>
-      <span>·</span>
-      <span>
-        오늘 {today} ({WEEKDAY_LABELS[weekdayOf(today)]})
-      </span>
-    </>
-  );
-
   if (error) {
     return (
       <>
-        <PageHeader title="프로젝트" meta={meta} />
+        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+          프로젝트
+        </h1>
         <Callout tone="danger" title="프로젝트를 불러오지 못했습니다">
           {error}
         </Callout>
@@ -123,28 +114,30 @@ export default async function ProjectsPage({
 
   return (
     <>
-      <PageHeader
-        title="프로젝트"
-        meta={
-          <>
-            {meta}
-            <span>·</span>
-            <span>
-              진행중 {summary.inProgress}건 / 전체 {summary.total}건
-            </span>
-          </>
-        }
-        actions={
-          canCreate ? (
-            <LinkButton href="/projects/new">
-              <FolderKanban className="size-4" />
-              새 프로젝트
-            </LinkButton>
-          ) : null
-        }
-      />
+      {/*
+        콘텐츠 제목 "프로젝트" 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 줄높이 30px은 06 heading-l 실측. 종전 메타(소속·오늘
+        날짜·건수)는 걷어낸다 — 건수는 아래 요약 밴드·분포 섹션·필터칩이
+        분모까지 들고 말한다.
+      */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          프로젝트
+        </h1>
+        {canCreate ? (
+          <LinkButton href="/projects/new">
+            <FolderKanban className="size-4" />
+            새 프로젝트
+          </LinkButton>
+        ) : null}
+      </div>
 
-      {/* 요약 밴드 — 숫자마다 분모가 붙는다 */}
+      {/*
+        요약 밴드 — 숫자마다 분모가 붙는다.
+        색 절제(할일·목표 화면과 같은 판단 축): 색을 갖는 값은 지연(warn)과
+        평균 진행률(민트 지표 규율) 둘뿐이다 — 진행중은 굴러가는 일이지
+        성패 판정이 아니라서 중립이다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="진행중"
@@ -152,7 +145,7 @@ export default async function ProjectsPage({
           unit="건"
           denominator={summary.total}
           denominatorUnit="건"
-          tone="informative"
+          tone="neutral"
           icon={FolderKanban}
           max={summary.total || 1}
           meterValue={summary.inProgress}
@@ -175,10 +168,10 @@ export default async function ProjectsPage({
           }
         />
         {/*
-          이 화면에서 색을 올리는 값은 여기 하나다 — 보류·취소는 위반이 아니다.
-          지연도 danger가 아니라 warning이다. 종료일이 밀린 건 챙길 일이지
-          규정 위반이 아니고, 할일·목표·마일스톤의 '기한 지남'이 전부 warning이라
-          같은 뜻에 두 색을 쓰면 어느 쪽이 더 급한지 잘못 읽힌다.
+          이 화면에서 경고색을 올리는 값은 여기 하나다 — 보류·취소는 위반이
+          아니다. 지연도 danger가 아니라 warning이다. 종료일이 밀린 건 챙길
+          일이지 규정 위반이 아니고, 할일·목표·마일스톤의 '기한 지남'이 전부
+          warning이라 같은 뜻에 두 색을 쓰면 어느 쪽이 더 급한지 잘못 읽힌다.
         */}
         <StatCard
           label="지연"

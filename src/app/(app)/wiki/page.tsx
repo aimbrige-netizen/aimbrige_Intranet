@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BookOpen, ChevronRight, FilePlus2, Search } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import { SectionHeader } from "@/components/ui/Card";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { LinkButton } from "@/components/ui/Button";
@@ -44,20 +44,19 @@ export default async function WikiPage({
 
   return (
     <>
-      <PageHeader
-        title="위키"
-        meta={
-          <span>
-            문서 {nodes.length}건
-            {query ? ` · "${query}" 검색 결과 ${search.data.length}건` : null}
-          </span>
-        }
-        actions={
-          <LinkButton href="/wiki/new" size="small">
-            <FilePlus2 className="size-4" />새 문서
-          </LinkButton>
-        }
-      />
+      {/*
+        콘텐츠 제목 "위키" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(문서 n건·검색 n건)는 트리/결과 섹션 제목이 분모로 든다.
+        이 화면의 진한 오렌지는 "새 문서" 버튼 하나다(원칙 1).
+      */}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          위키
+        </h1>
+        <LinkButton href="/wiki/new" size="small">
+          <FilePlus2 className="size-4" />새 문서
+        </LinkButton>
+      </div>
 
       <form method="get" action="/wiki" className="relative mb-5 max-w-xl">
         <Search
@@ -80,19 +79,25 @@ export default async function WikiPage({
         </Callout>
       ) : query ? (
         search.data.length === 0 ? (
-          <EmptyState
-            icon={Search}
-            title={`"${query}" 검색 결과가 없습니다`}
-            description="다른 단어로 찾아보거나 새 문서를 만들어 보세요."
-            action={
-              <LinkButton href="/wiki/new" size="small" variant="secondary">
-                새 문서 만들기
-              </LinkButton>
-            }
-          />
+          /* md+ 흰 시트에서는 빈 상태를 시트에 직접, md 미만은 canvas 위라 카드 면 유지 */
+          <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+            <EmptyState
+              icon={Search}
+              title={`"${query}" 검색 결과가 없습니다`}
+              description="다른 단어로 찾아보거나 새 문서를 만들어 보세요."
+              action={
+                <LinkButton href="/wiki/new" size="small" variant="secondary">
+                  새 문서 만들기
+                </LinkButton>
+              }
+            />
+          </div>
         ) : (
-          <ul className="space-y-2">
-            {search.data.map((hit) => (
+          <section>
+            {/* 분모는 제목이 든다(07·16 문법) — 검색 중임을 섹션이 말한다 */}
+            <SectionHeader title={`"${query}" 검색 결과 (총${search.data.length}건)`} />
+            <ul className="space-y-2">
+              {search.data.map((hit) => (
               <li key={hit.id}>
                 {/*
                   08 흰 시트: md+에서는 결과 행의 카드 테두리가 흰 면 위
@@ -112,24 +117,30 @@ export default async function WikiPage({
                   </p>
                 </Link>
               </li>
-            ))}
-          </ul>
+              ))}
+            </ul>
+          </section>
         )
       ) : nodes.length === 0 ? (
-        <EmptyState
-          icon={BookOpen}
-          title="아직 문서가 없습니다"
-          description="사내 매뉴얼·회의록을 문서로 정리해 두면 여기에 쌓입니다."
-          action={
-            <LinkButton href="/wiki/new" size="small" variant="secondary">
-              첫 문서 만들기
-            </LinkButton>
-          }
-        />
+        <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
+          <EmptyState
+            icon={BookOpen}
+            title="아직 문서가 없습니다"
+            description="사내 매뉴얼·회의록을 문서로 정리해 두면 여기에 쌓입니다."
+            action={
+              <LinkButton href="/wiki/new" size="small" variant="secondary">
+                첫 문서 만들기
+              </LinkButton>
+            }
+          />
+        </div>
       ) : (
-        <nav aria-label="문서 트리">
-          <TreeList nodes={tree} depth={0} />
-        </nav>
+        <section>
+          <SectionHeader title={`전체 문서 (총${nodes.length}건)`} />
+          <nav aria-label="문서 트리">
+            <TreeList nodes={tree} depth={0} />
+          </nav>
+        </section>
       )}
     </>
   );

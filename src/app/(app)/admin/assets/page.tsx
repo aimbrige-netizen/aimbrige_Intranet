@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import { Boxes } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { StatCard } from "@/components/ui/StatCard";
+import { DataTable, Td, Th } from "@/components/ui/Table";
 import { LoanAdminButtons } from "@/features/assets/AssetActions";
 import {
   AssetCreateForm,
@@ -13,8 +13,6 @@ import {
 } from "@/features/assets/AssetCreateForm";
 import { getAssets, getLoans } from "@/features/assets/data";
 import {
-  ASSET_STATUS_LABELS,
-  ASSET_STATUS_TONES,
   isOverdue,
   loanStage,
   LOAN_STAGE_LABELS,
@@ -47,15 +45,13 @@ export default async function AdminAssetsPage() {
 
   return (
     <>
-      <PageHeader
-        title="자산 관리"
-        meta={
-          <>
-            <span>자산 {assets.length}대</span>
-            <span>대여 이력 {loans.length}건</span>
-          </>
-        }
-      />
+      {/*
+        콘텐츠 제목 "자산 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
+        종전 메타(자산 n대·이력 n건)는 각 섹션 제목이 분모로 든다.
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        자산 관리
+      </h1>
 
       {assetError || loanError ? (
         <Callout tone="danger" title="자산 정보를 불러오지 못했습니다">
@@ -94,49 +90,75 @@ export default async function AdminAssetsPage() {
         </div>
       </section>
 
+      {/*
+        관리자 화면은 밀도 우선 — 종전 배지+자유 배치 목록을 07 표로 바꾼다.
+        상태가 컬럼이 되면 색 배지 없이도 행 사이 비교가 서고(색 절제),
+        처리 버튼은 우측 고정 컬럼으로 정렬된다.
+      */}
       <section className="mb-5">
         <SectionHeader
-          title="처리 대기"
+          title={`처리 대기 (총${todo.length}건)`}
           description="대여 신청 승인과 반납 확인"
         />
         <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {todo.length === 0 ? (
             <p className="text-label text-muted">처리할 신청이 없습니다.</p>
           ) : (
-            <ul className="divide-y divide-line">
-              {todo.map((loan) => {
-                const stage = loanStage(loan) as "requested" | "return_requested";
-                return (
-                  <li key={loan.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <Badge tone={LOAN_STAGE_TONES[stage]}>
-                      {LOAN_STAGE_LABELS[stage]}
-                    </Badge>
-                    <span className="text-body-sm font-bold text-ink">
-                      {loan.asset_name}
-                    </span>
-                    <span className="text-label text-muted">
-                      {loan.employee_name}
-                      {loan.expected_return_date
-                        ? ` · ${loan.expected_return_date} 반납 예정`
-                        : null}
-                    </span>
-                    <div className="ml-auto">
-                      <LoanAdminButtons
-                        loanId={loan.id}
-                        stage={stage}
-                        expectedReturnDate={loan.expected_return_date}
-                      />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
+            <DataTable minWidth={620} fixed>
+              <thead>
+                <tr>
+                  <Th className="w-32">구분</Th>
+                  <Th>자산</Th>
+                  <Th className="w-32">신청자</Th>
+                  <Th className="w-40">반납 예정</Th>
+                  <Th className="w-44">
+                    <span className="sr-only">처리</span>
+                  </Th>
+                </tr>
+              </thead>
+              <tbody>
+                {todo.map((loan) => {
+                  const stage = loanStage(loan) as "requested" | "return_requested";
+                  return (
+                    <tr key={loan.id}>
+                      {/* 승인 대기/반납 확인 대기는 처리 종류라 배지 상태색을 유지한다 */}
+                      <Td>
+                        <Badge tone={LOAN_STAGE_TONES[stage]}>
+                          {LOAN_STAGE_LABELS[stage]}
+                        </Badge>
+                      </Td>
+                      <Td>
+                        <span className="block truncate text-ink">
+                          {loan.asset_name}
+                        </span>
+                      </Td>
+                      <Td>
+                        <span className="block truncate">{loan.employee_name}</span>
+                      </Td>
+                      <Td numeric className="text-muted">
+                        {loan.expected_return_date ?? "—"}
+                      </Td>
+                      <Td>
+                        <LoanAdminButtons
+                          loanId={loan.id}
+                          stage={stage}
+                          expectedReturnDate={loan.expected_return_date}
+                        />
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
           )}
         </div>
       </section>
 
       <section className="mb-5">
-        <SectionHeader title="자산" description="수리중·폐기 표시는 여기서" />
+        <SectionHeader
+          title={`자산 (총${assets.length}대)`}
+          description="수리중·폐기 표시는 여기서"
+        />
         <div className="ab-card p-4 md:rounded-none md:border-0 md:p-0">
           {assets.length === 0 ? (
             <EmptyState
@@ -146,28 +168,44 @@ export default async function AdminAssetsPage() {
               compact
             />
           ) : (
-            <ul className="divide-y divide-line">
-              {assets.map((asset) => (
-                <li key={asset.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                  <Badge tone={ASSET_STATUS_TONES[asset.status]}>
-                    {ASSET_STATUS_LABELS[asset.status]}
-                  </Badge>
-                  <span className="text-body-sm text-ink">{asset.name}</span>
-                  <span className="text-label text-muted">
-                    {[asset.asset_type, asset.serial_number].filter(Boolean).join(" · ") ||
-                      "—"}
-                  </span>
-                  {asset.holder_name ? (
-                    <span className="text-label text-muted">
-                      사용 중 · {asset.holder_name}
-                    </span>
-                  ) : null}
-                  <div className="ml-auto">
-                    <AssetStatusSelect assetId={asset.id} status={asset.status} />
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <DataTable minWidth={620} fixed>
+              <thead>
+                <tr>
+                  <Th>자산명</Th>
+                  <Th className="w-36">종류</Th>
+                  <Th className="w-40">사용자</Th>
+                  {/* 상태 셀렉트가 현재 상태를 그대로 보여준다 — 배지 중복은 두지 않는다 */}
+                  <Th className="w-40">상태</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {assets.map((asset) => (
+                  <tr key={asset.id}>
+                    <Td>
+                      <span className="block truncate text-ink">{asset.name}</span>
+                      {asset.serial_number ? (
+                        <span className="block truncate text-nano tabular-nums text-muted">
+                          {asset.serial_number}
+                        </span>
+                      ) : null}
+                    </Td>
+                    <Td>
+                      <span className="block truncate text-muted">
+                        {asset.asset_type ?? "—"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <span className="block truncate text-muted">
+                        {asset.holder_name ?? "—"}
+                      </span>
+                    </Td>
+                    <Td>
+                      <AssetStatusSelect assetId={asset.id} status={asset.status} />
+                    </Td>
+                  </tr>
+                ))}
+              </tbody>
+            </DataTable>
           )}
         </div>
       </section>

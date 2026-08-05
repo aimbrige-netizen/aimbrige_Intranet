@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FolderKanban, NotebookPen, Target, Users } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
+import {
+  ChevronLeft,
+  FolderKanban,
+  NotebookPen,
+  Target,
+  Users,
+} from "lucide-react";
 import { SectionHeader } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Callout } from "@/components/ui/Callout";
@@ -50,7 +56,9 @@ export default async function ReviewCyclePage({
   if (cycleError) {
     return (
       <>
-        <PageHeader title="평가 작성" />
+        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+          평가 작성
+        </h1>
         <Callout tone="danger" title="사이클을 불러오지 못했습니다">
           {cycleError}
         </Callout>
@@ -74,21 +82,38 @@ export default async function ReviewCyclePage({
 
   return (
     <>
-      <PageHeader
-        title={cycle.name}
-        meta={
-          <>
-            <span>{periodLabel(cycle.start_date, cycle.end_date)}</span>
-            <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
-              {CYCLE_STATUS_LABELS[cycle.status]}
-            </Badge>
-            <Badge tone={REVIEW_STAGE_TONES[stage]}>
-              {REVIEW_STAGE_LABELS[stage]}
-            </Badge>
-          </>
-        }
-        actions={
-          me.isManager || me.isSystemAdmin ? (
+      {/*
+        콘텐츠 제목(사이클명) 20/500 — PageHeader급 밴드 없음(확립 문법,
+        결재 홈 축). 기간·단계 배지는 밴드 장식이 아니라 이 문서의 메타라
+        제목 아래 한 줄로 남긴다(게시글 상세와 같은 단). 뒤로가기 링크는
+        종전 PageHeader backHref 문법 그대로다.
+      */}
+      <div className="mb-5">
+        <Link
+          href="/reviews"
+          className="mb-2 inline-flex items-center gap-1 text-label text-muted transition-colors duration-fast ease-standard hover:text-ink"
+        >
+          <ChevronLeft className="size-3.5" aria-hidden />
+          목록으로
+        </Link>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+              {cycle.name}
+            </h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">
+              <span className="tabular-nums">
+                {periodLabel(cycle.start_date, cycle.end_date)}
+              </span>
+              <Badge tone={CYCLE_STATUS_TONES[cycle.status]}>
+                {CYCLE_STATUS_LABELS[cycle.status]}
+              </Badge>
+              <Badge tone={REVIEW_STAGE_TONES[stage]}>
+                {REVIEW_STAGE_LABELS[stage]}
+              </Badge>
+            </div>
+          </div>
+          {me.isManager || me.isSystemAdmin ? (
             <LinkButton
               href={`/reviews/${cycle.id}/team`}
               size="small"
@@ -97,10 +122,9 @@ export default async function ReviewCyclePage({
               <Users className="size-4" />
               팀원 평가
             </LinkButton>
-          ) : undefined
-        }
-        backHref="/reviews"
-      />
+          ) : null}
+        </div>
+      </div>
 
       {goalError ? (
         <Callout tone="danger" title="목표를 불러오지 못했습니다">

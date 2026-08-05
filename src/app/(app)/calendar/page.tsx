@@ -6,7 +6,6 @@ import {
   Plane,
   UserRound,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
 import { StatCard } from "@/components/ui/StatCard";
 import { CalendarBoard } from "@/features/calendar/CalendarBoard";
 import { CalendarHeader } from "@/features/calendar/CalendarHeader";
@@ -51,10 +50,11 @@ import type { CalendarItem, Holiday, Resource } from "@/types/db";
 export const metadata: Metadata = { title: "캘린더" };
 
 /**
- * 캘린더 (스펙 02 · 3.4~3.6)
+ * 캘린더 (스펙 02 · 3.4~3.6 + 09-calendar.md 실측)
  *
- * 골격은 근태 화면과 같다 —
- *   PageHeader(기간 스테퍼 + 기간 단위 토글) → 분모 있는 요약 밴드 → 시각화 → 조밀 표.
+ * 골격: 콘텐츠 제목 "일정목록" 20/500(09 — PageHeader급 밴드 없음, 결재 홈·
+ * 리소스 뷰와 같은 단) → 날짜 내비 + 보기 전환 필 세그먼트(CalendarHeader)
+ * → 분모 있는 요약 밴드 → 시각화 → 조밀 표.
  *
  * 예전에는 제목 한 줄 다음이 곧바로 격자였고, 그 사이에 스코프 탭·뷰 탭·
  * 스테퍼·기간 라벨·액션 2개가 flex-wrap 한 줄로 뭉쳐 있었다. 지표는 0개였다.
@@ -171,6 +171,7 @@ export default async function CalendarPage({
 
   const scheduleHeader = (
     <CalendarHeader
+      className="mb-5 mt-4"
       label={headerLabel}
       prevHref={step(-1)}
       nextHref={step(1)}
@@ -212,23 +213,17 @@ export default async function CalendarPage({
         ? "이 주"
         : "이후 30일";
 
-  const holidayCount = days.filter((day) => holidays[day]).length;
-
   return (
     <>
-      <PageHeader
-        title="캘린더"
-        meta={
-          <>
-            <span>{SCOPE_LABELS[scope]} 일정</span>
-            <span>·</span>
-            <span>오늘 {today}</span>
-            <span>·</span>
-            <span>이 기간 공휴일 {holidayCount}일</span>
-          </>
-        }
-        toolbar={scheduleHeader}
-      />
+      {/*
+        콘텐츠 제목 "일정목록" 20/500 — 09 실측 그대로, PageHeader급 밴드
+        없음(결재 홈·동호회 홈·리소스 뷰와 같은 단). 스코프는 아래 툴바
+        세그먼트가, 오늘·공휴일은 격자의 오늘 필·빨간 날짜가 그대로 말한다.
+      */}
+      <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        일정목록
+      </h1>
+      {scheduleHeader}
 
       {/* 요약 밴드 — 분모 없는 숫자는 두지 않는다 */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
