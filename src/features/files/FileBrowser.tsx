@@ -14,10 +14,9 @@ import {
   Layers,
   Upload,
 } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
-import { Meter, MiniMeter } from "@/components/ui/Progress";
+import { Meter } from "@/components/ui/Progress";
 import { StatCard } from "@/components/ui/StatCard";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import {
@@ -117,7 +116,6 @@ export function FileBrowser({
   const stats = useMemo(() => {
     let folders = 0;
     let totalSize = 0;
-    let largest = 0;
     let latest: FileRow | null = null;
 
     for (const file of files) {
@@ -125,7 +123,6 @@ export function FileBrowser({
         folders += 1;
       } else if (file.size) {
         totalSize += file.size;
-        largest = Math.max(largest, file.size);
       }
       if (
         file.modifiedTime &&
@@ -141,7 +138,6 @@ export function FileBrowser({
       folders,
       fileCount: files.length - folders,
       totalSize,
-      largest,
       latest,
     };
   }, [files]);
@@ -314,13 +310,15 @@ export function FileBrowser({
                 : "Drive 문서는 용량을 차지하지 않습니다"
           }
         />
+        {/* 색 절제(17 준용): 표시 건수는 정보지 상태가 아니다 — 중립 톤.
+            이 화면에서 색을 갖는 값은 Drive 사용량(brand) 하나다. */}
         <StatCard
           label="표시 중 항목"
           value={files.length}
           unit="개"
           denominator={PAGE_LIMIT}
           denominatorUnit="개"
-          tone="informative"
+          tone="neutral"
           icon={Files}
           max={PAGE_LIMIT}
           meterValue={files.length}
@@ -460,7 +458,8 @@ export function FileBrowser({
         onDrop={onDrop}
       >
         <div className="overflow-x-auto">
-            <table className="ab-table ab-table--compact min-w-[720px]">
+            {/* --compact는 규칙 없는 클래스 — 화면을 손대는 사이클에 정리(Table.tsx 주석) */}
+            <table className="ab-table min-w-[720px]">
               <thead>
                 <tr>
                   <SortableHead
@@ -481,7 +480,7 @@ export function FileBrowser({
                     sortKey="size"
                     sort={sort}
                     onSort={toggleSort}
-                    className="w-44"
+                    className="w-28"
                   />
                   <SortableHead
                     label="소유자"
@@ -547,12 +546,7 @@ export function FileBrowser({
                   />
                 ) : (
                   rows.map((file) => (
-                    <FileTableRow
-                      key={file.id}
-                      file={file}
-                      basePath={basePath}
-                      largest={stats.largest}
-                    />
+                    <FileTableRow key={file.id} file={file} basePath={basePath} />
                   ))
                 )}
               </tbody>
@@ -566,11 +560,9 @@ export function FileBrowser({
 function FileTableRow({
   file,
   basePath,
-  largest,
 }: {
   file: FileRow;
   basePath: string;
-  largest: number;
 }) {
   const kind = kindOf(file.mimeType);
   const meta = FILE_KINDS[kind];
@@ -611,24 +603,17 @@ function FileTableRow({
           name
         )}
       </td>
-      <td>
-        <Badge tone="neutral">{meta.label}</Badge>
-      </td>
+      {/*
+        07 표 문법 — 배지·아이콘·게이지 없는 순수 텍스트 셀. 유형 배지(회색
+        틴트)와 행마다 붙던 크기 미니 게이지를 걷었다(10 색 절제). 유형은
+        "유형" 헤더가, 크기 비교는 크기 정렬이 이미 그 일을 한다.
+      */}
+      <td>{meta.label}</td>
       <td>
         {isFolder ? (
           <span className="text-muted">-</span>
         ) : file.size ? (
-          <span className="flex items-center gap-2">
-            <span className="w-16 shrink-0 text-right tabular-nums">
-              {formatBytes(file.size)}
-            </span>
-            <MiniMeter
-              value={file.size}
-              max={largest || file.size}
-              tone="neutral"
-              aria-label={`용량 ${formatBytes(file.size)}`}
-            />
-          </span>
+          <span className="tabular-nums">{formatBytes(file.size)}</span>
         ) : (
           <span className="text-muted" title="Drive 문서는 용량을 차지하지 않습니다">
             —

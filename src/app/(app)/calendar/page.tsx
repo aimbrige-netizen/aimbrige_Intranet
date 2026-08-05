@@ -1,29 +1,19 @@
 import type { Metadata } from "next";
 import {
-  Boxes,
   CalendarDays,
   CalendarRange,
   Flag,
-  Gauge,
   Plane,
   UserRound,
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { PeriodNavigator } from "@/components/ui/PeriodNavigator";
 import { StatCard } from "@/components/ui/StatCard";
 import { CalendarBoard } from "@/features/calendar/CalendarBoard";
 import { CalendarHeader } from "@/features/calendar/CalendarHeader";
 import { ResourceBoard } from "@/features/calendar/ResourceBoard";
-import {
-  bookingHours,
-  bookingYmd,
-  formatBookingHours,
-  OPEN_HOURS_LABEL,
-  OPEN_HOURS_PER_DAY,
-  RESOURCE_TYPE_LABELS,
-  RESOURCE_TYPES,
-  type AttendeeOption,
-  type ResourceBookingBrief,
+import type {
+  AttendeeOption,
+  ResourceBookingBrief,
 } from "@/features/calendar/data-client";
 import {
   getActiveResources,
@@ -42,7 +32,6 @@ import {
   seoulToDate,
   todayYmd,
   weekGrid,
-  weekdayOf,
 } from "@/features/calendar/date";
 import {
   SCOPE_LABELS,
@@ -53,6 +42,7 @@ import {
   calendarViewOf,
   countByKind,
   parseScope,
+  type CalendarScope,
   type CalendarView,
 } from "@/features/calendar/view";
 import { requireSessionEmployee } from "@/lib/auth/session";
@@ -80,6 +70,8 @@ export default async function CalendarPage({
     cursor?: string;
     /** 다른 화면에서 넘어온 기간 단위. view가 없을 때만 본다 */
     period?: string;
+    /** 리소스 뷰의 일간/주간 세그먼트 (17 "예약" 실측). week 외에는 일간 */
+    mode?: string;
     /** ?new=1 이면 일정 작성 모달을 열고 시작한다 (홈 빈 상태에서 바로 진입) */
     new?: string;
   };
@@ -150,21 +142,7 @@ export default async function CalendarPage({
           : addDaysYmd(cursor, delta * (view === "list" ? 30 : 7)),
     });
 
-  const monthFrom = `${cursor}-01`;
-  const monthTo = addDaysYmd(`${addMonthsYm(cursor, 1)}-01`, -1);
-  const periodLabel =
-    view === "month" ? monthLabel(cursor) : `${first} ~ ${last}`;
-  const periodSub =
-    view === "month"
-      ? `${monthFrom} ~ ${monthTo}`
-      : view === "week"
-        ? "주간"
-        : view === "list"
-          ? "기준일 이후 30일"
-          : "주간 예약 현황";
-
   if (view === "resources") {
-    // 리소스 화면은 09 스펙 대상이 아니라 공용 PeriodNavigator를 유지한다
     return (
       <ResourceScreen
         resources={resources}
@@ -174,17 +152,9 @@ export default async function CalendarPage({
         today={today}
         myId={me.id}
         bookingRange={{ from: bookingFrom, to: bookingTo }}
-        navigator={
-          <PeriodNavigator
-            label={periodLabel}
-            sublabel={periodSub}
-            prevHref={step(-1)}
-            nextHref={step(1)}
-            todayHref={calendarHref({ scope, view })}
-            atToday={inPeriod}
-            className="mb-0"
-          />
-        }
+        scope={scope}
+        mode={searchParams.mode === "week" ? "week" : "day"}
+        focusDay={cursor}
       />
     );
   }
@@ -337,7 +307,18 @@ export default async function CalendarPage({
   );
 }
 
-/** 리소스 예약 현황 — 모듈 패널의 '리소스 예약'이 도착하는 화면 */
+/**
+ * 리소스 예약 현황 — 모듈 패널의 '리소스 예약'이 도착하는 화면.
+ *
+ * 17 "예약" 실측(다우 /gw/app/asset "자산 예약 현황") 재구축.
+ * 콘텐츠 제목 20/500 아래 일간/주간 세그먼트 + 날짜 내비 + 시간축 타임라인 +
+ * 하단 "내 예약 현황" 표(ResourceBoard가 그린다).
+ *
+ * 종전의 PageHeader 밴드·StatCard 4칸·PeriodNavigator는 다우 예약 화면에
+ * 없어서 걷어냈다(결재 홈에서 지표 밴드를 걷어낸 것과 같은 판단). 리소스
+ * 종수·이 주 예약 건수는 아래 필터 칩과 툴바 카운트가 그대로 말한다.
+ * 데이터 경로는 그대로다 — 표시 계층만 바꿨다(e2e:calendar 불변의 근거).
+ */
 function ResourceScreen({
   resources,
   bookings,
@@ -346,7 +327,9 @@ function ResourceScreen({
   today,
   myId,
   bookingRange,
-  navigator,
+  scope,
+  mode,
+  focusDay,
 }: {
   resources: Resource[];
   bookings: ResourceBookingBrief[];
@@ -355,97 +338,21 @@ function ResourceScreen({
   today: string;
   myId: string;
   bookingRange: { from: string; to: string };
-  navigator: React.ReactNode;
+  scope: CalendarScope;
+  /** 일간/주간 세그먼트 — URL(?mode=)이 쥔다. 내비 링크로 다시 그려도 유지된다 */
+  mode: "day" | "week";
+  /** 날짜 내비 기준일(=?cursor). 주 경계를 넘는 하루 이동이 정확한 날에 내린다 */
+  focusDay: string;
 }) {
-  const first = days[0];
-  const last = days[days.length - 1];
-  const week = bookings.filter((booking) => {
-    const ymd = bookingYmd(booking);
-    return ymd >= first && ymd <= last;
-  });
-
-  const mine = week.filter((booking) => booking.bookerId === myId).length;
-  const bookedResources = new Set(week.map((booking) => booking.resourceId))
-    .size;
-  const usedHours = week.reduce((sum, b) => sum + bookingHours(b), 0);
-  const workdays =
-    days.filter((day) => {
-      const weekday = weekdayOf(day);
-      return weekday !== 0 && weekday !== 6 && !holidays[day];
-    }).length || 1;
-  const openHours = workdays * OPEN_HOURS_PER_DAY * (resources.length || 1);
-  const rate = Math.round((usedHours / (openHours || 1)) * 100);
-
-  const typeSummary = RESOURCE_TYPES.filter((type) =>
-    resources.some((resource) => resource.type === type),
-  )
-    .map(
-      (type) =>
-        `${RESOURCE_TYPE_LABELS[type]} ${resources.filter((r) => r.type === type).length}`,
-    )
-    .join(" · ");
-
   return (
     <>
-      <PageHeader
-        title="리소스 예약"
-        meta={
-          <>
-            <span>회의실·차량·비품</span>
-            <span>·</span>
-            <span>오늘 {today}</span>
-            <span>·</span>
-            <span>근무일 {workdays}일</span>
-          </>
-        }
-        toolbar={navigator}
-      />
-
-      <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard
-          label="이 주 예약"
-          value={week.length}
-          unit="건"
-          tone="brand"
-          icon={Boxes}
-          emphasis
-          max={resources.length || 1}
-          meterValue={bookedResources}
-          sub={`예약된 리소스 ${bookedResources}종 / ${resources.length}종`}
-        />
-        <StatCard
-          label="내 예약"
-          value={mine}
-          unit="건"
-          denominator={week.length}
-          denominatorUnit="건"
-          tone="informative"
-          icon={UserRound}
-          max={week.length || 1}
-          meterValue={mine}
-          sub={`다른 직원 예약 ${week.length - mine}건`}
-        />
-        <StatCard
-          label="주간 가동"
-          value={formatBookingHours(usedHours)}
-          denominator={`${openHours}h`}
-          tone="neutral"
-          icon={Gauge}
-          max={openHours || 1}
-          meterValue={usedHours}
-          scale
-          scaleMaxLabel={`${openHours}h`}
-          sub={`가동률 ${rate}% · 근무일 ${OPEN_HOURS_LABEL} 기준`}
-        />
-        <StatCard
-          label="예약 가능 리소스"
-          value={resources.length}
-          unit="종"
-          tone="neutral"
-          icon={CalendarRange}
-          sub={typeSummary || "등록된 리소스가 없습니다"}
-        />
-      </div>
+      {/*
+        콘텐츠 제목 "리소스 예약 현황" 20/500 — 다우 "자산 예약 현황" 축.
+        줄높이 30px은 06 heading-l 실측(결재 홈·동호회 홈과 같은 단).
+      */}
+      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        리소스 예약 현황
+      </h1>
 
       <ResourceBoard
         resources={resources}
@@ -455,6 +362,9 @@ function ResourceScreen({
         today={today}
         myId={myId}
         bookingRange={bookingRange}
+        scope={scope}
+        mode={mode}
+        focusDay={focusDay}
       />
     </>
   );

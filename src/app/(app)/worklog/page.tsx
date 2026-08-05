@@ -142,7 +142,6 @@ export default async function WorklogPage({
     recordedDates.size > 0
       ? Math.round((logs.length / recordedDates.size) * 10) / 10
       : 0;
-  const countDelta = logs.length - previousCount;
 
   /*
    * 조회가 실패했을 때는 0이 아니라 "—"로 둔다. 둘은 다른 사실이다.
@@ -279,7 +278,11 @@ export default async function WorklogPage({
         </Callout>
       ) : null}
 
-      {/* 요약 밴드 — 숫자마다 분모나 비교값을 붙인다 */}
+      {/*
+        요약 밴드 — 숫자마다 분모나 비교값을 붙인다.
+        색 절제(17 준용): 색을 갖는 값은 이 화면의 질문인 "기록한 날"(brand)
+        하나다 — 기록 건수·연속 기록·태깅은 성패 판정이 아니라 중립이다.
+      */}
       <div className="mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
           label="기록한 날"
@@ -307,15 +310,11 @@ export default async function WorklogPage({
           tone="neutral"
           icon={FileText}
           state={statState}
-          delta={
-            previous
-              ? {
-                  label: `${countDelta >= 0 ? "+" : ""}${countDelta}`,
-                  direction:
-                    countDelta > 0 ? "up" : countDelta < 0 ? "down" : "flat",
-                }
-              : undefined
-          }
+          /*
+            증감 델타 배지는 두지 않는다 — 지난 기간보다 덜 쓴 주에 danger
+            틴트가 붙는데, 개인 기록의 주간 증감은 성패 판정이 아니다(할일
+            화면과 같은 판단). 비교값은 sub의 지난 기간 건수로 충분하다.
+          */
           sub={statSub(
             `지난 기간 ${previousCount}건 · 기록한 날 하루 평균 ${perDay}건`,
           )}
@@ -326,7 +325,7 @@ export default async function WorklogPage({
           unit="일"
           denominator={streak.longest}
           denominatorUnit="일"
-          tone="informative"
+          tone="neutral"
           icon={CalendarCheck}
           max={streak.longest || 1}
           meterValue={streak.current}

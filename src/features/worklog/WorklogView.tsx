@@ -4,7 +4,6 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { NotebookPen, Pencil, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { SectionHeader } from "@/components/ui/Card";
 import { DayStrip, type StripDay } from "@/components/ui/ChipStrip";
@@ -298,7 +297,8 @@ export function WorklogView({
         />
         <div className="ab-card md:rounded-none md:border-0">
           <div className="overflow-x-auto">
-            <table className="ab-table ab-table--compact min-w-[720px]">
+            {/* --compact는 규칙 없는 클래스 — 화면을 손대는 사이클에 정리(Table.tsx 주석) */}
+            <table className="ab-table min-w-[720px]">
               <thead>
                 <tr>
                   <th className="w-28">날짜</th>
@@ -469,6 +469,10 @@ export function WorklogView({
  * 이름을 아는 프로젝트만 링크로 만든다. 이름을 못 찾았다는 건 그 프로젝트가
  * 사라졌거나 조회가 실패했다는 뜻이라, 링크를 걸면 없는 화면으로 보내게 된다.
  * 그렇다고 칸을 비우지는 않는다 — 태깅했다는 사실 자체는 남은 정보다.
+ *
+ * 색 절제(07 표 문법 — 순수 텍스트 셀): 프로젝트명은 상태가 아니라서 행마다
+ * 반복되던 정보 틴트 배지를 걷고, 표의 다른 링크와 같은 문법(먹색 +
+ * hover 시안·밑줄)으로 간다. 결재 홈 제목 링크와 같은 단.
  */
 function ProjectCell({
   projectId,
@@ -478,15 +482,15 @@ function ProjectCell({
   name: string | null;
 }) {
   if (!projectId) return <span className="text-caption">-</span>;
-  if (!name) return <Badge tone="neutral">연결된 프로젝트</Badge>;
+  if (!name) return <span className="text-muted">연결된 프로젝트</span>;
 
   return (
     <Link
       href={`/projects/${projectId}`}
-      className="inline-block max-w-full truncate transition-opacity duration-fast ease-standard hover:opacity-80"
+      className="inline-block max-w-full truncate text-ink hover:text-primary hover:underline"
       title={`${name} 프로젝트 열기`}
     >
-      <Badge tone="info">{name}</Badge>
+      {name}
     </Link>
   );
 }
