@@ -23,8 +23,12 @@
   --seed-primary: #08a7bf; /* rgb(8,167,191) 시안 */
   --seed-primary-hover: #3cbed7; /* 원본 hover는 밝은 쪽 */
   --seed-primary-light: #e2f1f5;
-  --seed-accent: #08a7bf; /* 지표 강조 = primary. 민트는 원본에 없다 */
-  --seed-accent-ink: #00889c; /* primary-text-level2 */
+  /*
+   * 지표 값·게이지 강조 = 민트 — gw 변수 632개엔 없지만 ehr 앱 자체 팔레트다
+   * (14-ehr-attend.md ★판정, 04 최초 실측 재확인). tailwind.config.ts accent와 동기.
+   */
+  --seed-accent: #44d1a5;
+  --seed-accent-ink: #158466; /* 작은 글자용 민트 잉크 */
   --seed-canvas: #edf0f3; /* rgb(237,240,243) 페이지 바닥 */
   --seed-surface: #ffffff; /* 카드·시트 */
   --seed-subtle: #f8f8f8; /* gray-03 — 표 헤더·호버 */

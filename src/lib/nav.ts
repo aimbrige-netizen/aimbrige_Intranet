@@ -28,7 +28,6 @@ import {
   NotebookPen,
   PackageOpen,
   ScrollText,
-  Send,
   Settings,
   Shield,
   Stamp,
@@ -495,18 +494,27 @@ export const NAV_MODULES: NavModule[] = [
     primaryAction: { label: "새 기안", href: "/approvals/new", icon: FilePlus2 },
     sections: [
       {
+        /*
+         * 데스크톱 패널의 "결재하기" 섹션은 ApprovalPanelSections 포털이
+         * 카운트 행(내 차례·진행중·임시저장)까지 그린다(15-approval-home.md,
+         * 메일 앵커 섹션과 같은 문법). 이 정적 섹션은 panelHidden으로
+         * 데스크톱 렌더에서만 빠지고 hasPanel 판정·모바일 드로어를 맡는다.
+         * href는 기존 그대로라(/approvals · ?tab=inbox) 저장된 즐겨찾기
+         * 경로도 전부 유효하다 — 라벨만 홈 재구축에 맞췄다.
+         */
         key: "main",
         title: "결재하기",
+        panelHidden: true,
         items: [
           {
             key: "ap-mine",
-            label: "내가 올린 문서",
+            label: "결재 홈",
             href: "/approvals",
-            icon: Send,
+            icon: FileCheck,
           },
           {
             key: "ap-inbox",
-            label: "내가 승인할 문서",
+            label: "결재할 문서",
             href: "/approvals?tab=inbox",
             icon: Inbox,
           },

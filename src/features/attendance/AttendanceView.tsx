@@ -10,7 +10,7 @@ import {
   History,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/Button";
+import { Button, buttonClass } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { SectionHeader } from "@/components/ui/Card";
 import { EmptyState, TableEmptyRow } from "@/components/ui/EmptyState";
@@ -51,6 +51,11 @@ interface Props {
   adjustments: LeaveAdjustment[];
   remainingDays: number;
   periodLabel: string;
+  /**
+   * 주간누적 게이지·지표·주간 캘린더 블록(서버 렌더, page.tsx).
+   * ehr 순서(14-ehr) 그대로 툴바 아래·표들 위에 끼운다.
+   */
+  overview?: React.ReactNode;
 }
 
 type RequestTab = "leave" | "overtime" | "correction" | "adjustment";
@@ -63,6 +68,7 @@ export function AttendanceView({
   adjustments,
   remainingDays,
   periodLabel,
+  overview,
 }: Props) {
   const router = useRouter();
   const [modal, setModal] = useState<RequestKind>(null);
@@ -121,13 +127,14 @@ export function AttendanceView({
   return (
     <>
       {/*
-        콘텐츠 상단 액션 툴바 (07·10 문법): h-8(32) · 13px · radius 4 ·
-        아이콘+라벨. 원본 주소록 툴바(빠른 등록/메일발송/…)는 고스트 나열이라
-        보조 신청 둘과 내보내기는 ghost로 내리고, 화면의 주요 액션 하나
-        (연차·휴가 신청)만 primary로 남긴다 — 캘린더 툴바의 '일정 추가'와
-        같은 결정.
+        콘텐츠 상단 액션 툴바. 좌측 신청 액션은 07·10 문법(h-8·13px·radius 4,
+        주요 액션 하나만 primary) 그대로 — 캘린더 툴바의 '일정 추가'와 같은
+        결정. 우측은 14-ehr 근태 홈 상단 우측 실측으로 교체: "신청 이력"
+        (아래 신청 내역 섹션 앵커) + "목록 다운로드"(기존 내보내기), 고스트
+        h-40 · radius 8 · 13px(원본 121×40 단 — medium 높이에 radius·글자만
+        실측 단으로 내린다).
       */}
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Button size="small" onClick={() => setModal("leave")}>
           <CalendarPlus className="size-3.5" />
           연차·휴가 신청
@@ -140,17 +147,32 @@ export function AttendanceView({
           <FilePenLine className="size-3.5" />
           근태 수정요청
         </Button>
-        <Button
-          size="small"
-          variant="ghost"
-          onClick={exportCsv}
-          disabled={records.length === 0}
-          className="ml-auto"
-        >
-          <Download className="size-3.5" />
-          내보내기
-        </Button>
+        <div className="ml-auto flex items-center gap-1">
+          <a
+            href="#request-history"
+            className={buttonClass({
+              variant: "ghost",
+              size: "medium",
+              className: "rounded-sm text-label",
+            })}
+          >
+            <History className="size-3.5" />
+            신청 이력
+          </a>
+          <Button
+            variant="ghost"
+            size="medium"
+            className="rounded-sm text-label"
+            onClick={exportCsv}
+            disabled={records.length === 0}
+          >
+            <Download className="size-3.5" />
+            목록 다운로드
+          </Button>
+        </div>
       </div>
+
+      {overview}
 
       <div className="space-y-5">
         {/*
@@ -203,7 +225,8 @@ export function AttendanceView({
           </div>
         </section>
 
-        <section>
+        {/* 상단 "신청 이력" 앵커의 목적지 — scroll-mt는 고정 topbar(60px) 몫 */}
+        <section id="request-history" className="scroll-mt-20">
           <SectionHeader
             title="신청 내역"
             action={

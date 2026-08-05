@@ -35,17 +35,17 @@ export type StatTone =
 /**
  * 값 색.
  *
- * 원본 규칙 — **총계는 먹색, 활성·잔여는 시안.** neutral(총계)은 ink,
+ * 원본 규칙 — **총계는 먹색, 활성·잔여는 민트.** neutral(총계)은 ink,
  * positive(살아 있는 값: 활성 인원·잔여 연차·처리 완료)는 accent로 간다.
- * 한때 여기 민트(#44d1a5)를 썼는데 원본 팔레트 632개에 민트는 없다
- * (06-tokens-raw.md). accent가 primary 시안으로 재지정되면서 이 자리는
- * #08a7bf가 됐다 — 흰 배경 2.88:1로 28px 큰 글자 기준 3:1에 조금 못
- * 미치지만, 원본 홈의 큰 숫자가 전부 이 값으로 실측돼(tailwind.config.ts
- * accent 주석) 원본 코드값 그대로를 우선한다.
  *
- * 다만 "숫자가 아닌 것"에는 쓰지 않는다. 칩·라벨은 accent-ink(흰 배경
- * 4.20:1), 진행바 채움도 accent-ink(트랙 대비 3.55:1)로 간다 — 4px
- * 막대에서 민트는 트랙과 1.6:1이라 진행률 자체가 안 읽힌다(Progress.tsx 참고).
+ * accent 판정 이력(tailwind.config.ts accent 주석의 요약): 04 실측 민트 →
+ * 06 gw 변수 전수에 없어 시안으로 오판 → **14-ehr 재실측으로 민트 복원**
+ * (ehr 앱이 자체 팔레트로 지표 값에 민트를 쓴다). 이 파일은 토큰 참조라
+ * 값 교체만으로 민트 축으로 복귀했다.
+ *
+ * 민트 DEFAULT는 흰 배경 1.9:1이라 **28px 큰 숫자·게이지 막대 전용**이다.
+ * "숫자가 아닌 것"에는 쓰지 않는다 — 칩·라벨·작은 글자(18px 포함)는
+ * accent-ink(#158466, 흰 배경 4.6:1), 진행바 채움도 accent-ink로 간다.
  */
 const ACCENTS: Record<StatTone, { value: string; chip: string }> = {
   brand: { value: "text-primary", chip: "bg-primary-light text-primary" },

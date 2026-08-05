@@ -20,12 +20,13 @@ export type MeterTone =
   | "critical";
 
 /*
- * positive는 시안 축의 **accent-ink**(#00889c)다.
+ * positive는 민트 축의 **accent-ink**(#158466)다.
  *
- * 민트는 원본 팔레트에 없다(06-tokens-raw.md) — 지표 강조는 전부 시안이고,
- * accent 토큰이 primary 축으로 재지정되면서 숫자(#08a7bf)와 막대(#00889c)가
- * 색상은 같고 명도만 다른 관계가 됐다. 트랙(bg-line #eaecef) 위 대비도
- * #00889c가 3.55:1로 h-1(4px) 막대에서 읽힌다.
+ * accent는 14-ehr 재실측으로 민트로 복원됐다(판정 이력은 tailwind.config.ts
+ * accent 주석). 막대·범례는 DEFAULT 민트(#44d1a5)가 아니라 ink를 쓴다 —
+ * 4px 막대에서 DEFAULT는 트랙(bg-line #eaecef)과 1.6:1이라 진행률이 안
+ * 읽히고, ink는 트랙 대비 ~3.7:1로 읽힌다. 숫자(StatCard 28px 민트)와
+ * 막대(민트 잉크)가 색상은 같고 명도만 다른 관계다.
  *
  * 범례 점을 그리는 화면들은 이 표를 그대로 가져다 쓴다(METER_FILL).
  * 각 화면이 "bg-success" 같은 문자열을 따로 들고 있으면 여기 값을 바꾼 순간
