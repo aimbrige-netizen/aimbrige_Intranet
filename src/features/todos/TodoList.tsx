@@ -451,8 +451,9 @@ function RowButton({
       aria-label={label}
       title={label}
       className={cn(
-        // 2026-08-07 UI/UX 감사: p-1(22px 히트영역)→p-2.5(44px)로 확대, 시각적 아이콘 크기는 유지
-        "rounded-sm p-2.5 text-muted transition-colors duration-fast ease-standard disabled:opacity-30",
+        // 2026-08-07 UI/UX 감사: p-1(22px 히트영역) → grid+min-h/w-11(44px)로 확대, 시각적 아이콘 크기는 유지
+        // (패딩만으로는 p-2.5=34px/p-4=46px처럼 정확히 44px을 만들기 어려워 min-h/w를 직접 지정)
+        "grid min-h-11 min-w-11 place-items-center rounded-sm text-muted transition-colors duration-fast ease-standard disabled:opacity-30",
         danger
           ? "hover:bg-danger-light hover:text-danger"
           : "hover:bg-line hover:text-ink",

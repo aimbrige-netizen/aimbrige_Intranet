@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
 import { Card, CardBody } from "@/components/ui/Card";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton } from "@/components/ui/IconButton";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Meter } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
@@ -384,16 +385,13 @@ function GoalCard({
             {GOAL_STATUS_LABELS[goal.status]}
           </Badge>
           {canEdit ? (
-            <button
-              type="button"
+            <IconButton
+              label={`${goal.title} 수정`}
               onClick={onEdit}
               disabled={pending}
-              aria-label={`${goal.title} 수정`}
-              title="수정"
-              className="rounded-sm p-2.5 text-muted transition-colors duration-fast ease-standard hover:bg-line hover:text-ink disabled:opacity-30"
             >
               <Pencil className="size-3.5" aria-hidden />
-            </button>
+            </IconButton>
           ) : null}
         </div>
 
