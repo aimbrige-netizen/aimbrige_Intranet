@@ -905,8 +905,70 @@ function ItemTable({
 }) {
   const colSpan = showDate ? 5 : 4;
 
+  /*
+   * 2026-08-07 UI/UX 감사: min-w-[560~720px] 표가 375px 폭에서 overflow-x-auto
+   * 안에서만 스크롤돼 목~토 열을 보려면 좌우로 밀어야 했다(카드 자체는
+   * 안 깨지지만 한 주 일정을 한눈에 못 봄). sm 미만은 카드 리스트로 갈아끼운다 —
+   * DB·서버 쿼리는 그대로, 표시 레이어만 분기.
+   */
+  if (rows.length === 0) {
+    return (
+      <>
+        <div className="hidden overflow-x-auto sm:block">
+          <table
+            className={cn(
+              "ab-table ab-table--compact",
+              showDate ? "min-w-[720px]" : "min-w-[560px]",
+            )}
+          >
+            <thead>
+              <tr>
+                {showDate ? <th className="w-40">날짜</th> : null}
+                <th className="w-28">시간</th>
+                <th className="w-28">종류</th>
+                <th>제목</th>
+                <th className="w-32">관련자</th>
+              </tr>
+            </thead>
+            <tbody>
+              <TableEmptyRow
+                colSpan={colSpan}
+                icon={CalendarClock}
+                title={emptyTitle}
+                description={emptyDescription}
+                action={emptyAction}
+              />
+            </tbody>
+          </table>
+        </div>
+        <div className="sm:hidden">
+          <TableEmptyRow
+            colSpan={colSpan}
+            icon={CalendarClock}
+            title={emptyTitle}
+            description={emptyDescription}
+            action={emptyAction}
+          />
+        </div>
+      </>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto">
+    <>
+      <div className="flex flex-col gap-2 sm:hidden">
+        {rows.map(({ date, item }) => (
+          <ItemCard
+            key={`${date}-${item.id}`}
+            date={date}
+            item={item}
+            holiday={holidays[date]}
+            showDate={showDate}
+            onPick={onPick}
+          />
+        ))}
+      </div>
+      <div className="hidden overflow-x-auto sm:block">
       <table
         className={cn(
           "ab-table ab-table--compact",
@@ -1029,6 +1091,102 @@ function ItemTable({
           )}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
+  );
+}
+
+/** ItemTable의 375px 대체 뷰 — 표 대신 한 항목당 카드 하나 (2026-08-07 UI/UX 감사) */
+function ItemCard({
+  date,
+  item,
+  holiday,
+  showDate,
+  onPick,
+}: {
+  date: string;
+  item: CalendarItem;
+  holiday: Holiday | undefined;
+  showDate: boolean;
+  onPick: (item: CalendarItem) => void;
+}) {
+  const color = EVENT_COLORS[item.kind];
+  const weekday = weekdayOf(date);
+  const mark = item.kind === "milestone" ? milestoneMark(item.completed) : null;
+
+  return (
+    <button
+      type="button"
+      onClick={() => onPick(item)}
+      className={cn(
+        "rounded-card border border-line bg-surface p-3 text-left transition-colors duration-fast ease-standard hover:border-primary",
+        declinedClass(item),
+      )}
+    >
+      <span className="flex items-center gap-1.5 text-nano text-muted">
+        <span className={cn("size-2 rounded-full", color.dot)} aria-hidden />
+        {color.label}
+        <span className="ml-auto tabular-nums">
+          {item.allDay
+            ? "종일"
+            : `${toSeoulTime(item.startAt)}–${toSeoulTime(item.endAt)}`}
+        </span>
+      </span>
+
+      {showDate ? (
+        <span
+          className={cn(
+            "mt-1 block text-nano tabular-nums",
+            dayToneClass(weekday, !!holiday),
+          )}
+        >
+          {date.slice(5)} ({WEEKDAY_LABELS[weekday]})
+          {holiday ? <span className="ml-1.5 text-danger">{holiday.name}</span> : null}
+        </span>
+      ) : null}
+
+      <span className="mt-1 flex flex-wrap items-center gap-1.5">
+        <span
+          className={cn(
+            "min-w-0 truncate text-body-sm text-ink",
+            mark?.className,
+            item.myResponse === "declined" && "line-through",
+          )}
+        >
+          {item.title}
+        </span>
+        {item.myResponse ? (
+          <span
+            className={cn(
+              "shrink-0 rounded-sm px-1.5 text-nano",
+              RESPONSE_COLORS[item.myResponse].badge,
+            )}
+          >
+            {RESPONSE_COLORS[item.myResponse].label}
+          </span>
+        ) : null}
+        {mark ? (
+          <span
+            className={cn(
+              "inline-flex shrink-0 items-center gap-0.5 rounded-sm px-1.5 text-nano",
+              mark.badge,
+            )}
+          >
+            <mark.icon className="size-2.5" aria-hidden />
+            {mark.label}
+          </span>
+        ) : null}
+      </span>
+
+      {placeLine(item) ? (
+        <span className="mt-0.5 block truncate text-nano text-muted">
+          {placeLine(item)}
+        </span>
+      ) : null}
+
+      <span className="mt-1 block truncate text-caption">
+        {item.ownerName ?? "-"}
+      </span>
+    </button>
   );
 }

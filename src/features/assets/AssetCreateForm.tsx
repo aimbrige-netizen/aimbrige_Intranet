@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Field";
 import { Callout } from "@/components/ui/Callout";
 import { Select } from "@/components/ui/Field";
+import { useToast } from "@/components/ui/Toast";
 import { createAsset, setAssetStatus } from "@/server/actions/assets";
 import {
   ASSET_STATUS_LABELS,
@@ -21,11 +22,14 @@ export function AssetCreateForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const toast = useToast();
 
   const submit = () =>
     startTransition(async () => {
       const result = await createAsset({ name, assetType, serialNumber });
       if (result.ok) {
+        // 2026-08-07 UI/UX 감사: 등록해도 성공 피드백이 전혀 없었다
+        toast(`${name} 자산을 등록했습니다.`);
         setName("");
         setAssetType("");
         setSerialNumber("");

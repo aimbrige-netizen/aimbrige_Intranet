@@ -72,7 +72,10 @@ export function Callout({
 
   return (
     <div
-      role={tone === "danger" ? "alert" : undefined}
+      role={tone === "danger" ? "alert" : "status"}
+      // 2026-08-07 UI/UX 감사: danger 외 톤(success/warn/info/neutral)은
+      // 스크린리더에 아예 안 읽혔다. role="status"+aria-live="polite" 추가.
+      aria-live={tone === "danger" ? undefined : "polite"}
       className={cn(
         "flex items-start gap-2.5 rounded-card border px-4 py-3",
         meta.shell,

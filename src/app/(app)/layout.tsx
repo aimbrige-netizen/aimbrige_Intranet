@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/AppShell";
+import { ToastProvider } from "@/components/ui/Toast";
 import { requireSessionEmployee } from "@/lib/auth/session";
 import { getFavorites } from "@/features/dashboard/widget-data";
 import { getUnifiedUnreadMailCount } from "@/features/mail/gmail-source";
@@ -26,19 +27,21 @@ export default async function AppLayout({
   ]);
 
   return (
-    <AppShell
-      role={me.roleName}
-      favorites={favorites}
-      mailUnreadCount={mailUnreadCount}
-      user={{
-        name: me.name,
-        email: me.email,
-        position: me.position,
-        departmentName: me.department?.name ?? null,
-        profileImageUrl: me.profile_image_url,
-      }}
-    >
-      {children}
-    </AppShell>
+    <ToastProvider>
+      <AppShell
+        role={me.roleName}
+        favorites={favorites}
+        mailUnreadCount={mailUnreadCount}
+        user={{
+          name: me.name,
+          email: me.email,
+          position: me.position,
+          departmentName: me.department?.name ?? null,
+          profileImageUrl: me.profile_image_url,
+        }}
+      >
+        {children}
+      </AppShell>
+    </ToastProvider>
   );
 }
