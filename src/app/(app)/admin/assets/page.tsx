@@ -222,43 +222,42 @@ export default async function AdminAssetsPage() {
         ) : (
           /* 표는 패딩 없는 면 — /assets의 표 래퍼와 동일 */
           <div className="ab-card overflow-hidden md:rounded-none md:border-0">
-            <div className="overflow-x-auto">
-              <table className="ab-table min-w-[560px]">
-                <thead>
-                  <tr>
-                    <th>자산</th>
-                    <th>대여자</th>
-                    <th>상태</th>
-                    <th>신청</th>
-                    <th>반납</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loans.map((loan) => {
-                    const stage = loanStage(loan);
-                    return (
-                      <tr key={loan.id}>
-                        <td className="text-body-sm text-ink">{loan.asset_name}</td>
-                        <td className="text-label text-muted">
-                          {loan.employee_name}
-                        </td>
-                        <td>
-                          <Badge tone={LOAN_STAGE_TONES[stage]}>
-                            {LOAN_STAGE_LABELS[stage]}
-                          </Badge>
-                        </td>
-                        <td className="text-label tabular-nums text-muted">
-                          {loan.requested_at.slice(0, 10)}
-                        </td>
-                        <td className="text-label tabular-nums text-muted">
-                          {loan.returned_at?.slice(0, 10) ?? "—"}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            {/* 2026-08-07 UI/UX 감사: 손복사 표 → DataTable(이 파일의 다른 두 표와 같은 컴포넌트) */}
+            <DataTable minWidth={560}>
+              <thead>
+                <tr>
+                  <Th>자산</Th>
+                  <Th>대여자</Th>
+                  <Th>상태</Th>
+                  <Th>신청</Th>
+                  <Th>반납</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {loans.map((loan) => {
+                  const stage = loanStage(loan);
+                  return (
+                    <tr key={loan.id}>
+                      <Td className="text-body-sm text-ink">{loan.asset_name}</Td>
+                      <Td className="text-label text-muted">
+                        {loan.employee_name}
+                      </Td>
+                      <Td>
+                        <Badge tone={LOAN_STAGE_TONES[stage]}>
+                          {LOAN_STAGE_LABELS[stage]}
+                        </Badge>
+                      </Td>
+                      <Td numeric className="text-label text-muted">
+                        {loan.requested_at.slice(0, 10)}
+                      </Td>
+                      <Td numeric className="text-label text-muted">
+                        {loan.returned_at?.slice(0, 10) ?? "—"}
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </DataTable>
           </div>
         )}
       </section>

@@ -150,7 +150,15 @@ export function EmployeeFilters({
             active={params.department === department.id}
             count={departmentCounts.get(department.id) ?? 0}
           >
-            {department.name}
+            {/*
+              2026-08-07 UI/UX 감사: FilterChip은 whitespace-nowrap이라
+              부서명이 긴 칩 하나가 flex-wrap 행을 뚫고 페이지를 가로로
+              밀었다(1280px에서도 21px). 칩 자체(공용 컴포넌트, 다른 화면
+              필터에도 쓰임)는 그대로 두고, 이 텍스트에만 상한+말줄임을 준다.
+            */}
+            <span className="max-w-[10rem] truncate" title={department.name}>
+              {department.name}
+            </span>
           </FilterChip>
         ))}
 

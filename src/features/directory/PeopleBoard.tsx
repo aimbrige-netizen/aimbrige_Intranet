@@ -177,7 +177,10 @@ export function PeopleBoard({
                 active={params.department === department.id}
                 count={index.totalByDepartment.get(department.id) ?? 0}
               >
-                {department.name}
+                {/* 2026-08-07 UI/UX 감사: 긴 부서명이 flex-wrap 필터 행을 밀어내는 것 방지(EmployeeFilters와 동일 처리) */}
+                <span className="max-w-[10rem] truncate" title={department.name}>
+                  {department.name}
+                </span>
               </FilterChip>
             ))}
             {index.unassigned.length > 0 ? (
@@ -240,7 +243,9 @@ export function PeopleBoard({
               active={params.team === team.id}
               count={index.membersByTeam.get(team.id)?.length ?? 0}
             >
-              {team.name}
+              <span className="max-w-[10rem] truncate" title={team.name}>
+                {team.name}
+              </span>
             </FilterChip>
           ))}
         </div>

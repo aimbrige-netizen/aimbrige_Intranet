@@ -57,7 +57,8 @@ export function QuickMenuWidget({ email }: { email: string }) {
                 >
                   <Icon
                     className="size-6 text-ink-sub"
-                    strokeWidth={1.5}
+                    // 2026-08-07 UI/UX 감사: 셸(사이드바·유틸바·앱런처)과 같은 1.75로 통일
+                    strokeWidth={1.75}
                     aria-hidden
                   />
                   <span className="text-[12px] font-medium text-ink">

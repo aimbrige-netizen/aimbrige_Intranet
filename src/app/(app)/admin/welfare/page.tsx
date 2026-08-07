@@ -170,40 +170,39 @@ export default async function AdminWelfarePage({
         ) : (
           /* 표는 패딩 없는 면 — /assets의 표 래퍼와 동일 */
           <div className="ab-card overflow-hidden md:rounded-none md:border-0">
-            <div className="overflow-x-auto">
-              <table className="ab-table min-w-[560px]">
-                <thead>
-                  <tr>
-                    <th>신청자</th>
-                    <th>용도</th>
-                    <th className="text-right">금액</th>
-                    <th>상태</th>
-                    <th>신청일</th>
+            {/* 2026-08-07 UI/UX 감사: 손복사 표 → DataTable(이 파일 위쪽 지급 이력 표와 같은 컴포넌트) */}
+            <DataTable minWidth={560}>
+              <thead>
+                <tr>
+                  <Th>신청자</Th>
+                  <Th>용도</Th>
+                  <Th align="right">금액</Th>
+                  <Th>상태</Th>
+                  <Th>신청일</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((request) => (
+                  <tr key={request.id}>
+                    <Td className="text-body-sm text-ink">
+                      {request.employee_name}
+                    </Td>
+                    <Td className="text-label text-muted">{request.purpose}</Td>
+                    <Td align="right" numeric className="text-body-sm text-ink">
+                      {formatPoints(request.amount)}
+                    </Td>
+                    <Td>
+                      <Badge tone={WELFARE_STATUS_TONES[request.status]}>
+                        {WELFARE_STATUS_LABELS[request.status]}
+                      </Badge>
+                    </Td>
+                    <Td numeric className="text-label text-muted">
+                      {request.requested_at.slice(0, 10)}
+                    </Td>
                   </tr>
-                </thead>
-                <tbody>
-                  {requests.map((request) => (
-                    <tr key={request.id}>
-                      <td className="text-body-sm text-ink">
-                        {request.employee_name}
-                      </td>
-                      <td className="text-label text-muted">{request.purpose}</td>
-                      <td className="text-right text-body-sm tabular-nums text-ink">
-                        {formatPoints(request.amount)}
-                      </td>
-                      <td>
-                        <Badge tone={WELFARE_STATUS_TONES[request.status]}>
-                          {WELFARE_STATUS_LABELS[request.status]}
-                        </Badge>
-                      </td>
-                      <td className="text-label tabular-nums text-muted">
-                        {request.requested_at.slice(0, 10)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                ))}
+              </tbody>
+            </DataTable>
           </div>
         )}
       </section>

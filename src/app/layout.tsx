@@ -21,6 +21,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // tailwind.config.ts의 colors.ink.DEFAULT와 같은 값. Next.js Viewport 메타데이터는
+  // Tailwind 클래스를 못 읽어 리터럴로 둔다 — ink.DEFAULT를 바꾸면 이 값도 함께 바꿀 것
+  // (2026-08-07 UI/UX 감사 — 두 값이 갈라질 수 있는 유일한 자리로 기록).
   themeColor: "#1c1c1c",
 };
 

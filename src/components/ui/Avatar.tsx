@@ -10,7 +10,8 @@ import { cn, initialsOf } from "@/lib/utils";
  */
 /* 사이즈 이름은 SEED 규격(xsmall~xlarge)을 따라 Button과 통일한다 */
 const SIZES = {
-  small: "size-6 text-[10px]",
+  // 2026-08-07 UI/UX 감사: 임의값 10px → 기존 nano(11px) 토큰. 24px 원 안 이니셜 1~2자라 차이 없음
+  small: "size-6 text-nano",
   medium: "size-8 text-label",
   large: "size-12 text-body",
   xlarge: "size-20 text-h2",
