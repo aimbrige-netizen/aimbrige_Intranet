@@ -202,7 +202,7 @@ export function PostList({
                   <Td align="center">
                     {post.is_pinned ? (
                       <Pin
-                        className="mx-auto size-3.5 text-primary"
+                        className="mx-auto size-3.5 text-primary-ink"
                         aria-label="고정"
                       />
                     ) : !post.isRead ? (

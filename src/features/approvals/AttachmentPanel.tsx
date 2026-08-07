@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Download, Paperclip, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { createClient } from "@/lib/supabase/client";
 import {
   getAttachmentUrl,
@@ -129,25 +130,24 @@ export function AttachmentPanel({
                   {Math.round(file.file_size / 1024)}KB
                 </span>
               ) : null}
-              <button
-                type="button"
+              <IconButton
+                label={`${file.file_name ?? "첨부"} 다운로드`}
                 onClick={() => download(file.file_url)}
                 disabled={pending}
-                aria-label={`${file.file_name ?? "첨부"} 다운로드`}
-                className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-primary disabled:opacity-50"
+                className="shrink-0 hover:bg-canvas hover:text-primary-ink"
               >
                 <Download className="size-4" />
-              </button>
+              </IconButton>
               {canUpload ? (
-                <button
-                  type="button"
+                <IconButton
+                  label="첨부 삭제"
+                  danger
                   onClick={() => remove(file.id, file.file_name ?? "첨부")}
                   disabled={pending}
-                  aria-label="첨부 삭제"
-                  className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
+                  className="shrink-0"
                 >
                   <Trash2 className="size-4" />
-                </button>
+                </IconButton>
               ) : null}
             </li>
           ))}

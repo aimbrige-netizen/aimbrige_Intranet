@@ -52,7 +52,7 @@ const FILL: Record<MeterTone, string> = {
 export const METER_FILL: Record<MeterTone, string> = FILL;
 
 const TEXT: Record<MeterTone, string> = {
-  brand: "text-primary",
+  brand: "text-primary-ink",
   neutral: "text-ink",
   positive: "text-accent-ink",
   informative: "text-info-ink",

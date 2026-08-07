@@ -104,7 +104,7 @@ function BigStat({
       href={href}
       className="group rounded-sm py-1 transition-colors duration-fast ease-standard hover:bg-subtle"
     >
-      <span className="block text-[24px] font-medium tabular-nums leading-tight text-primary">
+      <span className="block text-[24px] font-medium tabular-nums leading-tight text-primary-ink">
         {value}
       </span>
       <span className="mt-0.5 block text-label text-ink-sub">{label}</span>
@@ -133,7 +133,7 @@ function CountRow({
         <span
           className={
             accent
-              ? "shrink-0 font-medium tabular-nums text-primary"
+              ? "shrink-0 font-medium tabular-nums text-primary-ink"
               : "shrink-0 tabular-nums text-muted"
           }
         >

@@ -87,7 +87,7 @@ export function OptionCardGrid<T extends string>({
                   className={cn(
                     "grid size-7 shrink-0 place-items-center rounded-sm text-body-sm",
                     selected
-                      ? "bg-white text-primary"
+                      ? "bg-white text-primary-ink"
                       : "bg-subtle text-muted",
                   )}
                 >
@@ -100,7 +100,7 @@ export function OptionCardGrid<T extends string>({
                   <span
                     className={cn(
                       "truncate text-body-sm font-bold",
-                      selected ? "text-primary" : "text-ink",
+                      selected ? "text-primary-ink" : "text-ink",
                     )}
                   >
                     {option.title}

@@ -140,7 +140,7 @@ function LeaveModal({
         {isAnnual ? (
           <div className="flex items-center justify-between rounded-card bg-primary-light px-4 py-3">
             <span className="text-body text-ink">잔여 연차</span>
-            <span className="text-h2 text-primary">{remainingDays}일</span>
+            <span className="text-h2 text-primary-ink">{remainingDays}일</span>
           </div>
         ) : (
           <Callout tone="info">

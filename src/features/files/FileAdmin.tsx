@@ -281,7 +281,7 @@ export function FileAdmin({
                           href={`https://drive.google.com/drive/folders/${row.driveFolderId}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary"
+                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary-ink"
                         >
                           <span className="truncate">{row.driveFolderId}</span>
                           <ExternalLink className="size-3 shrink-0" aria-hidden />
@@ -358,7 +358,7 @@ export function FileAdmin({
                           href={`https://drive.google.com/file/d/${row.driveFileId}/view`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary"
+                          className="inline-flex max-w-64 items-center gap-1 text-caption hover:text-primary-ink"
                         >
                           <span className="truncate">{row.driveFileId}</span>
                           <ExternalLink className="size-3 shrink-0" aria-hidden />

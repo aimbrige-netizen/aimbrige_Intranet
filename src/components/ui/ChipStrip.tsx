@@ -23,7 +23,7 @@ export type ChipTone =
 
 const CHIP_TONES: Record<ChipTone, string> = {
   neutral: "bg-subtle text-ink",
-  primary: "bg-primary-light text-primary",
+  primary: "bg-primary-light text-primary-ink",
   /*
    * 상태 톤의 색 글자는 Badge(틴트 위 ink)와 달리 유지한다 — 이 칩의 문법은
    * chip(06 L45)이 아니라 **tag-attendance**(06 L52-58)다: 옅은 면 위에
@@ -113,7 +113,7 @@ const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as cons
 function weekdayToneClass(weekday: number, holiday: boolean, muted: boolean) {
   if (muted) return "text-muted/50";
   if (holiday || weekday === 0) return "text-danger";
-  if (weekday === 6) return "text-info";
+  if (weekday === 6) return "text-info-ink";
   return "text-ink";
 }
 

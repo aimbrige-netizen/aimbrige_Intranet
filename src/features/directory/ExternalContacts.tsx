@@ -13,6 +13,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Textarea } from "@/components/ui/Field";
 import { Badge } from "@/components/ui/Badge";
@@ -383,22 +384,19 @@ export function ExternalContacts({
                       <td>
                         {canModify(contact) ? (
                           <span className="flex gap-1">
-                            <button
-                              type="button"
+                            <IconButton
+                              label={`${contact.name} 수정`}
                               onClick={() => openEdit(contact)}
-                              aria-label={`${contact.name} 수정`}
-                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-line hover:text-ink"
                             >
                               <Pencil className="size-3.5" />
-                            </button>
-                            <button
-                              type="button"
+                            </IconButton>
+                            <IconButton
+                              label={`${contact.name} 삭제`}
+                              danger
                               onClick={() => remove(contact)}
-                              aria-label={`${contact.name} 삭제`}
-                              className="rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger"
                             >
                               <Trash2 className="size-3.5" />
-                            </button>
+                            </IconButton>
                           </span>
                         ) : (
                           <span className="text-caption">-</span>

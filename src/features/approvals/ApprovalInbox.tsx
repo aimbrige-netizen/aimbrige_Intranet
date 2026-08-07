@@ -244,7 +244,7 @@ export function ApprovalInbox({ rows }: { rows: InboxRow[] }) {
                       <td>
                         <Link
                           href={`/approvals/${row.id}`}
-                          className="text-ink hover:text-primary hover:underline"
+                          className="text-ink hover:text-primary-ink hover:underline"
                         >
                           {row.title}
                         </Link>

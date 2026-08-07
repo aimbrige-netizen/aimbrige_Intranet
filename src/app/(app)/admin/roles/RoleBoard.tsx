@@ -187,7 +187,7 @@ export function RoleBoard({
                       query ? undefined : (
                         <Link
                           href="/admin/employees"
-                          className="text-label text-primary hover:underline"
+                          className="text-label text-primary-ink hover:underline"
                         >
                           임직원 목록 열기
                         </Link>

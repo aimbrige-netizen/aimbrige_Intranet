@@ -153,7 +153,7 @@ export function HolidayManager({ holidays }: { holidays: Holiday[] }) {
                         weekday === 0
                           ? "text-danger"
                           : weekday === 6
-                            ? "text-primary"
+                            ? "text-primary-ink"
                             : "text-muted",
                       )}
                     >

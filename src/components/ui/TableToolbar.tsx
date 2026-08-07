@@ -77,7 +77,7 @@ export function ToolbarSearch({
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         placeholder={placeholder}
         aria-label={ariaLabel ?? placeholder}
-        className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body-sm text-ink placeholder:text-muted transition-colors duration-fast ease-standard focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+        className="h-9 w-full rounded-card border border-line-strong bg-surface pl-9 pr-3 text-body-sm text-ink placeholder:text-muted transition-colors duration-fast ease-standard focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-pressed"
       />
     </div>
   );

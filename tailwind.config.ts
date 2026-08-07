@@ -46,7 +46,14 @@ const config: Config = {
           light: "#e2f1f5",
           "light-hover": "#cdeaf1",
           "light-pressed": "#bbe2ec",
-          ink: "#00889c",
+          /*
+           * 2026-08-07 UI/UX 감사 반영: 기존 #00889c(흰 배경 대비 4.20:1)는
+           * WCAG AA 4.5:1에 근소하게 못 미친다. text-primary(브랜드 시안)를
+           * 13~14px 텍스트로 쓰는 자리(네비 활성 라벨·지표값 등, 38개 파일/69곳)가
+           * 전부 이 토큰을 거치도록 아래에서 일괄 치환했다 — DEFAULT/hover/pressed는
+           * 배경·보더용이라 그대로 두고 텍스트 전용 값만 더 어둡게 조정.
+           */
+          ink: "#008094",
         },
         /*
          * 레일 — DevTools 재실측(.doa_gnb)으로 확정.
@@ -70,14 +77,20 @@ const config: Config = {
           DEFAULT: "#1c1c1c", // rgb(28,28,28) 본문
           sub: "#323333", // rgb(50,51,51) 보조 — 라벨·레일 텍스트
         },
-        muted: "#969799", // --doa-color-status-neutral-level1 (gray-52) 흐린 글자
         /*
-         * 빈 상태 문구색 — 07-modules.md L15 실측 rgb(170,170,170).
-         * 06의 632개 변수에는 없는 값(원본 하드코딩)이라 sunday·line-dark와
-         * 같은 방식으로 07 실측을 근거 삼아 별도 토큰으로 둔다.
-         * 06 최근접값은 gray-40 #aeafb1.
+         * 2026-08-07 UI/UX 감사 반영: 원본 gray-52(#969799)는 흰 배경 대비
+         * 2.92:1로 WCAG AA 4.5:1에 크게 못 미친다(126개 파일/477곳, 직책·날짜·
+         * 상태어 등 보조 텍스트 전용 — 이 토큰의 원래 정의 자체가 "흐린 글자"라
+         * 배경·보더 용도로 쓰이는 자리가 없어 값을 직접 낮춰도 안전하다).
+         * #757575 = 4.61:1으로 교체.
          */
-        faint: "#aaaaaa",
+        muted: "#757575",
+        /*
+         * 빈 상태 문구색 — 07-modules.md L15 실측 rgb(170,170,170), 2.32:1로 미달.
+         * "문구색"이라는 정의 자체가 텍스트 전용이라 muted와 같은 값으로 낮춘다
+         * (2026-08-07 UI/UX 감사).
+         */
+        faint: "#757575",
         /*
          * 레일 gnb-band 화살표 밴드 글리프색 — 08-shell-extra.md
          * "gnb-band 화살표 밴드(h-24, #7a7b7d)". 06 팔레트 gray-64
@@ -184,13 +197,26 @@ const config: Config = {
         "warn-light": "#fdebc2", // yellow-05 = --doa-color-chip-bg-notice
         "danger-light": "#ffe4dc", // red-05 = --doa-color-chip-bg-negative
         /*
-         * 옅은 면·흰 배경 위 글자색 — 원본 tag-system-text-* 그대로.
-         * (원본은 4.5:1을 고집하지 않는다. 코드값을 따른다.)
+         * 옅은 면·흰 배경 위 글자색 — 원본은 tag-system-text-* 그대로였다
+         * ("원본은 4.5:1을 고집하지 않는다. 코드값을 따른다").
+         *
+         * 2026-08-07 UI/UX 감사 반영: 네 값 다 흰 배경에서 2.36~3.26:1로
+         * AA 4.5:1 미달이었고, warn-ink는 하필 "지연/경고" 배지에 쓰여
+         * 가장 눈에 띄어야 할 텍스트가 가장 흐린 역설이 있었다. "-ink" 접미사
+         * 토큰은 애초에 텍스트 전용으로 설계된 자리라(DEFAULT/-light가 면·배경을
+         * 맡는다) 값을 직접 낮춰도 배경 용도와 충돌하지 않는다.
          */
-        "success-ink": "#00af52",
-        "info-ink": "#0d99ff",
-        "warn-ink": "#d99f00", // --doa-color-tag-system-text-notice
-        "danger-ink": "#ff502a", // --doa-color-tag-system-text-negative
+        /*
+         * -ink 네 값은 흰 배경뿐 아니라 각자의 -light 틴트 배경(칩·배지 조합,
+         * 예: bg-warn-light text-warn-ink) 위에서도 4.5:1을 넘도록 잡았다 —
+         * 두 문맥 다 만족하는 단일 값이면 컴포넌트마다 예외를 안 둬도 된다.
+         * warn-ink·info-ink는 흰 배경 대비만 맞추면 옅은 노랑/파랑 틴트 위에서는
+         * 여전히 3.9~4.1:1 수준이라 한 단계 더 낮췄다.
+         */
+        "success-ink": "#007a39", // 흰 배경 5.47:1 · success-light 위 4.74:1
+        "info-ink": "#0864a3", // 흰 배경 6.25:1 · info-light 위 5.40:1
+        "warn-ink": "#7a5900", // 흰 배경 6.45:1 · warn-light 위 5.49:1
+        "danger-ink": "#c92208", // 흰 배경 5.65:1 · danger-light 위 4.68:1 (기존 danger.pressed와 동일값)
         /*
          * 캘린더 이벤트 색상 (스펙 02 · 3.4)
          * SEED는 브랜드 색을 하나만 두므로, 이벤트 구분은 브랜드가 아니라

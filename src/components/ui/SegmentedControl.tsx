@@ -77,7 +77,7 @@ export function SegmentedControl<T extends string>({
               <span
                 className={cn(
                   "tabular-nums",
-                  selected ? "text-primary" : "text-muted",
+                  selected ? "text-primary-ink" : "text-muted",
                 )}
               >
                 {option.badge}

@@ -153,7 +153,7 @@ function FilterRow({
         />
         <span
           className={cn(
-            "grid size-4 shrink-0 place-items-center rounded-[4px] border transition-colors duration-fast ease-standard peer-focus-visible:ring-2 peer-focus-visible:ring-primary/20",
+            "grid size-4 shrink-0 place-items-center rounded-[4px] border transition-colors duration-fast ease-standard peer-focus-visible:ring-2 peer-focus-visible:ring-primary-pressed",
             checked
               ? "border-check bg-check" // #333333 — 09 실측 토큰
               : "border-line-strong bg-surface",

@@ -464,7 +464,7 @@ export default async function AuditLogsPage({
                     action={
                       <Link
                         href="/admin/audit-logs"
-                        className="text-label text-primary hover:underline"
+                        className="text-label text-primary-ink hover:underline"
                       >
                         최근 {DEFAULT_RANGE_DAYS}일 전체 보기
                       </Link>
@@ -487,7 +487,7 @@ export default async function AuditLogsPage({
                     action={
                       <Link
                         href="/admin/audit-logs"
-                        className="text-label text-primary hover:underline"
+                        className="text-label text-primary-ink hover:underline"
                       >
                         최근 {DEFAULT_RANGE_DAYS}일 전체 보기
                       </Link>
@@ -528,7 +528,7 @@ export default async function AuditLogsPage({
                           <>
                             <Link
                               href={`/admin/employees/${log.targetId}`}
-                              className="text-primary hover:underline"
+                              className="text-primary-ink hover:underline"
                             >
                               {targetNames.get(log.targetId)}
                             </Link>
@@ -540,7 +540,8 @@ export default async function AuditLogsPage({
                                   q: undefined,
                                 })}
                                 title="이 대상의 기록만 보기"
-                                className="ml-1.5 text-nano text-muted opacity-0 transition-opacity duration-fast ease-standard hover:text-ink group-hover:opacity-100 focus-visible:opacity-100"
+                                // 2026-08-07 UI/UX 감사: 순텍스트 링크라 상시 노출 비용이 적어, 호버 전용 대신 옅게 상시 노출
+                                className="ml-1.5 text-nano text-muted opacity-60 transition-opacity duration-fast ease-standard hover:text-ink hover:opacity-100 focus-visible:opacity-100"
                               >
                                 이 대상만
                               </Link>

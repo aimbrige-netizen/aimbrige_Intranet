@@ -390,7 +390,7 @@ function AttendeePicker({
                 return (
                   <span
                     key={id}
-                    className="inline-flex items-center gap-1 rounded-pill bg-primary-light py-0.5 pl-0.5 pr-1.5 text-label text-primary"
+                    className="inline-flex items-center gap-1 rounded-pill bg-primary-light py-0.5 pl-0.5 pr-1.5 text-label text-primary-ink"
                   >
                     <Avatar
                       name={person?.name ?? "?"}
@@ -453,7 +453,7 @@ function AttendeePicker({
                       className={cn(
                         "flex w-full items-center gap-2 px-2.5 py-2 text-left transition-colors duration-fast ease-standard",
                         active
-                          ? "bg-primary-light text-primary"
+                          ? "bg-primary-light text-primary-ink"
                           : "text-ink hover:bg-subtle",
                       )}
                     >

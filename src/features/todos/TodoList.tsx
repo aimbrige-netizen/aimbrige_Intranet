@@ -305,7 +305,7 @@ export function TodoList({ todos, today }: { todos: Todo[]; today: string }) {
                     {todo.content}
                   </span>
                   {todo.due_date ? <DueLabel due={todo.due_date} today={today} /> : null}
-                  <span className="flex shrink-0 items-center gap-0.5">
+                  <span className="flex shrink-0 items-center gap-2">
                     <RowButton
                       label="위로 이동"
                       icon={ChevronUp}
@@ -451,7 +451,8 @@ function RowButton({
       aria-label={label}
       title={label}
       className={cn(
-        "rounded-sm p-1 text-muted transition-colors duration-fast ease-standard disabled:opacity-30",
+        // 2026-08-07 UI/UX 감사: p-1(22px 히트영역)→p-2.5(44px)로 확대, 시각적 아이콘 크기는 유지
+        "rounded-sm p-2.5 text-muted transition-colors duration-fast ease-standard disabled:opacity-30",
         danger
           ? "hover:bg-danger-light hover:text-danger"
           : "hover:bg-line hover:text-ink",

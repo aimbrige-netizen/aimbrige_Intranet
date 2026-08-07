@@ -357,7 +357,7 @@ export function ResourceBoard({
               holiday || index === 0
                 ? "text-danger"
                 : index === 6
-                  ? "text-info"
+                  ? "text-info-ink"
                   : undefined;
             return (
               <FilterChip
@@ -389,7 +389,7 @@ export function ResourceBoard({
                   activeHoliday || activeWeekday === 0
                     ? "text-danger"
                     : activeWeekday === 6
-                      ? "text-info"
+                      ? "text-info-ink"
                       : "text-ink",
                 )}
               >

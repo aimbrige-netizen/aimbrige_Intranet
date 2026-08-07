@@ -114,7 +114,7 @@ export function TimelineTrack({
             title={`${toSeoulTime(booking.startAt)}–${toSeoulTime(booking.endAt)} ${booking.bookerName ?? "예약됨"}${booking.purpose ? ` · ${booking.purpose}` : ""}`}
             className={cn(
               "absolute inset-y-1 flex items-center overflow-hidden rounded-sm px-1 text-nano",
-              mine ? "bg-primary-light text-primary" : "bg-line-strong text-ink",
+              mine ? "bg-primary-light text-primary-ink" : "bg-line-strong text-ink",
             )}
             style={{
               left: `${left}%`,

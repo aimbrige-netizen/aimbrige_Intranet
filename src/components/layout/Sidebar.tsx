@@ -288,8 +288,8 @@ export function Sidebar({
                           : "md:w-full md:text-center md:text-[12px] md:font-medium",
                         favActive
                           ? wide
-                            ? "text-primary md:text-white"
-                            : "text-primary"
+                            ? "text-primary-ink md:text-white"
+                            : "text-primary-ink"
                           : "text-sidebar-text",
                       )}
                     >
@@ -467,8 +467,8 @@ function ModuleRow({
               : "md:w-full md:text-center md:text-[12px] md:font-medium",
             active
               ? wide
-                ? "text-primary md:text-white"
-                : "text-primary"
+                ? "text-primary-ink md:text-white"
+                : "text-primary-ink"
               : "text-sidebar-text",
           )}
         >

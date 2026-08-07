@@ -258,7 +258,7 @@ function MemberLink({
         <span
           className={cn(
             "min-w-0 flex-1 truncate text-body-sm font-bold",
-            active ? "text-primary" : "text-ink",
+            active ? "text-primary-ink" : "text-ink",
           )}
         >
           {row.name}

@@ -12,7 +12,7 @@ type Tone = "neutral" | "primary" | "success" | "warn" | "danger" | "info";
 const TONES: Record<Tone, string> = {
   neutral: "bg-subtle text-muted",
   // 옅은 면 위 브랜드 글자 — 06 button level2(#e2f1f5 + #08a7bf) 그대로
-  primary: "bg-primary-light text-primary",
+  primary: "bg-primary-light text-primary-ink",
   /*
    * 상태 틴트는 solid를 쓴다 — 알파 합성은 얹히는 면마다 결과가 달라진다.
    *

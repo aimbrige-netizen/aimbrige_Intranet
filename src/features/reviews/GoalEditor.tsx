@@ -158,7 +158,10 @@ export function GoalEditor({
                         variant="ghost"
                         aria-label={`목표 ${index + 1} 삭제`}
                         disabled={pending}
-                        onClick={() => run(() => deleteReviewGoal(goal.id))}
+                        onClick={() => {
+                          if (!window.confirm("이 목표를 삭제할까요?")) return;
+                          run(() => deleteReviewGoal(goal.id));
+                        }}
                       >
                         <Trash2 className="size-3.5" />
                       </Button>
@@ -207,7 +210,10 @@ export function GoalEditor({
             <Button
               variant="primary"
               disabled={pending || goals.length === 0}
-              onClick={() => run(() => submitReviewGoals(cycleId))}
+              onClick={() => {
+                if (!window.confirm("목표를 제출할까요? 팀장 승인 전까지 수정할 수 없습니다.")) return;
+                run(() => submitReviewGoals(cycleId));
+              }}
             >
               <Send className="size-4" />
               목표 제출

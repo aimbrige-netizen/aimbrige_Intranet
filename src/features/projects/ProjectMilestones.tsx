@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Flag, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionHeader } from "@/components/ui/Card";
 import { TableEmptyRow } from "@/components/ui/EmptyState";
 import { Field, Input } from "@/components/ui/Field";
@@ -256,9 +257,9 @@ export function ProjectMilestones({
                         </td>
                         {canEdit ? (
                           <td>
-                            <span className="flex items-center gap-0.5">
-                              <button
-                                type="button"
+                            <span className="flex items-center gap-1">
+                              <IconButton
+                                label="수정"
                                 onClick={() =>
                                   openDraft({
                                     id: milestone.id,
@@ -267,22 +268,17 @@ export function ProjectMilestones({
                                   })
                                 }
                                 disabled={pending}
-                                aria-label={`${milestone.title} 수정`}
-                                title="수정"
-                                className="rounded-sm p-1.5 text-muted transition-colors duration-fast ease-standard hover:bg-subtle hover:text-ink disabled:opacity-40"
                               >
                                 <Pencil className="size-3.5" />
-                              </button>
-                              <button
-                                type="button"
+                              </IconButton>
+                              <IconButton
+                                label="삭제"
+                                danger
                                 onClick={() => remove(milestone)}
                                 disabled={pending}
-                                aria-label={`${milestone.title} 삭제`}
-                                title="삭제"
-                                className="rounded-sm p-1.5 text-muted transition-colors duration-fast ease-standard hover:bg-danger-light hover:text-danger disabled:opacity-40"
                               >
                                 <Trash2 className="size-3.5" />
-                              </button>
+                              </IconButton>
                             </span>
                           </td>
                         ) : null}

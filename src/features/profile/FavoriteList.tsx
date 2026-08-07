@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Star, Trash2 } from "lucide-react";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { IconButton } from "@/components/ui/IconButton";
 import { removeFavoriteById } from "@/server/actions/favorites";
 import type { Favorite } from "@/types/db";
 
@@ -50,15 +51,15 @@ export function FavoriteList({
             <span className="truncate text-body text-ink">{favorite.label}</span>
             <span className="shrink-0 text-caption">{favorite.target_path}</span>
           </Link>
-          <button
-            type="button"
+          <IconButton
+            danger
             onClick={() => remove(favorite.id)}
             disabled={pending}
-            className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
-            aria-label={`${favorite.label} 즐겨찾기 삭제`}
+            className="shrink-0"
+            label={`${favorite.label} 즐겨찾기 삭제`}
           >
             <Trash2 className="size-4" />
-          </button>
+          </IconButton>
         </li>
       ))}
     </ul>

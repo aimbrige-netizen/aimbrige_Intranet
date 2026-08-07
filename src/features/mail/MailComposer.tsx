@@ -670,7 +670,7 @@ function RecipientField({
       <div
         className={cn(
           "flex min-h-11 w-full flex-wrap items-center gap-1.5 rounded-card border border-line-strong bg-surface px-2.5 py-1.5",
-          "transition-colors duration-fast ease-standard focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20",
+          "transition-colors duration-fast ease-standard focus-within:border-primary focus-within:ring-2 focus-within:ring-primary-pressed",
         )}
       >
         {selected.map((chip) => (

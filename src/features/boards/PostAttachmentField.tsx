@@ -198,7 +198,7 @@ export function PostAttachmentField({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={busy}
-            className="font-medium text-primary-ink underline underline-offset-2 transition-colors duration-fast ease-standard hover:text-primary disabled:opacity-50"
+            className="font-medium text-primary-ink underline underline-offset-2 transition-colors duration-fast ease-standard hover:text-primary-ink disabled:opacity-50"
           >
             파일선택
           </button>

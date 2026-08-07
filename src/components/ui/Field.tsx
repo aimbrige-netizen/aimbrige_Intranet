@@ -10,7 +10,9 @@ import { cn } from "@/lib/utils";
 const CONTROL_BASE =
   "w-full rounded-card border border-line-strong bg-surface px-3.5 py-2.5 text-body-sm text-ink placeholder:text-muted " +
   "transition-colors duration-fast ease-standard " +
-  "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 " +
+  // 2026-08-07 UI/UX 감사: ring-primary/20(≈1.2:1)은 사실상 안 보였다. 불투명한
+  // primary-pressed(#00889c, 흰 배경 4.20:1 — 비텍스트 UI 기준 3:1은 넉넉히 통과)로 교체.
+  "focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-pressed " +
   "disabled:bg-subtle disabled:text-muted read-only:bg-subtle";
 
 export const Input = forwardRef<

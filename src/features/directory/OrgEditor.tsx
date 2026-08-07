@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Building2, Plus, Trash2, Users, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { IconButton } from "@/components/ui/IconButton";
 import { Modal } from "@/components/ui/Modal";
 import { Field, Input, Select } from "@/components/ui/Field";
 import {
@@ -317,33 +318,5 @@ export function OrgEditor({
         </div>
       </Modal>
     </div>
-  );
-}
-
-function IconButton({
-  label,
-  danger,
-  onClick,
-  children,
-}: {
-  label: string;
-  danger?: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={label}
-      title={label}
-      className={
-        danger
-          ? "rounded-sm p-1.5 text-muted transition-colors hover:bg-danger-light hover:text-danger"
-          : "rounded-sm p-1.5 text-muted transition-colors hover:bg-canvas hover:text-ink"
-      }
-    >
-      {children}
-    </button>
   );
 }

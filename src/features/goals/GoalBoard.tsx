@@ -390,7 +390,7 @@ function GoalCard({
               disabled={pending}
               aria-label={`${goal.title} 수정`}
               title="수정"
-              className="rounded-sm p-1 text-muted transition-colors duration-fast ease-standard hover:bg-line hover:text-ink disabled:opacity-30"
+              className="rounded-sm p-2.5 text-muted transition-colors duration-fast ease-standard hover:bg-line hover:text-ink disabled:opacity-30"
             >
               <Pencil className="size-3.5" aria-hidden />
             </button>

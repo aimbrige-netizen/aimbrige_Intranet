@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Callout } from "@/components/ui/Callout";
+import { IconButton } from "@/components/ui/IconButton";
 import { SectionHeader } from "@/components/ui/Card";
 import { Meter } from "@/components/ui/Progress";
 import { Modal } from "@/components/ui/Modal";
@@ -50,7 +51,7 @@ function PostText({ text, className }: { text: string; className?: string }) {
             href={segment.href}
             target="_blank"
             rel="noreferrer noopener"
-            className="text-primary underline underline-offset-2"
+            className="text-primary-ink underline underline-offset-2"
           >
             {segment.value}
           </a>
@@ -181,7 +182,7 @@ export function PostDetailView({
                 {/* 고정은 위반이 아니다 — 빨강은 실제 위반·파괴적 동작에만 */}
                 {post.is_pinned ? (
                   <Badge tone="neutral">
-                    <Pin className="mr-1 size-3 text-primary" aria-hidden />
+                    <Pin className="mr-1 size-3 text-primary-ink" aria-hidden />
                     고정
                   </Badge>
                 ) : null}
@@ -320,15 +321,14 @@ export function PostDetailView({
                         {formatFileSize(file.file_size)}
                       </span>
                     ) : null}
-                    <button
-                      type="button"
+                    <IconButton
+                      label={`${file.file_name ?? "첨부"} 내려받기`}
                       onClick={() => download(file.file_url)}
                       disabled={pending}
-                      aria-label={`${file.file_name ?? "첨부"} 내려받기`}
-                      className="shrink-0 rounded-sm p-1.5 text-muted transition-colors hover:bg-subtle hover:text-primary disabled:opacity-50"
+                      className="shrink-0 hover:text-primary-ink"
                     >
                       <Download className="size-4" />
-                    </button>
+                    </IconButton>
                   </li>
                 ))}
               </ul>
@@ -355,7 +355,7 @@ export function PostDetailView({
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-body transition-colors disabled:opacity-50",
                     reaction.mine
-                      ? "border-primary bg-primary-light text-primary"
+                      ? "border-primary bg-primary-light text-primary-ink"
                       : "border-line text-muted hover:bg-subtle",
                   )}
                   aria-pressed={reaction.mine}
@@ -386,7 +386,7 @@ export function PostDetailView({
         <SectionHeader
           title={
             <span className="flex items-center gap-2">
-              <MessageSquare className="size-4 text-primary" aria-hidden />
+              <MessageSquare className="size-4 text-primary-ink" aria-hidden />
               댓글 {post.comments.length}
             </span>
           }
@@ -416,15 +416,15 @@ export function PostDetailView({
                         {formatDateTime(c.created_at)}
                       </span>
                       {c.author_id === currentEmployeeId || isSystemAdmin ? (
-                        <button
-                          type="button"
+                        <IconButton
+                          label="댓글 삭제"
+                          danger
                           onClick={() => removeComment(c.id)}
                           disabled={pending}
-                          className="ml-auto rounded-sm p-1 text-muted transition-colors hover:bg-danger-light hover:text-danger disabled:opacity-50"
-                          aria-label="댓글 삭제"
+                          className="ml-auto"
                         >
                           <Trash2 className="size-3.5" />
-                        </button>
+                        </IconButton>
                       ) : null}
                     </div>
                     <PostText

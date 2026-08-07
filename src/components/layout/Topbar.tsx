@@ -38,9 +38,13 @@ const ALL_SCOPE = "__all__";
 /**
  * 우측 클러스터 아이콘 버튼 공통 — 08-shell-extra.md "상단바 우측 클러스터".
  * 글리프 20(size-5) + p-2 = 히트영역 36px (실측 32~40 범위 안).
+ *
+ * 2026-08-07 UI/UX 감사: 데스크톱은 실측 범위를 지키고, 375px 모바일에서
+ * 상시 노출되는 메일·알림 버튼(Settings·Network는 md:block이라 무관)만
+ * p-3(44px)으로 확대한다.
  */
 const ICON_BTN =
-  "rounded-sm p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle";
+  "rounded-sm p-3 md:p-2 text-ink transition-colors duration-fast ease-standard hover:bg-subtle";
 
 /**
  * 상단바 60px — 전체 폭.
@@ -147,7 +151,8 @@ export function Topbar({
       <button
         type="button"
         onClick={onMenuClick}
-        className="-ml-1 rounded-sm p-1.5 text-ink transition-colors duration-fast ease-standard hover:bg-subtle md:hidden"
+        // 2026-08-07 UI/UX 감사: 32px→44px, 모바일 유일한 1차 내비 진입점
+        className="-ml-1 rounded-sm p-3 text-ink transition-colors duration-fast ease-standard hover:bg-subtle md:hidden"
         aria-label="메뉴 열기"
       >
         <Menu className="size-5" />
@@ -353,7 +358,7 @@ export function Topbar({
               name={user.name}
               src={user.profileImageUrl}
               size="medium"
-              className="!bg-primary-light !text-primary"
+              className="!bg-primary-light !text-primary-ink"
             />
             <span className="hidden text-left lg:block">
               <span className="block text-label font-bold leading-tight text-ink">
@@ -384,7 +389,7 @@ export function Topbar({
                   name={user.name}
                   src={user.profileImageUrl}
                   size="medium"
-                  className="!size-10 !bg-primary-light !text-primary"
+                  className="!size-10 !bg-primary-light !text-primary-ink"
                 />
                 <div className="min-w-0">
                   <p className="truncate text-body font-bold text-ink">
@@ -450,12 +455,12 @@ function ScopeOption({
       onClick={onSelect}
       className={cn(
         "flex h-8 w-full items-center gap-2 px-3 text-left text-body-sm transition-colors duration-fast ease-standard hover:bg-subtle",
-        selected ? "font-medium text-primary" : "text-ink",
+        selected ? "font-medium text-primary-ink" : "text-ink",
       )}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>
       {selected ? (
-        <Check className="size-4 shrink-0 text-primary" aria-hidden />
+        <Check className="size-4 shrink-0 text-primary-ink" aria-hidden />
       ) : null}
     </button>
   );

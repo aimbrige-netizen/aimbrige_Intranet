@@ -305,7 +305,7 @@ export function AttendanceView({
 
 /** 날짜 칸 색 — 일요일 빨강, 토요일 파랑 (한국 캘린더 기본) */
 function dateCellClass(weekday: number) {
-  return weekday === 0 ? "text-danger" : weekday === 6 ? "text-info" : undefined;
+  return weekday === 0 ? "text-danger" : weekday === 6 ? "text-info-ink" : undefined;
 }
 
 function AttendanceRow({ row }: { row: AttendanceRecord | AbsentDay }) {

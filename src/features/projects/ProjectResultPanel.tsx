@@ -296,7 +296,7 @@ export function ProjectResultPanel({
                     onClick={() => download(file.file_url)}
                     disabled={pending}
                     aria-label={`${file.file_name ?? "산출물"} 다운로드`}
-                    className="shrink-0 rounded-sm p-1.5 text-muted transition-colors duration-fast ease-standard hover:bg-subtle hover:text-primary disabled:opacity-40"
+                    className="shrink-0 rounded-sm p-1.5 text-muted transition-colors duration-fast ease-standard hover:bg-subtle hover:text-primary-ink disabled:opacity-40"
                   >
                     <Download className="size-4" />
                   </button>

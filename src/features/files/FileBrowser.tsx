@@ -572,7 +572,7 @@ function FileTableRow({
   const name = (
     <span className="flex min-w-0 items-center gap-2">
       <Icon
-        className={cn("size-4 shrink-0", isFolder ? "text-primary" : "text-muted")}
+        className={cn("size-4 shrink-0", isFolder ? "text-primary-ink" : "text-muted")}
         aria-hidden
       />
       <span className="truncate text-ink">{file.name}</span>
@@ -586,7 +586,7 @@ function FileTableRow({
           // 폴더는 인트라넷 안에서 내려간다 — 새 탭으로 튕기지 않는다
           <Link
             href={folderHref(basePath, file.id)}
-            className="block min-w-0 hover:text-primary"
+            className="block min-w-0 hover:text-primary-ink"
           >
             {name}
           </Link>
@@ -595,7 +595,7 @@ function FileTableRow({
             href={file.webViewLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="block min-w-0 hover:text-primary"
+            className="block min-w-0 hover:text-primary-ink"
           >
             {name}
           </a>
@@ -674,7 +674,7 @@ function SortableHead({
       >
         {label}
         <Icon
-          className={cn("size-3", active ? "text-primary" : "text-line-strong")}
+          className={cn("size-3", active ? "text-primary-ink" : "text-line-strong")}
           aria-hidden
         />
       </button>

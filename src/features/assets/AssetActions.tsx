@@ -66,7 +66,10 @@ export function LoanRequestButton({
           size="small"
           variant="ghost"
           disabled={pending}
-          onClick={() => run(() => cancelAssetLoan(pendingLoanId))}
+          onClick={() => {
+            if (!window.confirm("대여 신청을 취소할까요?")) return;
+            run(() => cancelAssetLoan(pendingLoanId));
+          }}
         >
           취소
         </Button>

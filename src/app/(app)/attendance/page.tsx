@@ -406,11 +406,11 @@ function WeekCalendar({ days, today }: { days: WeeklyDay[]; today: string }) {
                     className={cn(
                       "tabular-nums",
                       isToday
-                        ? "font-medium text-primary"
+                        ? "font-medium text-primary-ink"
                         : day.holidayName || weekday === 0
                           ? "text-danger"
                           : weekday === 6
-                            ? "text-info"
+                            ? "text-info-ink"
                             : "text-ink",
                     )}
                   >

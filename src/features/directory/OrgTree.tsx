@@ -70,7 +70,7 @@ export function OrgTree({
         className={cn(
           "flex w-full items-center gap-2 rounded-card px-2 py-2 text-left transition-colors duration-fast ease-standard",
           selected.kind === "company"
-            ? "bg-primary-light text-primary"
+            ? "bg-primary-light text-primary-ink"
             : "text-ink hover:bg-subtle",
         )}
       >
@@ -174,7 +174,7 @@ function DepartmentNode({
           <Building2
             className={cn(
               "size-4 shrink-0",
-              isSelected ? "text-primary" : "text-muted",
+              isSelected ? "text-primary-ink" : "text-muted",
             )}
             aria-hidden
           />
@@ -234,7 +234,7 @@ function TeamNode({ team, ...props }: NodeProps & { team: Team }) {
           <Users
             className={cn(
               "size-4 shrink-0",
-              isSelected ? "text-primary" : "text-muted",
+              isSelected ? "text-primary-ink" : "text-muted",
             )}
             aria-hidden
           />
@@ -324,7 +324,7 @@ function NodeRow({
         <span
           className={cn(
             "min-w-0 flex-1 truncate",
-            selected ? "text-primary" : "text-ink",
+            selected ? "text-primary-ink" : "text-ink",
             bold && "font-bold",
           )}
         >

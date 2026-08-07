@@ -173,7 +173,7 @@ export function AppLauncher({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="앱 검색"
               aria-label="앱 검색"
-              className="h-9 w-60 rounded-lg border border-line-strong bg-surface pl-8 pr-3 text-body-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none"
+              className="h-9 w-60 rounded-lg border border-line-strong bg-surface pl-8 pr-3 text-body-sm text-ink placeholder:text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-pressed"
             />
           </div>
         </div>
@@ -199,7 +199,7 @@ export function AppLauncher({
                         className="flex h-9 items-center gap-2.5 rounded-lg px-2 text-body-sm text-ink transition-colors duration-fast ease-standard hover:bg-subtle"
                       >
                         {/* 둥근 사각 틴트 타일 안 20px 글리프 */}
-                        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary-light text-primary">
+                        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-primary-light text-primary-ink">
                           <Icon
                             className="size-5"
                             strokeWidth={1.75}

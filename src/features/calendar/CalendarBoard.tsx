@@ -66,7 +66,7 @@ function dayToneClass(weekday: number, isHoliday: boolean): string {
   return isHoliday || weekday === 0
     ? "text-danger"
     : weekday === 6
-      ? "text-info"
+      ? "text-info-ink"
       : "text-ink";
 }
 
@@ -566,7 +566,7 @@ function WeekdayDistribution({
                 column.weekday === 0
                   ? "text-danger"
                   : column.weekday === 6
-                    ? "text-info"
+                    ? "text-info-ink"
                     : "text-muted",
               )}
             >
@@ -671,7 +671,7 @@ function MonthGrid({
               index === 0
                 ? "text-sunday"
                 : index === 6
-                  ? "text-info"
+                  ? "text-info-ink"
                   : "text-muted",
             )}
           >
@@ -744,7 +744,13 @@ function MonthGrid({
                   onClick={() => onAdd(day)}
                   aria-label={`${day} 일정 추가`}
                   title={`${day} 일정 추가`}
-                  className="ml-auto grid size-5 shrink-0 place-items-center rounded-sm text-muted opacity-0 transition-opacity duration-fast ease-standard hover:bg-subtle hover:text-ink focus-visible:opacity-100 group-hover:opacity-100"
+                  /*
+                   * 2026-08-07 UI/UX 감사: 호버 전용(opacity-0)이면 호버가 없는
+                   * 터치기기에서 이 버튼에 아예 접근할 수 없었다. md 이상(마우스
+                   * 우세 폭)에서만 호버로 숨기고, 그 아래에서는 상시 노출한다.
+                   * 히트영역도 20px(size-5)→28px(size-7)로 확대.
+                   */
+                  className="ml-auto grid size-7 shrink-0 place-items-center rounded-sm text-muted opacity-100 transition-opacity duration-fast ease-standard hover:bg-subtle hover:text-ink md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100"
                 >
                   <Plus className="size-3.5" aria-hidden />
                 </button>
@@ -822,7 +828,7 @@ function WeekGrid({
                     index === 0
                       ? "text-danger"
                       : index === 6
-                        ? "text-info"
+                        ? "text-info-ink"
                         : "text-muted",
                   )}
                 >
@@ -832,7 +838,7 @@ function WeekGrid({
                   className={cn(
                     "text-body tabular-nums",
                     isToday
-                      ? "font-bold text-primary"
+                      ? "font-bold text-primary-ink"
                       : dayToneClass(index, !!holiday),
                   )}
                 >
@@ -858,9 +864,10 @@ function WeekGrid({
                 type="button"
                 onClick={() => onAdd(day)}
                 className={cn(
-                  "w-full rounded-sm border border-dashed border-line-strong px-1.5 py-1 text-nano text-muted transition-colors duration-fast ease-standard hover:border-primary hover:text-primary",
+                  "w-full rounded-sm border border-dashed border-line-strong px-1.5 py-1 text-nano text-muted transition-colors duration-fast ease-standard hover:border-primary hover:text-primary-ink",
+                  // 2026-08-07 UI/UX 감사: md 미만(터치 우세 폭)에서는 상시 노출
                   dayItems.length > 0 &&
-                    "opacity-0 focus-visible:opacity-100 group-hover:opacity-100",
+                    "md:opacity-0 md:focus-visible:opacity-100 md:group-hover:opacity-100",
                 )}
                 title={`${day} 일정 추가`}
               >
@@ -967,7 +974,7 @@ function ItemTable({
                       type="button"
                       onClick={() => onPick(item)}
                       className={cn(
-                        "block w-full text-left transition-colors duration-fast ease-standard hover:text-primary",
+                        "block w-full text-left transition-colors duration-fast ease-standard hover:text-primary-ink",
                         mark?.className,
                         declinedClass(item),
                       )}

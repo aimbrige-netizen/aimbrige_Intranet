@@ -136,12 +136,13 @@ export function WelfareCancelButton({ requestId }: { requestId: string }) {
         size="small"
         variant="ghost"
         disabled={pending}
-        onClick={() =>
+        onClick={() => {
+          if (!window.confirm("신청을 취소할까요?")) return;
           startTransition(async () => {
             const result = await cancelWelfareRequest(requestId);
             setMessage(result.ok ? null : (result.message ?? "취소하지 못했습니다."));
-          })
-        }
+          });
+        }}
       >
         취소
       </Button>

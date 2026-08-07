@@ -699,7 +699,7 @@ function RecordRow({
             weekday === 0
               ? "text-danger"
               : weekday === 6
-                ? "text-info"
+                ? "text-info-ink"
                 : undefined,
           )}
         >

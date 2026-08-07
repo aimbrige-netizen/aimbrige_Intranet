@@ -344,7 +344,7 @@ export function WorklogView({
                                 weekday === 0
                                   ? "text-danger"
                                   : weekday === 6
-                                    ? "text-info"
+                                    ? "text-info-ink"
                                     : undefined,
                               )}
                             >
@@ -487,7 +487,7 @@ function ProjectCell({
   return (
     <Link
       href={`/projects/${projectId}`}
-      className="inline-block max-w-full truncate text-ink hover:text-primary hover:underline"
+      className="inline-block max-w-full truncate text-ink hover:text-primary-ink hover:underline"
       title={`${name} 프로젝트 열기`}
     >
       {name}

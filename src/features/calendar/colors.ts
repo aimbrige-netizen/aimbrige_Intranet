@@ -28,7 +28,7 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
   personal: {
     label: "개인 일정",
     hex: "#08a7bf", // primary
-    chip: "bg-primary-light text-primary",
+    chip: "bg-primary-light text-primary-ink",
     dot: "bg-primary",
   },
   /*
@@ -40,7 +40,7 @@ export const EVENT_COLORS: Record<CalendarItemKind, EventColor> = {
   invited: {
     label: "참석 일정",
     hex: "#08a7bf", // primary
-    chip: "border border-primary bg-surface text-primary",
+    chip: "border border-primary bg-surface text-primary-ink",
     dot: "border border-primary bg-surface",
   },
   team: {

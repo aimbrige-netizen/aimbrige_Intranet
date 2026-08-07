@@ -109,7 +109,10 @@ export function ReviewForm({
           </Button>
           <Button
             disabled={pending || !text.trim()}
-            onClick={() => submit(true)}
+            onClick={() => {
+              if (!window.confirm("제출할까요? 제출 후에는 수정할 수 없습니다.")) return;
+              submit(true);
+            }}
           >
             <Send className="size-4" />
             제출

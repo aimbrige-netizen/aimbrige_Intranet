@@ -137,7 +137,7 @@ export default async function ApprovalsPage({
                       <Td>
                         <Link
                           href={`/approvals/${row.document.id}`}
-                          className="text-ink hover:text-primary hover:underline"
+                          className="text-ink hover:text-primary-ink hover:underline"
                         >
                           {row.document.title}
                         </Link>
@@ -265,7 +265,7 @@ function MyDocsTable({
                         ? `/approvals/new/${doc.document_type}?draft=${doc.id}`
                         : `/approvals/${doc.id}`
                     }
-                    className="text-ink hover:text-primary hover:underline"
+                    className="text-ink hover:text-primary-ink hover:underline"
                   >
                     {doc.title}
                   </Link>
@@ -477,7 +477,7 @@ async function InboxView({
               가장 오래 기다린 문서 ·{" "}
               <Link
                 href={`/approvals/${oldest.document.id}`}
-                className="text-ink hover:text-primary hover:underline"
+                className="text-ink hover:text-primary-ink hover:underline"
               >
                 {oldest.document.title}
               </Link>{" "}

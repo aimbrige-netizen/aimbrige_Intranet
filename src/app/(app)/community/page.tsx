@@ -183,7 +183,7 @@ export default async function CommunityPage({
                   <Td>
                     <Link
                       href={`/community/${community.id}`}
-                      className="block truncate text-ink hover:text-primary hover:underline"
+                      className="block truncate text-ink hover:text-primary-ink hover:underline"
                     >
                       {community.name}
                     </Link>

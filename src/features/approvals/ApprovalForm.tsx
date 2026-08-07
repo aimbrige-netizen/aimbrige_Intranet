@@ -405,7 +405,7 @@ export function ApprovalForm({
                   </div>
                 </FormRow>
                 <FormRow label="총액">
-                  <p className="text-h2 tabular-nums text-primary">
+                  <p className="text-h2 tabular-nums text-primary-ink">
                     {total.toLocaleString("ko-KR")}원
                     <span className="ml-2 text-label font-normal text-muted">
                       {items.length}건

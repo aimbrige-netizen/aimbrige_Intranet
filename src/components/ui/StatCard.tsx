@@ -48,10 +48,15 @@ export type StatTone =
  * accent-ink(#158466, 흰 배경 4.6:1), 진행바 채움도 accent-ink로 간다.
  */
 const ACCENTS: Record<StatTone, { value: string; chip: string }> = {
-  brand: { value: "text-primary", chip: "bg-primary-light text-primary" },
+  brand: { value: "text-primary-ink", chip: "bg-primary-light text-primary-ink" },
   neutral: { value: "text-ink", chip: "bg-subtle text-muted" },
   positive: {
-    value: "text-accent",
+    /*
+     * 2026-08-07 UI/UX 감사: 민트 DEFAULT(#44d1a5)는 흰 배경 1.9:1이라
+     * 28px 숫자에서도 큰 텍스트 기준(3:1)을 못 넘는다. 위 주석의 원칙대로
+     * accent-ink(4.6:1)로 교체 — 토큰 참조만 바꾸면 되는 자리였다.
+     */
+    value: "text-accent-ink",
     chip: "bg-accent-light text-accent-ink",
   },
   informative: { value: "text-info-ink", chip: "bg-info-light text-info-ink" },
@@ -165,7 +170,7 @@ export function StatCard({
           <span
             className={cn(
               "grid size-7 shrink-0 place-items-center rounded-sm",
-              emphasis ? "bg-white text-primary" : accent.chip,
+              emphasis ? "bg-white text-primary-ink" : accent.chip,
             )}
           >
             <Icon className="size-4" aria-hidden />
@@ -185,7 +190,7 @@ export function StatCard({
             isPlaceholder
               ? "text-muted"
               : emphasis
-                ? "text-primary"
+                ? "text-primary-ink"
                 : accent.value,
           )}
         >

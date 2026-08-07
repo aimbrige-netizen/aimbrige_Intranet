@@ -253,7 +253,7 @@ function Anchor({ label, href }: { label: string; href: string }) {
     return <span className="text-ink">{label}</span>;
   }
 
-  const className = "text-primary underline underline-offset-2";
+  const className = "text-primary-ink underline underline-offset-2";
 
   return kind === "internal" ? (
     <Link href={href} className={className}>
