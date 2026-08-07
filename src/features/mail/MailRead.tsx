@@ -189,7 +189,7 @@ export function MailRead({ mail }: { mail: MailReadModel | null }) {
       </div>
 
       {/* 제목 20/500 — PageHeader(20/600)보다 한 단 가볍다(실측) */}
-      <h1 className="mt-5 text-[20px] font-medium leading-[30px] tracking-[-0.4px] text-ink">
+      <h1 className="mt-5 text-title-l tracking-[-0.4px] text-ink">
         {mail.subject || "(제목 없음)"}
       </h1>
 

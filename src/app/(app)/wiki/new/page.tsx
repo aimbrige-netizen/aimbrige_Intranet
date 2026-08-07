@@ -30,7 +30,7 @@ export default async function NewWikiPage({
           <ChevronLeft className="size-3.5" aria-hidden />
           위키 홈으로
         </Link>
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           새 문서
         </h1>
       </div>

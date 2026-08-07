@@ -60,7 +60,7 @@ export default async function WelfarePage({
         이 화면의 주요 버튼(진한 오렌지)은 신청 버튼 하나다(원칙 1).
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           복지포인트
         </h1>
         {balance ? (

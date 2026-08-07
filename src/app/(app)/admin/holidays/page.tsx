@@ -105,7 +105,7 @@ export default async function HolidaysPage({
         전년 대비 일수는 스테퍼 보조 줄로 내린다 — 연도 이동과 같은 자리의
         정보다. "공통 기준" 설명은 요약 카드 sub가 이미 말한다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         휴일 관리
       </h1>
 

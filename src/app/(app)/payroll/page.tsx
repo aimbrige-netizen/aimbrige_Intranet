@@ -79,7 +79,7 @@ export default async function PayrollPage({
     <>
       {/* 콘텐츠 제목 20/500 — PageHeader급 밴드 없음(13 ESS는 gw 콘텐츠 문법) */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           내 급여
         </h1>
         <p className="mt-1 text-caption">

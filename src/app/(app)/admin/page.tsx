@@ -201,7 +201,7 @@ export default async function AdminOverviewPage({
         콘텐츠 제목 "시스템 개요" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 설명("전사 통계와 조치가 필요한 항목")은 섹션 제목들이 이미 말한다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         시스템 개요
       </h1>
 

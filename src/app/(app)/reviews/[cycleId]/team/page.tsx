@@ -57,7 +57,7 @@ export default async function ReviewTeamPage({
       <>
         <div className="mb-5">
           <BackLink href="/reviews" />
-          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="text-title-l text-ink">
             팀원 평가
           </h1>
         </div>
@@ -95,7 +95,7 @@ export default async function ReviewTeamPage({
       */}
       <div className="mb-5">
         <BackLink href={`/reviews/${cycle.id}`} />
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           팀원 평가
         </h1>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">

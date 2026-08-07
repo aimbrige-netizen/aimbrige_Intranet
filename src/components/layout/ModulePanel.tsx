@@ -74,8 +74,8 @@ export function ModulePanel({ role }: { role: RoleName }) {
       aria-label={`${active.label} 메뉴`}
     >
       <div className="flex h-14 shrink-0 items-center px-4">
-        {/* 20px/500 — fontSize 스케일에 20px 단이 없다(h2 19 / h1 24) */}
-        <h2 className="truncate text-[20px] font-medium leading-[1.35] tracking-[-0.02em] text-ink">
+        {/* 2026-08-07 UI/UX 감사: title-l 토큰으로 교체(20px/30px/600) */}
+        <h2 className="truncate text-title-l text-ink">
           {active.label}
         </h2>
       </div>

@@ -72,7 +72,7 @@ export default async function RolesPage() {
         콘텐츠 제목 "권한관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 메타(등록 n명·역할 n종)는 카드 분모와 보드가 이미 들고 말한다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         권한관리
       </h1>
 

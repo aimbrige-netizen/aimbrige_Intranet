@@ -51,7 +51,7 @@ export default async function PaySlipPage({
             <ChevronLeft className="size-3.5" aria-hidden />
             급여명세서 목록으로
           </Link>
-          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="text-title-l text-ink">
             급여명세서
           </h1>
         </div>

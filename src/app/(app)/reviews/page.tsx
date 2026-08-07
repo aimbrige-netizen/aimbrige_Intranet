@@ -42,7 +42,7 @@ export default async function ReviewsPage() {
         아래 섹션 제목의 설명이 분모까지 들고 말한다.
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           내 평가
         </h1>
         {/*

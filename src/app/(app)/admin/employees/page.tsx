@@ -192,7 +192,7 @@ export default async function EmployeesPage({
         규모는 이 화면의 내용이다. 변경 기록 안내는 상세 화면이 이미 말한다.
       */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           임직원 관리
         </h1>
         <p className="mt-1.5 text-label text-muted">

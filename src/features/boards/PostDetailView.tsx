@@ -192,7 +192,7 @@ export function PostDetailView({
                 원본에 없는 단이고 PageHeader(20/600)와도 위계가 어긋났다.
                 줄높이 30px은 06 heading-l 실측.
               */}
-              <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+              <h1 className="text-title-l text-ink">
                 {post.title}
               </h1>
               <div className="mt-2 flex flex-wrap items-center gap-3">

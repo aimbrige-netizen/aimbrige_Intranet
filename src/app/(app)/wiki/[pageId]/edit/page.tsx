@@ -34,7 +34,7 @@ export default async function EditWikiPage({
       <>
         <div className="mb-5">
           <BackLink href="/wiki" />
-          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="text-title-l text-ink">
             문서 편집
           </h1>
         </div>
@@ -54,7 +54,7 @@ export default async function EditWikiPage({
       */}
       <div className="mb-5">
         <BackLink href={`/wiki/${page.id}`} />
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           문서 편집
         </h1>
         <p className="mt-1.5 text-label text-muted">{page.title}</p>

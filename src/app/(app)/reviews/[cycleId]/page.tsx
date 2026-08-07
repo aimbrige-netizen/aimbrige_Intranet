@@ -56,7 +56,7 @@ export default async function ReviewCyclePage({
   if (cycleError) {
     return (
       <>
-        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="mb-5 text-title-l text-ink">
           평가 작성
         </h1>
         <Callout tone="danger" title="사이클을 불러오지 못했습니다">
@@ -98,7 +98,7 @@ export default async function ReviewCyclePage({
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            <h1 className="text-title-l text-ink">
               {cycle.name}
             </h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">

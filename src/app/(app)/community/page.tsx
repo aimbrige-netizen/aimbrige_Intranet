@@ -46,7 +46,7 @@ export default async function CommunityPage({
     return (
       <>
         {/* 빈 화면의 주요 버튼은 빈 상태 CTA 하나만 — 제목 행에 겹치지 않는다 */}
-        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="mb-5 text-title-l text-ink">
           동호회 홈
         </h1>
         {/*
@@ -105,7 +105,7 @@ export default async function CommunityPage({
         줄높이 30px은 06 heading-l 실측(결재 홈과 같은 단).
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           동호회 홈
         </h1>
         <CreateCommunityButton />

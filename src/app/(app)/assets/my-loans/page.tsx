@@ -54,7 +54,7 @@ export default async function MyLoansPage() {
         분모·상태 요약은 표 바로 위에서 말하는 것이 07 문법이다.
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           내 대여 현황
         </h1>
         <LinkButton href="/assets" size="small" variant="secondary">

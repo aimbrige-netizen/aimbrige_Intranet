@@ -26,7 +26,7 @@ export default async function NewProjectPage() {
         결재 홈 축). 안내문·등록자는 제목 아래 한 줄씩 남긴다.
       */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           새 프로젝트
         </h1>
         <p className="mt-1 text-caption">

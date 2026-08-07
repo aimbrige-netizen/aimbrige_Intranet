@@ -310,7 +310,7 @@ export default async function AdminAttendancePage({
         분모(재직)와 판정 기준(09~18시)은 아래 모든 집계의 전제라 내용이다.
       */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           근태 관리
         </h1>
         <p className="mt-1.5 text-label text-muted">

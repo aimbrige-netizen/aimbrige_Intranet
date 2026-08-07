@@ -49,7 +49,7 @@ export default async function AdminAssetsPage() {
         콘텐츠 제목 "자산 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 메타(자산 n대·이력 n건)는 각 섹션 제목이 분모로 든다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         자산 관리
       </h1>
 

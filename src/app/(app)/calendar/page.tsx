@@ -220,7 +220,7 @@ export default async function CalendarPage({
         없음(결재 홈·동호회 홈·리소스 뷰와 같은 단). 스코프는 아래 툴바
         세그먼트가, 오늘·공휴일은 격자의 오늘 필·빨간 날짜가 그대로 말한다.
       */}
-      <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="text-title-l text-ink">
         일정목록
       </h1>
       {scheduleHeader}
@@ -345,7 +345,7 @@ function ResourceScreen({
         콘텐츠 제목 "리소스 예약 현황" 20/500 — 다우 "자산 예약 현황" 축.
         줄높이 30px은 06 heading-l 실측(결재 홈·동호회 홈과 같은 단).
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         리소스 예약 현황
       </h1>
 

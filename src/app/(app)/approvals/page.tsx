@@ -93,7 +93,7 @@ export default async function ApprovalsPage({
         콘텐츠 제목 "결재 홈" 20/500 — PageHeader급 밴드 없음(15 실측).
         줄높이 30px은 06 heading-l 실측(게시글 제목 PostDetailView와 같은 단).
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         결재 홈
       </h1>
 

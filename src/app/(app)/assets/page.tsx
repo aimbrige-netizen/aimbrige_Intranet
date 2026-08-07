@@ -47,7 +47,7 @@ export default async function AssetsPage() {
         줄높이 30px은 06 heading-l 실측. 종전 메타(전체 n대)는 걷어낸다 —
         전체 대수는 요약 카드 분모와 종류별 섹션 제목이 이미 들고 말한다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         자산
       </h1>
 

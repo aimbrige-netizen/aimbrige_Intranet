@@ -27,7 +27,7 @@ export default async function AdminBoardsPage() {
         콘텐츠 제목 "게시판 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 메타(공지·자유 개수)와 권한 설명은 섹션 제목·설명이 든다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         게시판 관리
       </h1>
 

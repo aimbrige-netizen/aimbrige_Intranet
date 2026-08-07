@@ -69,7 +69,7 @@ export default async function ApprovalLinesPage() {
         지금 결재가 몇 단계로 도는지는 장식이 아니라 설정 상태다.
       */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           결재라인 설정
         </h1>
         <p className="mt-1.5 text-label text-muted">

@@ -75,7 +75,7 @@ export default async function ProjectsPage({
   if (error) {
     return (
       <>
-        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="mb-5 text-title-l text-ink">
           프로젝트
         </h1>
         <Callout tone="danger" title="프로젝트를 불러오지 못했습니다">
@@ -121,7 +121,7 @@ export default async function ProjectsPage({
         분모까지 들고 말한다.
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           프로젝트
         </h1>
         {canCreate ? (

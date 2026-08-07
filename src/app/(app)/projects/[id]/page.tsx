@@ -75,7 +75,7 @@ export default async function ProjectDetailPage({
   if (error) {
     return (
       <>
-        <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="mb-5 text-title-l text-ink">
           프로젝트
         </h1>
         <Callout tone="danger" title="프로젝트를 불러오지 못했습니다">
@@ -131,7 +131,7 @@ export default async function ProjectDetailPage({
         메타라 제목 아래 한 줄로 남긴다(게시글 상세와 같은 단).
       */}
       <div className="mb-5">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           {project.name}
         </h1>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-label text-muted">

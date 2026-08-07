@@ -69,7 +69,7 @@ export function CardHeader({
             density === "compact"
               ? "text-body-sm font-bold"
               : density === "widget"
-                ? "text-[20px] font-semibold"
+                ? "text-title-l" // 2026-08-07 UI/UX 감사: title-l 토큰으로 교체
                 : "text-body font-semibold",
           )}
         >

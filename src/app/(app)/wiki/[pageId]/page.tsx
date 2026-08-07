@@ -47,7 +47,7 @@ export default async function WikiPageView({
       <>
         <div className="mb-5">
           <BackToWiki />
-          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="text-title-l text-ink">
             위키 문서
           </h1>
         </div>
@@ -78,7 +78,7 @@ export default async function WikiPageView({
       <div className="mb-5">
         <BackToWiki />
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="min-w-0 text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="min-w-0 text-title-l text-ink">
             {page.title}
           </h1>
           <div className="flex shrink-0 items-center gap-2">

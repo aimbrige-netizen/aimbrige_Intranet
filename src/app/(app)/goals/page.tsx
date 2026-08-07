@@ -73,7 +73,7 @@ export default async function GoalsPage({
     return (
       <>
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="text-title-l text-ink">
             목표
           </h1>
           {memberSelect}
@@ -96,7 +96,7 @@ export default async function GoalsPage({
         조회 대상은 우측 MemberSelect 값과 팀원 조회 Callout이 말한다.
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           목표
         </h1>
         {memberSelect}

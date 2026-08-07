@@ -46,7 +46,7 @@ export default async function AdminReviewsPage() {
         콘텐츠 제목 "평가 사이클 관리" 20/500 — PageHeader급 밴드 없음(확립
         문법). 종전 메타(n개 사이클)는 사이클 섹션 제목이 분모로 든다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         평가 사이클 관리
       </h1>
 

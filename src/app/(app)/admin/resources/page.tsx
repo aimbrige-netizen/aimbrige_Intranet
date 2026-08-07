@@ -26,7 +26,7 @@ export default async function ResourcesPage() {
         콘텐츠 제목 "리소스 관리" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 메타(예약 대상 n개·안내)는 카드와 섹션 설명이 나눠 든다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         리소스 관리
       </h1>
 

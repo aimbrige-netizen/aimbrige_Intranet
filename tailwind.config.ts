@@ -279,6 +279,14 @@ const config: Config = {
          * body와 body-sm이 같은 14px로 수렴하는 건 의도한 결과다.
          */
         h1: ["24px", { lineHeight: "36px", fontWeight: "600", letterSpacing: "-0.48px" }],
+        /*
+         * 2026-08-07 UI/UX 감사: h2(18px)와 h1/title(24px) 사이 20px 단이
+         * 스케일에 없어서, 이 자리를 41개 파일이 손으로 text-[20px]를
+         * 4가지 다른 조합(line-height·font-weight 제각각)으로 복붙해왔다.
+         * 원본 타이포 스케일 주석(위 L248 "heading: ... l 20/30/-.4 ...")에
+         * 이미 있던 값을 그대로 등록한다 — h1/h2/h3/title과 같은 600 굵기.
+         */
+        "title-l": ["20px", { lineHeight: "30px", fontWeight: "600", letterSpacing: "-0.4px" }],
         h2: ["18px", { lineHeight: "27px", fontWeight: "600", letterSpacing: "-0.36px" }],
         h3: ["16px", { lineHeight: "24px", fontWeight: "600", letterSpacing: "-0.32px" }],
         title: ["24px", { lineHeight: "36px", fontWeight: "600", letterSpacing: "-0.48px" }],

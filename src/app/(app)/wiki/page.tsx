@@ -50,7 +50,7 @@ export default async function WikiPage({
         이 화면의 진한 오렌지는 "새 문서" 버튼 하나다(원칙 1).
       */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+        <h1 className="text-title-l text-ink">
           위키
         </h1>
         <LinkButton href="/wiki/new" size="small">

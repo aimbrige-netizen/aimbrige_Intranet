@@ -125,7 +125,7 @@ export function PaySlipDetail({ slip }: { slip: PaySlipDetailModel }) {
         </Link>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-medium leading-[30px] text-ink">
+            <h1 className="text-title-l text-ink">
               급여명세서
             </h1>
             <p className="mt-1 text-caption">

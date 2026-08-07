@@ -353,7 +353,7 @@ export default async function AuditLogsPage({
         콘텐츠 제목 "감사 로그" 20/500 — PageHeader급 밴드 없음(확립 문법).
         종전 메타(건수·정렬·구간)는 스테퍼 보조 줄과 표 정렬 헤더가 이미 든다.
       */}
-      <h1 className="mb-5 text-[20px] font-medium leading-[30px] text-ink">
+      <h1 className="mb-5 text-title-l text-ink">
         감사 로그
       </h1>
 

@@ -81,7 +81,7 @@ export default async function EmployeeDetailPage({
           임직원 목록
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="min-w-0 text-[20px] font-medium leading-[30px] text-ink">
+          <h1 className="min-w-0 text-title-l text-ink">
             {employee.name}
           </h1>
           <div className="flex shrink-0 items-center gap-2">
